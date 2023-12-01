@@ -1,0 +1,22 @@
+Django==4.1
+djangorestframework~=3.14.0
+djangorestframework-simplejwt~=5.2.2
+psycopg2-binary==2.9.5
+Pillow==9.2.0
+python-decouple==3.4 #conf
+drf-yasg #swager
+django-cors-headers~=4.0.0
+django-filter==23.2
+drf-extra-fields~=3.5.0
+drf-spectacular~=0.26.2
+python-dateutil~=2.8.2
+celery~=5.2.7
+pandas~=2.0.2
+channels~=4.0.0
+channels-redis~=4.1.0
+daphne~=4.0.0
+redis==4.5.3
+coreapi
+django_redis
+asgiref~=3.7.2
+transliterate
