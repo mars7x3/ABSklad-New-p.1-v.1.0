@@ -50,8 +50,8 @@ INSTALLED_APPS = [
     'general_service',
     'product',
     'order',
-    'promotion'
-
+    'promotion',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -92,7 +92,7 @@ ASGI_APPLICATION = "absklad_commerce.asgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
+        'ENGINE': 'django.db.backends.sqlite3',  # TODO: psycopg2
         'NAME': config('POSTGRES_DB'),
         'USERNAME': config('POSTGRES_USER'),
         'PASSWORD': config('POSTGRES_PASSWORD'),
@@ -110,18 +110,14 @@ CACHES = {
     'default': {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": REDIS_URL + '0',
-    },
-    'chat': {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL + '15',
-    },
+    }
 }
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [REDIS_URL + '0'],
+            "hosts": [REDIS_URL + '1'],
             "symmetric_encryption_keys": [SECRET_KEY],
         },
     },
