@@ -70,7 +70,7 @@ class DealerProfile(models.Model):
 
 class DealerStore(models.Model):
     dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='dealer_stores')
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)
+    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True)
     title = models.CharField(max_length=200, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
 

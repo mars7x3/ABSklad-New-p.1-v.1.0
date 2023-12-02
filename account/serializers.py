@@ -35,13 +35,19 @@ class DealerMeInfoSerializer(serializers.ModelSerializer):
 class DealerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        exclude = ['user', 'price_city']
+        exclude = ['user', 'price_city', 'dealer_status', 'liability', 'id']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['city_title'] = instance.city.title
+        return representation
 
 
 class DealerStoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerStore
         exclude = ('dealer',)
+        extra_kwargs = {"city": {'required': True}}
 
     def validate(self, data):
         request = self.context.get('request')
@@ -81,3 +87,13 @@ class BalancePlusSerializer(serializers.ModelSerializer):
         model = BalancePlus
         fields = '__all__'
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['files'] = BalancePlusFileSerializer(instance.files.all(), many=True, context=self.context).data
+        return rep
+
+
+class BalancePlusFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalancePlusFile
+        fields = ('file', )

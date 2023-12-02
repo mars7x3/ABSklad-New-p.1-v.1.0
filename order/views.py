@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
 from order.main_functions import purchase_analysis
-from order.models import MyOrder, Cart, CartProduct
+from order.models import MyOrder, Cart, CartProduct, OrderReceipt
 from order.serializers import MyOrderListSerializer, MyOrderDetailSerializer, MyOrderCreateSerializer, \
     CartListSerializer
 
@@ -60,6 +60,26 @@ class MyOrderCreateView(generics.CreateAPIView):
     serializer_class = MyOrderCreateSerializer
 
 
+class OrderReceiptAddView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        receipts = request.FILES.getlist('receipts')
+        order_id = request.data.get('order_id')
+        if receipts and order_id:
+            order = MyOrder.objects.filter(id=order_id)
+            if order:
+                OrderReceipt.objects.bulk_create([OrderReceipt(order=order, file=i) for i in receipts])
+                response_data = MyOrderDetailSerializer(order, context=self.get_renderer_context()).data
+                return Response(response_data, status=status.HTTP_200_OK)
+            return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'receipts': 'Обязательное поле!',
+                         'order_id': 'Обязательное поле!'
+                         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
 class CartListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -79,7 +99,8 @@ class CartAddView(APIView):
 
         for c in carts:
             cart, _ = Cart.objects.get_or_create(dealer=dealer, stock_id=c.get('stock'))
-            cart.cart_products.delete()
+            print(cart)
+            cart.cart_products.all().delete()
             cart_product_list = [CartProduct(cart=cart, product_id=p.get('id'), count=p.get('count')) for p in
                                  c.get('products')]
             CartProduct.objects.bulk_create(cart_product_list)

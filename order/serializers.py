@@ -55,7 +55,6 @@ class StockSerializer(serializers.ModelSerializer):
 
 class MyOrderCreateSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False, required=False)
-    products = serializers.ListField(required=True)
 
     class Meta:
         model = MyOrder
@@ -72,7 +71,8 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
         products = request.data.get('products')
-        dealer = request.user.dealer_profile
+        user = request.user
+        dealer = user.dealer_profile
 
         if not check_product_count(products, data['stock']):
             raise serializers.ValidationError({'text': 'Количество товара больше чем есть в наличии!'})
@@ -87,25 +87,21 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
 
         data['author'] = dealer
         data['name'] = dealer.name
-        data['author_image'] = dealer.author_image
-        data['gmail'] = dealer.gmail
+        data['gmail'] = user.email
         data['cash_box'] = data['stock'].cash_box
         data['cost_price'] = order_cost_price(product_list, products)
-        data['receipts'] = request.FILES.getlist('receipts')
         data['products'] = generate_order_products(product_list, products, dealer)
 
         return data
 
     def create(self, validated_data):
         with transaction.atomic():
-            receipts = validated_data.pop('receipts')
             products = validated_data.pop('products')
 
             order = MyOrder.objects.create(**validated_data)
-            OrderReceipt.objects.bulk_create([OrderReceipt(order=order, **i) for i in receipts])
             OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
 
-            create_order_notification.delay(order.id)
+            create_order_notification(order.id)  # TODO: delay() add here
 
             return order
 
@@ -134,9 +130,6 @@ class CartProductSerializer(serializers.ModelSerializer):
 
 
 class CartAsiaProductSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False, read_only=True)
-    old_price = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False, read_only=True)
-
     class Meta:
         model = AsiaProduct
         fields = ('title', 'collection')

@@ -6,8 +6,6 @@ from .tasks import create_avg_rating
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    images = serializers.ListField(required=True)
-
     class Meta:
         model = Review
         fields = ('id', 'rating', 'text', 'created_at', 'product')

@@ -22,7 +22,6 @@ class MyOrder(models.Model):
     )
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     name = models.CharField(max_length=100, blank=True, null=True)
-    author_image = models.FileField(upload_to='order-author', blank=True, null=True)
     gmail = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=100, blank=True, null=True)
     address = models.CharField(max_length=300, blank=True, null=True)

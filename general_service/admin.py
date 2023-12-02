@@ -15,9 +15,17 @@ class StockPhoneInline(admin.TabularInline):
     extra = 0
 
 
+class CashBoxInline(admin.TabularInline):
+    model = CashBox
+    max_num = 100
+    extra = 0
+
+
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    inlines = [StockPhoneInline]
+    inlines = [StockPhoneInline, CashBoxInline]
     search_fields = ('id', 'address', 'city__title')
     list_display = ('id', 'address', 'city')
     list_display_links = ('id', 'address', 'city')
+
+

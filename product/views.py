@@ -84,12 +84,14 @@ class ReviewListView(APIView):
 
     def post(self, request):
         product_id = request.data.get('product_id')
-        product = AsiaProduct.objects.filter(id=product_id).first()
-        if product:
-            response_data = ReviewSerializer(product.reviews.filter(is_active=True), many=True,
-                                             context=self.get_renderer_context()).data
-            return Response(response_data, status=status.HTTP_200_OK)
-        return Response({'text': "Продукт не существует!"}, status=status.HTTP_400_BAD_REQUEST)
+        if product_id:
+            product = AsiaProduct.objects.filter(id=product_id).first()
+            if product:
+                response_data = ReviewSerializer(product.reviews.filter(is_active=True), many=True,
+                                                 context=self.get_renderer_context()).data
+                return Response(response_data, status=status.HTTP_200_OK)
+            return Response({'text': "Продукт не существует!"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'product_id': "Объязательное поле!"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FilterMaxMinView(APIView):

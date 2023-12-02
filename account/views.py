@@ -51,16 +51,18 @@ class NotificationReadView(APIView):
 
     def post(self, request):
         notification_id = request.data.get('notification_id')
-        notification = Notification.objects.filter(id=notification_id).first()
-        if notification:
-            if notification.user == request.user:
-                notification.is_read = True
-                notification.save()
-                response_data = NotificationSerializer(notification, context=self.get_renderer_context()).data
+        if notification_id:
+            notification = Notification.objects.filter(id=notification_id).first()
+            if notification:
+                if notification.user == request.user:
+                    notification.is_read = True
+                    notification.save()
+                    response_data = NotificationSerializer(notification, context=self.get_renderer_context()).data
 
-                return Response(response_data, status=status.HTTP_200_OK)
-            return Response('Permission denied!', status=status.HTTP_400_BAD_REQUEST)
-        return Response('Notification exist!', status=status.HTTP_400_BAD_REQUEST)
+                    return Response(response_data, status=status.HTTP_200_OK)
+                return Response('Permission denied!', status=status.HTTP_400_BAD_REQUEST)
+            return Response('Notification exist!', status=status.HTTP_400_BAD_REQUEST)
+        return Response({'notification_id': 'Это поле обязательное!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class NotificationCountView(APIView):
@@ -156,8 +158,8 @@ class BalancePlusView(APIView):
         dealer = request.user.dealer_profile
         if amount and files:
             # TODO: добавить синхронизацию с 1С
-            BalancePlus.objects.create(dealer=dealer, amount=amount)
-            BalancePlusFile.objects.bulk_create([BalancePlusFile(dealer=dealer, **i) for i in files])
+            balance = BalancePlus.objects.create(dealer=dealer, amount=amount)
+            BalancePlusFile.objects.bulk_create([BalancePlusFile(balance=balance, file=i) for i in files])
             return Response({'text': 'Завявка принята!'}, status=status.HTTP_200_OK)
         return Response({'text': 'amount and files is required!'}, status=status.HTTP_400_BAD_REQUEST)
 

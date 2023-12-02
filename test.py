@@ -27,3 +27,6 @@ import requests
 #                             description='This is ASIA BRAND!')
 # Notification.objects.create(user=a, status='chat', title='Привет! Меня зовут Марсел - твой менеджер.',
 #                             description='Привет! Меня зовут Марсел - твой менеджер.')
+
+
+

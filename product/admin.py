@@ -12,4 +12,5 @@ admin.site.register(ProductSize)
 
 admin.site.register(Review)
 admin.site.register(FilterMaxMin)
+admin.site.register(ProductCostPrice)
 

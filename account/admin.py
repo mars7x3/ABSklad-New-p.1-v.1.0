@@ -12,3 +12,5 @@ admin.site.register(DealerStatus)
 admin.site.register(Notification)
 admin.site.register(Wallet)
 
+admin.site.register(BalancePlus)
+
