@@ -4,6 +4,8 @@ from .views import *
 
 router = DefaultRouter()
 router.register('dealer/stories', StoriesListView)
+router.register('dealer/target/list', TargetListView)
+
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -15,7 +15,7 @@ class DealerStatus(models.Model):
 class MyUser(AbstractUser):
     STATUS = (
         ('director', 'Директор'),
-        ('main_manager', 'РОП'),
+        ('rop', 'РОП'),
         ('manager', 'Менеджер'),
         ('marketer', 'Маркетолог'),
         ('accountant', 'Бухгалтер'),
