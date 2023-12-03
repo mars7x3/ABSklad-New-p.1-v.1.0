@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'order',
     'promotion',
     'chat',
+    'crm_manager'
 ]
 
 MIDDLEWARE = [
