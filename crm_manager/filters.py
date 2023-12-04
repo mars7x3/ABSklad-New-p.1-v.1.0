@@ -4,6 +4,8 @@ from rest_framework.filters import BaseFilterBackend
 
 
 class OrderFilter(BaseFilterBackend):
+    active_param = "active"
+    active_description = _("Filter orders by active")
     status_param = "status"
     status_description = _("Filter orders by status")
     user_param = "user_id"
@@ -30,6 +32,12 @@ class OrderFilter(BaseFilterBackend):
         end = request.query_params.get(self.end_date_param)
         if end:
             filters['created_at__date__lte'] = end
+        active = request.query_params.get(self.active_param)
+        match active:
+            case "1":
+                filters['is_active'] = True
+            case "0":
+                filters['is_active'] = False
         return filters
 
     def filter_queryset(self, request, queryset, view):
@@ -40,6 +48,15 @@ class OrderFilter(BaseFilterBackend):
 
     def get_schema_operation_parameters(self, view):
         return [
+            {
+                'name': self.active_param,
+                'required': False,
+                'in': 'query',
+                'description': force_str(self.active_description),
+                'schema': {
+                    'type': 'number'
+                }
+            },
             {
                 'name': self.status_param,
                 'required': False,
