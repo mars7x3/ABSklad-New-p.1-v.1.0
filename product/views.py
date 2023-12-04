@@ -1,6 +1,9 @@
+from collections import OrderedDict
+
 from django.db.models import Q
 from rest_framework import viewsets, mixins, status, generics
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +13,23 @@ from product.models import Category, AsiaProduct, Review, Collection, FilterMaxM
 from product.permissions import IsAuthor
 from product.serializers import CategoryListSerializer, ProductListSerializer, ReviewSerializer, \
     ProductDetailSerializer, CollectionListSerializer
+
+
+class AppProductPaginationClass(PageNumberPagination):
+    page_size = 1
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response(OrderedDict([
+            ('total_pages', self.page.paginator.num_pages),
+            ('page', self.page.number),
+            ('next', self.get_next_link()),
+            ('previous', self.get_previous_link()),
+            ('results', data),
+            ('results_count', len(data)),
+            ('total_results', self.page.paginator.count),
+        ]))
 
 
 class ReviewCDView(mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
@@ -34,6 +54,7 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = AsiaProduct.objects.filter(is_active=True, is_show=True)
     serializer_class = ProductListSerializer
+    pagination_class = AppProductPaginationClass
 
     def get_serializer_class(self):
         if self.kwargs.get('pk'):
@@ -75,11 +96,13 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
             )
 
         products = queryset.filter(**kwargs)
-        response_data = self.get_serializer(products, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        page = self.paginate_queryset(products)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+
+        return self.get_paginated_response(serializer)
 
 
-class ReviewListView(APIView):
+class ReviewListView(APIView, AppProductPaginationClass):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -87,9 +110,11 @@ class ReviewListView(APIView):
         if product_id:
             product = AsiaProduct.objects.filter(id=product_id).first()
             if product:
-                response_data = ReviewSerializer(product.reviews.filter(is_active=True), many=True,
+
+                page = self.paginate_queryset(product.reviews.filter(is_active=True), request)
+                response_data = ReviewSerializer(page, many=True,
                                                  context=self.get_renderer_context()).data
-                return Response(response_data, status=status.HTTP_200_OK)
+                return self.get_paginated_response(response_data)
             return Response({'text': "Продукт не существует!"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'product_id': "Объязательное поле!"}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=list)
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', cast=list)
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Application definition
@@ -92,40 +92,40 @@ ASGI_APPLICATION = "absklad_commerce.asgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('POSTGRES_DB'),
-        'USERNAME': config('POSTGRES_USER'),
+        'USER': config('POSTGRES_USER'),
         'PASSWORD': config('POSTGRES_PASSWORD'),
         'HOST': config('POSTGRES_HOST'),
         'PORT': config('POSTGRES_PORT', cast=int)
     }
 }
 
-REDIS_HOST = config("REDIS_HOST", default='localhost')
-REDIS_PASSWORD = config("REDIS_PASSWORD", default='')
-REDIS_PORT = config("REDIS_PORT", default=6379)
-REDIS_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/'
+#REDIS_HOST = config("REDIS_HOST", default='localhost')
+#REDIS_PASSWORD = config("REDIS_PASSWORD", default='')
+#REDIS_PORT = config("REDIS_PORT", default=6379)
+#REDIS_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/'
 
-CACHES = {
-    'default': {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL + '0',
-    },
-    'chat': {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL + '15',
-    },
-}
+#CACHES = {
+#    'default': {
+#        "BACKEND": "django_redis.cache.RedisCache",
+#        "LOCATION": REDIS_URL + '0',
+#    },
+#    'chat': {
+#        "BACKEND": "django_redis.cache.RedisCache",
+#        "LOCATION": REDIS_URL + '15',
+#    },
+#}
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [REDIS_URL + '0'],
-            "symmetric_encryption_keys": [SECRET_KEY],
-        },
-    },
-}
+#CHANNEL_LAYERS = {
+#    "default": {
+#        "BACKEND": "channels_redis.core.RedisChannelLayer",
+#        "CONFIG": {
+#            "hosts": [REDIS_URL + '0'],
+#            "symmetric_encryption_keys": [SECRET_KEY],
+#        },
+#    },
+#}
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'AsiaBrand Commerce Project API',
@@ -134,8 +134,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-BROKER_URL = REDIS_URL + '0'
-CELERY_RESULT_BACKEND = BROKER_URL
+#BROKER_URL = REDIS_URL + '0'
+#CELERY_RESULT_BACKEND = BROKER_URL
 
 
 # Password validation
@@ -187,6 +187,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    "COERCE_DECIMAL_TO_STRING": False,
 
 }
 

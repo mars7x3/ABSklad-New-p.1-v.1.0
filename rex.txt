@@ -20,3 +20,4 @@ coreapi
 django_redis
 asgiref~=3.7.2
 transliterate
+gunicorn

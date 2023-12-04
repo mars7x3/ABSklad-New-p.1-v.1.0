@@ -71,7 +71,7 @@ class ProductCostPrice(models.Model):
 
 class ProductPrice(models.Model):
     STATUS = (
-        ('%', '%'),
+        ('Per', 'per'),
         ('Num', 'Num'),
     )
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='prices')

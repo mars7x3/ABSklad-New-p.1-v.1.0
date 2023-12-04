@@ -11,6 +11,7 @@ from order.main_functions import purchase_analysis
 from order.models import MyOrder, Cart, CartProduct, OrderReceipt
 from order.serializers import MyOrderListSerializer, MyOrderDetailSerializer, MyOrderCreateSerializer, \
     CartListSerializer
+from product.views import AppProductPaginationClass
 
 
 class PurchaseAnalysisView(APIView):
@@ -25,6 +26,7 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = MyOrder.objects.all()
     serializer_class = MyOrderDetailSerializer
+    pagination_class = AppProductPaginationClass
 
     def get_queryset(self):
         queryset = self.request.user.dealer_profile.orders.filter(is_active=True)
@@ -50,8 +52,11 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
             kwargs['status'] = o_status
 
         queryset = queryset.filter(**kwargs)
-        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+    
+        return self.get_paginated_response(serializer)
 
 
 class MyOrderCreateView(generics.CreateAPIView):
@@ -76,8 +81,6 @@ class OrderReceiptAddView(APIView):
         return Response({'receipts': 'Обязательное поле!',
                          'order_id': 'Обязательное поле!'
                          }, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 
 class CartListView(APIView):
