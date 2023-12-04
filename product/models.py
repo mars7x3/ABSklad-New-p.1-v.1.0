@@ -80,7 +80,7 @@ class ProductPrice(models.Model):
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     old_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)
-    discount_status = models.CharField(max_length=5, choices=STATUS, default='%')
+    discount_status = models.CharField(max_length=5, choices=STATUS, default='Per')
 
     def __str__(self):
         return f'{self.product} - {self.city} - {self.price}'

@@ -1,5 +1,5 @@
 """
-ASGI config for absklad_commerce project.
+ASGI config for server project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,17 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'absklad_commerce.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "absklad_commerce.settings")
 
-application = get_asgi_application()
+django_application = get_asgi_application()
+
+from channels.routing import ProtocolTypeRouter, URLRouter
+#from channels.security.websocket import AllowedHostsOriginValidator
+
+from chat.routers import websocket_urlpatterns
+from chat.middlewares import TokenAuthMiddlewareStack
+
+application = ProtocolTypeRouter({
+    'http': django_application,
+    "websocket": TokenAuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
+})

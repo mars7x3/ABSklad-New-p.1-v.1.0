@@ -50,8 +50,8 @@ INSTALLED_APPS = [
     'general_service',
     'product',
     'order',
-    'promotion'
-
+    'promotion',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -101,31 +101,27 @@ DATABASES = {
     }
 }
 
-#REDIS_HOST = config("REDIS_HOST", default='localhost')
-#REDIS_PASSWORD = config("REDIS_PASSWORD", default='')
-#REDIS_PORT = config("REDIS_PORT", default=6379)
-#REDIS_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/'
+REDIS_HOST = config("REDIS_HOST", default='localhost')
+REDIS_PASSWORD = config("REDIS_PASSWORD", default='')
+REDIS_PORT = config("REDIS_PORT", default=6379)
+REDIS_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/'
 
-#CACHES = {
-#    'default': {
-#        "BACKEND": "django_redis.cache.RedisCache",
-#        "LOCATION": REDIS_URL + '0',
-#    },
-#    'chat': {
-#        "BACKEND": "django_redis.cache.RedisCache",
-#        "LOCATION": REDIS_URL + '15',
-#    },
-#}
+CACHES = {
+    'default': {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL + '0',
+    }
+}
 
-#CHANNEL_LAYERS = {
-#    "default": {
-#        "BACKEND": "channels_redis.core.RedisChannelLayer",
-#        "CONFIG": {
-#            "hosts": [REDIS_URL + '0'],
-#            "symmetric_encryption_keys": [SECRET_KEY],
-#        },
-#    },
-#}
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL + '1'],
+            "symmetric_encryption_keys": [SECRET_KEY],
+        },
+    },
+}
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'AsiaBrand Commerce Project API',
@@ -134,8 +130,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-#BROKER_URL = REDIS_URL + '0'
-#CELERY_RESULT_BACKEND = BROKER_URL
+BROKER_URL = REDIS_URL + '0'
+CELERY_RESULT_BACKEND = BROKER_URL
 
 
 # Password validation

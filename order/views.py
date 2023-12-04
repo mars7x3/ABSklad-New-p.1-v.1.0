@@ -55,7 +55,6 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
 
         page = self.paginate_queryset(queryset)
         serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-    
         return self.get_paginated_response(serializer)
 
 

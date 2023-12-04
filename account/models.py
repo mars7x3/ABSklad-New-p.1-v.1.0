@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from general_service.models import City
+from general_service.models import City, Stock
 
 
 class DealerStatus(models.Model):
@@ -15,7 +15,7 @@ class DealerStatus(models.Model):
 class MyUser(AbstractUser):
     STATUS = (
         ('director', 'Директор'),
-        ('main_manager', 'РОП'),
+        ('rop', 'РОП'),
         ('manager', 'Менеджер'),
         ('marketer', 'Маркетолог'),
         ('accountant', 'Бухгалтер'),
@@ -47,6 +47,7 @@ class MyUser(AbstractUser):
 class StaffProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='staff_profile')
     city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True, related_name='staff_profiles')
+    stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, blank=True, null=True, related_name='staff_profiles')
     name = models.CharField(max_length=50, blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
 
