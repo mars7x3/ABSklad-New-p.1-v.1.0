@@ -67,6 +67,10 @@ class ProductListSerializer(serializers.ModelSerializer):
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
+    old_price = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
+    discount = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
+
     class Meta:
         model = ProductPrice
         fields = ('price', 'old_price', 'discount', 'discount_status')
