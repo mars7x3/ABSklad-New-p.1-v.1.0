@@ -49,7 +49,7 @@ class CollectionListSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'collection', 'avg_rating', 'reviews_count')
+        fields = ('id', 'title', 'collection', 'avg_rating', 'reviews_count', 'description')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
