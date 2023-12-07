@@ -20,6 +20,11 @@ from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
+
+crm_urlpatterns = [
+    path('api/v1/manager/', include('crm_manager.urls')),
+]
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),
@@ -33,8 +38,7 @@ urlpatterns = [
     path('api/v1/', include('product.urls')),
     path('api/v1/', include('promotion.urls')),
     path('api/v1/chat/', include('chat.urls')),
-    path('api/v1/', include('crm_manager.urls')),
-]
+] + crm_urlpatterns
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

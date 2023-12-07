@@ -56,10 +56,12 @@ class ProductListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
+        rep['price_info'] = ProductPriceListSerializer(
+            instance=instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first(),
+            many=False,
+            context=self.context
+        ).data
         rep['images'] = ProductImageSerializer([instance.images.first()], many=True, context=self.context).data
-        rep['price_info'] = ProductPriceListSerializer(instance.prices.filter(city=dealer.price_city,
-                                                                              d_status=dealer.dealer_status).first(),
-                                                       context=self.context).data
         if instance.collection:
             rep['collection'] = instance.collection.title
 

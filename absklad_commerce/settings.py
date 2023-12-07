@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=list)
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', cast=list)
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Application definition
@@ -52,8 +52,7 @@ INSTALLED_APPS = [
     'order',
     'promotion',
     'chat',
-    'crm_manager',
-
+    'crm_manager'
 ]
 
 MIDDLEWARE = [
@@ -94,7 +93,7 @@ ASGI_APPLICATION = "absklad_commerce.asgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',  # TODO: psycopg2
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('POSTGRES_DB'),
         'USER': config('POSTGRES_USER'),
         'PASSWORD': config('POSTGRES_PASSWORD'),
@@ -185,6 +184,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    "COERCE_DECIMAL_TO_STRING": False,
 
 }
 

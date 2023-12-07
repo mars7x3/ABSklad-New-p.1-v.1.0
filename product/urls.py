@@ -13,7 +13,5 @@ router.register('dealer/product/list', ProductListView)
 urlpatterns = [
     path('dealer/product/reviews/list/', ReviewListView.as_view()),
     path('dealer/product/price/max-min/', FilterMaxMinView.as_view()),
-
-
     path('', include(router.urls)),
 ]
