@@ -27,16 +27,9 @@ class AppPaginationClass(PageNumberPagination):
         ]))
 
 
-class StaffListView(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated, IsDirector]
-    queryset = StaffProfile.objects.all()
-    serializer_class = StaffListSerializer
-    pagination_class = AppPaginationClass
-
-
 class StaffCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = MyUser.objects.all()
+    queryset = MyUser.objects.exclude(status__in=['dealer', 'dealer_1'])
     serializer_class = StaffCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):
