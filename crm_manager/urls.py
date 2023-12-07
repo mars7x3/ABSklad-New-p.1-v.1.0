@@ -11,7 +11,6 @@ from crm_manager.views import (
 router = SimpleRouter()
 router.register("dealers", DealerViewSet)
 router.register("warehouses", WareHouseViewSet)
-router.register("orders", OrderViewSet)
 router.register('balance/plus/list', CRMBalanceHistoryListView)
 router.register('order/list', ManagerOrderListView)
 
