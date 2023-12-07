@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from account.models import MyUser
 from product.models import AsiaProduct, ProductImage
+from promotion.models import TargetPresent, Target, Story
 
 
 class StaffListSerializer(serializers.ModelSerializer):
