@@ -15,8 +15,6 @@ class MyOrderListSerializer(serializers.ModelSerializer):
 
 
 class MyOrderDetailSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False, required=False)
-
     class Meta:
         model = MyOrder
         exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')
@@ -54,8 +52,6 @@ class StockSerializer(serializers.ModelSerializer):
 
 
 class MyOrderCreateSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False, required=False)
-
     class Meta:
         model = MyOrder
         exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')

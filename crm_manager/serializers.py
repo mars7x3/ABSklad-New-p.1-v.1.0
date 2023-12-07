@@ -231,8 +231,6 @@ class CRMStockSerializer(serializers.ModelSerializer):
 
 
 class MangerOrderCreateSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False, required=False)
-
     class Meta:
         model = MyOrder
         exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')
@@ -288,8 +286,6 @@ class ManagerOrderListSerializer(serializers.ModelSerializer):
 
 
 class ManagerOrderDetailSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False, required=False)
-
     class Meta:
         model = MyOrder
         exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')
@@ -304,8 +300,6 @@ class ManagerOrderDetailSerializer(serializers.ModelSerializer):
 
 
 class CRMBalancePlusSerializer(serializers.ModelSerializer):
-    amount = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False)
-
     class Meta:
         model = BalancePlus
         fields = '__all__'

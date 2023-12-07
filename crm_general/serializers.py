@@ -24,8 +24,6 @@ class StoryDetailSerializer(serializers.ModelSerializer):
 
 
 class StoryProductSerializer(serializers.ModelSerializer):
-    avg_rating = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False)
-
     class Meta:
         model = AsiaProduct
         fields = ('id', 'description', 'avg_rating', 'reviews_count')
@@ -46,9 +44,6 @@ class StoryProductImageSerializer(serializers.ModelSerializer):
 
 
 class TargetSerializer(serializers.ModelSerializer):
-    total_amount = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False)
-    completed = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False)
-
     class Meta:
         model = Target
         exclude = ('dealer', 'id')
@@ -61,8 +56,6 @@ class TargetSerializer(serializers.ModelSerializer):
 
 
 class TargetPresentSerializer(serializers.ModelSerializer):
-    money = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False)
-
     class Meta:
         model = TargetPresent
         exclude = ('id', 'target')
