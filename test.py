@@ -29,4 +29,8 @@ import requests
 #                             description='Привет! Меня зовут Марсел - твой менеджер.')
 
 
+from general_service.models import Stock
+from product.models import AsiaProduct
 
+
+Stock.objects.filter(counts__product_id=1)

@@ -17,7 +17,7 @@ class MyOrderListSerializer(serializers.ModelSerializer):
 class MyOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')
+        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'author')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -54,7 +54,7 @@ class StockSerializer(serializers.ModelSerializer):
 class MyOrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')
+        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'author')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

@@ -233,7 +233,7 @@ class CRMStockSerializer(serializers.ModelSerializer):
 class MangerOrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')
+        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'author')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -288,7 +288,7 @@ class ManagerOrderListSerializer(serializers.ModelSerializer):
 class ManagerOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'cash_box', 'author')
+        exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'author')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
