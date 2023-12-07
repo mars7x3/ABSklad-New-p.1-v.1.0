@@ -47,8 +47,6 @@ class CollectionListSerializer(serializers.ModelSerializer):
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-    avg_rating = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
-
     class Meta:
         model = AsiaProduct
         fields = ('id', 'title', 'collection', 'avg_rating', 'reviews_count')
@@ -69,10 +67,6 @@ class ProductListSerializer(serializers.ModelSerializer):
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
-    old_price = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
-    discount = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
-
     class Meta:
         model = ProductPrice
         fields = ('price', 'old_price', 'discount', 'discount_status')
@@ -97,8 +91,6 @@ class ProductCountSerializer(serializers.ModelSerializer):
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
-    avg_rating = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
-
     class Meta:
         model = AsiaProduct
         exclude = ('is_active', 'is_show', 'is_hit', 'uid', 'created_at', 'updated_at', 'collection')
