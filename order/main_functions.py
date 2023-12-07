@@ -25,21 +25,23 @@ def purchase_analysis(request):
         orders = orders.filter(status__in=o_status)
 
     total_price = sum(orders.values_list('price', flat=True))
-    eco_price = sum(orders.values_list('order__products__price', flat=True))
-    true_price = sum(orders.filter(order__products__discount=0)
+    true_price = sum(orders.filter(order_products__discount=0)
                      .values_list('order_products__total_price', flat=True))
-    discount_price = total_price - true_price
+    discount_price = sum(orders.exclude(order_products__discount=0)
+                         .values_list('order_products__total_price', flat=True))
+    eco_price = sum(orders.exclude(order_products__discount=0)
+                    .values_list('order_products__discount', flat=True))
 
     cities_list = orders.values_list('stock__city__title', flat=True).distinct()
     city_info = {}
     for city in cities_list:
         city_info[city] = sum(orders.filter(stock__city__title=city).values_list('price', flat=True))
 
-    categories_list = orders.values_list('order__products__category__title', flat=True).distinct()
+    categories_list = orders.values_list('order_products__category__title', flat=True).distinct()
     cat_info = {}
     for cat in categories_list:
-        cat_info[cat] = sum(orders.filter(order__products__category__title=cat)
-                            .values_list('order__products__total_price', flat=True))
+        cat_info[cat] = sum(orders.filter(order_products__category__title=cat)
+                            .values_list('order_products__total_price', flat=True))
 
     result_data = {
         "total_price": total_price,

@@ -38,7 +38,6 @@ urlpatterns = [
     path('api/v1/', include('product.urls')),
     path('api/v1/', include('promotion.urls')),
     path('api/v1/chat/', include('chat.urls')),
-
 ] + crm_urlpatterns
 
 if settings.DEBUG:
