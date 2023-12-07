@@ -1,27 +1,25 @@
-import datetime
-
-from django.utils import timezone
+from django.db.models import Sum, DecimalField, Q, Value
 from drf_spectacular.utils import extend_schema
-from rest_framework import viewsets, generics, mixins, status
+from rest_framework import viewsets, generics, mixins, parsers, status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from account.models import DealerProfile, StaffProfile, BalancePlus, MyUser, BalancePlusFile
+from account.models import DealerProfile, StaffProfile, BalancePlus, Wallet
 from crm_manager.mixins import ManagerMixin
-from order.models import MyOrder, OrderReceipt, OrderProduct
+from order.db_request import query_debugger
+from order.models import MyOrder
 from product.models import Category, AsiaProduct
 
-from crm_manager.filters import OrderFilter
-from crm_manager.paginations import ProfilePagination, OrderPagination, AppPaginationClass
+from crm_manager.filters import OrderFilter, BalancePlusFilter, WallerFilter
+from crm_manager.paginations import ProfilePagination, AppPaginationClass
 from crm_manager.permissions import OrderPermission
 from crm_manager.serializers import (
-    DealerProfileSerializer, StaffProfileSerializer, OrderSerializer,
-    OrderReceiptSerializer, OrderProductSerializer, CategoryInventorySerializer,
-    MangerOrderCreateSerializer, ManagerOrderDetailSerializer, ManagerOrderListSerializer, CRMBalancePlusSerializer,
-    ShortProductSerializer, ProductSerializer
+    ActivitySerializer,
+    CRMDealerProfileSerializer, CRMStaffProfileSerializer, CRMCategorySerializer,
+    ManagerOrderSerializer, ManagerShortOrderSerializer,
+    CRMProductSerializer, CRMShortProductSerializer,
+    CRMBalancePlusSerializer, CRMBalancePlusCreateSerializer, CRMWalletSerializer, CRMWalletAmountSerializer
 )
 
 
@@ -32,8 +30,8 @@ class DealerViewSet(
     mixins.CreateModelMixin,
     viewsets.GenericViewSet
 ):
-    queryset = DealerProfile.objects.select_related("user", "city").all()
-    serializer_class = DealerProfileSerializer
+    queryset = DealerProfile.objects.select_related("user", "city", "price_city").all()
+    serializer_class = CRMDealerProfileSerializer
     pagination_class = ProfilePagination
     filter_backends = (SearchFilter, OrderingFilter)
     search_fields = ("name",)
@@ -44,14 +42,18 @@ class DealerViewSet(
     def get_queryset(self):
         return super().get_queryset().filter(city=self.request.user.staff_profile.city)
 
-    @extend_schema(responses={status.HTTP_200_OK: None, status.HTTP_404_NOT_FOUND: None}, request=None)
-    @action(methods=['PATCH'], detail=True, url_path='change-activity')
+    @query_debugger
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(responses={"200": ActivitySerializer, "404": None}, request=None)
+    @action(methods=['PATCH'], detail=True, url_path='change-activity', filter_backends=[])
     def change_user_activity(self, request, user_id):
         dealer_profile = self.get_object()
         user = dealer_profile.user
         user.is_active = not user.is_active
         user.save()
-        return Response(status=status.HTTP_200_OK)
+        return Response(ActivitySerializer(data={"active": user.is_active}, many=False).data)
 
 
 class WareHouseViewSet(
@@ -62,7 +64,7 @@ class WareHouseViewSet(
     viewsets.GenericViewSet
 ):
     queryset = StaffProfile.objects.select_related("user", "city").filter(user__status="warehouse")
-    serializer_class = StaffProfileSerializer
+    serializer_class = CRMStaffProfileSerializer
     pagination_class = ProfilePagination
     filter_backends = (OrderingFilter,)
     ordering_fields = ("user__date_joined",)
@@ -72,23 +74,29 @@ class WareHouseViewSet(
     def get_queryset(self):
         return super().get_queryset().filter(stock=self.request.user.staff_profile.stock)
 
-    @extend_schema(responses={status.HTTP_200_OK: None, status.HTTP_404_NOT_FOUND: None}, request=None)
-    @action(methods=['PATCH'], detail=True, url_path='change-activity')
+    @extend_schema(responses={"200": ActivitySerializer, "404": None}, request=None)
+    @action(methods=['PATCH'], detail=True, url_path='change-activity', filter_backends=[])
     def change_user_activity(self, request, user_id):
         warehouse_profile = self.get_object()
         user = warehouse_profile.user
         user.is_active = not user.is_active
         user.save()
-        return Response(status=status.HTTP_200_OK)
+        return Response(ActivitySerializer(data={"active": user.is_active}, many=False).data)
 
 
-class OrderViewSet(ManagerMixin, mixins.ListModelMixin, generics.GenericAPIView):
-    queryset = MyOrder.objects.all()
-    serializer_class = OrderSerializer
-    pagination_class = OrderPagination
+# Заказы:
+# sum тотал прайс
+# sum приход денег
+# sum отгруженных заказов
+
+class OrderViewSet(ManagerMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = MyOrder.objects.select_related("stock").all()
+    serializer_class = ManagerShortOrderSerializer
+    retrieve_serializer_class = ManagerOrderSerializer
+    pagination_class = AppPaginationClass
     filter_backends = (SearchFilter, OrderFilter, OrderingFilter)
     search_fields = ("name",)
-    ordering_fields = ("price", "created_at", "paid_at", "released_at")
+    ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
     lookup_field = "id"
     lookup_url_kwarg = "order_id"
 
@@ -96,39 +104,35 @@ class OrderViewSet(ManagerMixin, mixins.ListModelMixin, generics.GenericAPIView)
         return [*super().get_permissions(), OrderPermission()]
 
     def get_queryset(self):
-        return super().get_queryset().filter(author__city=self.request.user.staff_profile.city)
+        queryset = super().get_queryset().filter(author__city=self.request.user.staff_profile.city)
+        if self.detail:
+            return queryset.prefetch_related("receipts", "products")
+        return queryset.only("id", "name", "price", "status", "created_at", "paid_at", "released_at", "stock")
 
-    @extend_schema(responses={status.HTTP_200_OK: OrderReceiptSerializer(many=True)})
-    @action(methods=['GET'], detail=True, url_path="receipts")
-    def get_order_receipts(self, request, order_id):
-        receipts = OrderReceipt.objects.filter(order_id=order_id)
-        return Response(OrderReceiptSerializer(instance=receipts, many=True).data)
+    def get_serializer_class(self):
+        if self.detail:
+            return self.retrieve_serializer_class
+        return self.serializer_class
 
-    @extend_schema(responses={status.HTTP_200_OK: OrderProductSerializer(many=True)})
-    @action(methods=['GET'], detail=True, url_path="products")
-    def get_order_products(self, request, order_id):
-        products = OrderProduct.objects.filter(order_id=order_id)
-        return Response(OrderProductSerializer(instance=products).data)
-
-    @extend_schema(responses={status.HTTP_200_OK: None, status.HTTP_404_NOT_FOUND: None}, request=None)
-    @action(methods=['PATCH'], detail=True, url_path='change-activity')
+    @extend_schema(responses={"200": ActivitySerializer, "404": None}, request=None)
+    @action(methods=['PATCH'], detail=True, url_path='deactivate', filter_backends=[])
     def change_user_activity(self, request, order_id):
         order = self.get_object()
-        order.is_active = not order.is_active
+        order.is_active = False
         order.save()
-        return Response(status=status.HTTP_200_OK)
+        return Response(ActivitySerializer(data={"active": False}).data)
 
 
 class CategoryListAPIView(ManagerMixin, generics.ListAPIView):
     queryset = Category.objects.filter(is_active=True)
-    serializer_class = CategoryInventorySerializer
+    serializer_class = CRMCategorySerializer
     filter_backends = (SearchFilter,)
     search_fields = ("title", "slug")
 
 
 class CategoryProductListAPIView(ManagerMixin, generics.ListAPIView):
     queryset = AsiaProduct.objects.filter(is_active=True)
-    serializer_class = ShortProductSerializer
+    serializer_class = CRMShortProductSerializer
     lookup_field = 'category__slug'
     lookup_url_kwarg = 'category_slug'
 
@@ -138,103 +142,54 @@ class CategoryProductListAPIView(ManagerMixin, generics.ListAPIView):
 
 class ProductRetrieveAPIView(ManagerMixin, generics.RetrieveAPIView):
     queryset = AsiaProduct.objects.filter(is_active=True)
-    serializer_class = ProductSerializer
+    serializer_class = CRMProductSerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'product_id'
 
 
 class ManagerOrderCreateView(ManagerMixin, generics.CreateAPIView):
-    queryset = MyOrder.objects.all()
-    serializer_class = MangerOrderCreateSerializer
+    """
+    Создание заказа
+
+    В поле products_count необходимо отправлять объект где ключи это идентификатор продукта, а значением будет количесво
+    """
+    serializer_class = ManagerOrderSerializer
 
 
-class ManagerOrderDeactivateView(ManagerMixin, APIView):
-    def post(self, request):
-        order_id = request.data.get('order_id')
-        order = MyOrder.objects.filter(id=order_id).first()
-        response_data = MangerOrderCreateSerializer(order, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-class ManagerOrderListView(viewsets.ReadOnlyModelViewSet):
-    permission_classes = (IsAuthenticated,)
-    queryset = MyOrder.objects.all()
-    serializer_class = ManagerOrderDetailSerializer
+class WallerViewSet(ManagerMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = Wallet.objects.all()
+    serializer_class = CRMWalletSerializer
     pagination_class = AppPaginationClass
+    filter_backends = (WallerFilter,)
 
-    def get_queryset(self):
-        queryset = self.queryset.filter(author__city=self.request.user.staff_profile.city)
-        return queryset
-
-    def get_serializer_class(self):
-        if self.kwargs.get('pk'):
-            return ManagerOrderDetailSerializer
-        else:
-            return ManagerOrderListSerializer
-
-    @action(detail=False, methods=['get'])
-    def search(self, request, **kwargs):
-        queryset = self.get_queryset()
-        kwargs = {}
-        city = request.query_params.get('city')
-        o_status = request.query_params.get('status')
-
-        if city:
-            kwargs['stock__city__slug'] = city
-
-        if o_status:
-            kwargs['status'] = o_status
-
-        queryset = queryset.filter(**kwargs)
-
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-
-        return self.get_paginated_response(serializer)
+    @extend_schema(
+        responses={"200": CRMWalletAmountSerializer(many=False)},
+        filters=True,
+    )
+    @action(methods=['GET'], detail=False, url_path='total-amounts')
+    def get_wallet_amounts(self, request,):
+        queryset = self.filter_queryset(self.get_queryset())
+        return Response(
+            queryset.aggregate(
+                total_one_c=Sum('amount_1c', output_field=DecimalField(), default=Value(0.0)),
+                total_crm=Sum('amount_crm', output_field=DecimalField(), default=Value(0.0)),
+                total_paid=Sum('user__orders__price', filter=Q(user__orders__status="Оплачено"),
+                               default=Value(0.0))
+            )
+        )
 
 
-class ManagerBalancePlusView(ManagerMixin, APIView):
-    def post(self, request):
-        amount = request.data.get('amount')
-        files = request.FILES.getlist('files')
-        user_id = request.data.get('user_id')
-        user = MyUser.objects.filter(id=user_id).first()
-        dealer = user.dealer_profile
-        if amount and files:
-            # TODO: добавить синхронизацию с 1С
-            balance = BalancePlus.objects.create(dealer=dealer, amount=amount)
-            BalancePlusFile.objects.bulk_create([BalancePlusFile(balance=balance, file=i) for i in files])
-            return Response({'text': 'Завявка принята!'}, status=status.HTTP_200_OK)
-        return Response({'text': 'amount and files is required!'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CRMBalanceHistoryListView(ManagerMixin, viewsets.ReadOnlyModelViewSet):
+class BalanceHistoryViewSet(ManagerMixin, viewsets.ReadOnlyModelViewSet):
     queryset = BalancePlus.objects.all()
     serializer_class = CRMBalancePlusSerializer
+    parser_classes = (parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser)
     pagination_class = AppPaginationClass
+    filter_backends = (BalancePlusFilter,)
 
     def get_queryset(self):
         queryset = self.queryset.filter(dealer__city=self.request.user.staff_profile.city)
         return queryset
 
-    @action(detail=False, methods=['get'])
-    def search(self, request, **kwargs):
-        queryset = self.get_queryset()
-        kwargs = {}
-        price = request.query_params.get('start')
-        end = request.query_params.get('end')
-        is_success = request.query_params.get('is_success')
 
-        if price and end:
-            start_date = timezone.make_aware(datetime.datetime.strptime(price, "%d-%m-%Y"))
-            end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
-            kwargs['created_at__gte'] = start_date
-            kwargs['created_at__lte'] = end_date
-
-        if is_success:
-            kwargs['is_success'] = bool(int(is_success))
-
-        queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+class BalancePlusView(ManagerMixin, generics.CreateAPIView):
+    serializer_class = CRMBalancePlusCreateSerializer

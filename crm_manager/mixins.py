@@ -12,5 +12,5 @@ class ManagerMixin:
         context = super().get_serializer_context()
         staff_profile = self.request.user.staff_profile
         context.setdefault("city", staff_profile.city)
-        context.setdefault("stock_id", staff_profile.stock.id)
+        context.setdefault("stock", staff_profile.stock)
         return context
