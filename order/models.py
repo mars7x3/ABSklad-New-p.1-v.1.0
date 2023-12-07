@@ -25,7 +25,6 @@ class MyOrder(models.Model):
     gmail = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=100, blank=True, null=True)
     address = models.CharField(max_length=300, blank=True, null=True)
-    cash_box = models.ForeignKey(CashBox, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='orders')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
@@ -41,6 +40,14 @@ class MyOrder(models.Model):
 
     class Meta:
         ordering = ('-created_at',)
+
+
+class OrderMoney(models.Model):
+    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='order_receipts')
+    amount = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    cash_box = models.ForeignKey(CashBox, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
+    uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class OrderReceipt(models.Model):
