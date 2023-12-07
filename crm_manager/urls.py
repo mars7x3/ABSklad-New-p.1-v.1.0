@@ -4,25 +4,23 @@ from rest_framework.routers import SimpleRouter
 from crm_manager.views import (
     DealerViewSet, WareHouseViewSet, OrderViewSet,
     CategoryListAPIView, CategoryProductListAPIView, ProductRetrieveAPIView,
-    CRMBalanceHistoryListView, ManagerOrderListView, ManagerOrderCreateView, ManagerOrderDeactivateView,
-    ManagerBalancePlusView
+    BalanceHistoryViewSet, BalancePlusView, ManagerOrderCreateView, WallerViewSet
 )
 
 router = SimpleRouter()
 router.register("dealers", DealerViewSet)
 router.register("warehouses", WareHouseViewSet)
-router.register('balance/plus/list', CRMBalanceHistoryListView)
-router.register('order/list', ManagerOrderListView)
+router.register("orders", OrderViewSet)
+router.register('balances', WallerViewSet)
+router.register('balances/plus', BalanceHistoryViewSet)
 
 urlpatterns = [
-    path('category-inventories/', CategoryListAPIView.as_view(), name='crm_manager-categories-list'),
-    re_path('^categories/(?P<category_slug>.+)/product-inventories$', CategoryProductListAPIView.as_view(),
+    path('categories/', CategoryListAPIView.as_view(), name='crm_manager-categories-list'),
+    re_path('^categories/(?P<category_slug>.+)/products/$', CategoryProductListAPIView.as_view(),
             name='crm_manager-category-products-list'),
     re_path('^products/(?P<product_id>.+)/detail$', ProductRetrieveAPIView.as_view(),
             name="crm_manager-products-retrieve"),
-    path('order/create/', ManagerOrderCreateView.as_view()),  # manager order create
-    path('order/deactivate/', ManagerOrderDeactivateView.as_view()),  # manager order deactivate
-
-    path('balance/plus/create/', ManagerBalancePlusView.as_view()),
+    path('balance/plus/', BalancePlusView.as_view(), name="crm_manager-dealer-balance-plus"),
     path('', include(router.urls)),
+    path('order/create/', ManagerOrderCreateView.as_view()),  # manager order create
 ]

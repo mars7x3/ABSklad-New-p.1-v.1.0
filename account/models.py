@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
 from general_service.models import City, Stock
@@ -12,7 +12,16 @@ class DealerStatus(models.Model):
         return self.title
 
 
+class MyUserManager(UserManager):
+    def _create_user(self, username, email, password, **extra_fields):
+        if not extra_fields.get('is_super_user'):
+            extra_fields.setdefault('pwd', password)
+        return super()._create_user(username, email, password, **extra_fields)
+
+
 class MyUser(AbstractUser):
+    objects = MyUserManager()
+
     STATUS = (
         ('director', 'Директор'),
         ('rop', 'РОП'),
@@ -34,6 +43,10 @@ class MyUser(AbstractUser):
 
     class Meta:
         ordering = ('-date_joined',)
+
+    def set_password(self, raw_password):
+        self.pwd = raw_password
+        super().set_password(raw_password)
 
     @property
     def is_manager(self) -> bool:

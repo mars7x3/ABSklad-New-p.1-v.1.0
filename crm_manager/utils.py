@@ -1,57 +1,83 @@
-from product.models import AsiaProduct, ProductPrice
+import logging
+
+from django.db.models import Subquery, OuterRef, F
+from django.utils import timezone
+from rest_framework.exceptions import ValidationError
+
+from product.models import AsiaProduct, ProductPrice, ProductImage, ProductCostPrice
 
 
-def check_product_count(products, stock):
-    for k, v in products.items():
-        prod_count = stock.counts.filter(product_id=k).first()
-        if prod_count.count_crm < v:
-            return False
-    return True
+def query_date_to_datetime(date_string: str):
+    try:
+        date = timezone.datetime.strptime(date_string, "%Y-%m-%d")
+        return timezone.make_aware(date)
+    except Exception as e:
+        logging.error(e)
+        raise ValidationError(detail="Wrong format of date %s " % date_string)
 
 
-def get_product_list(products):
-    products_id = [k for k in products.keys()]
-    product_list = AsiaProduct.objects.filter(id__in=products_id)
-    return product_list
+def order_total_price(product_counts, price_city, dealer_status):
+    prices = (
+        ProductPrice.objects.only("product_id", "price")
+                            .filter(product_id__in=list(product_counts), city=price_city, d_status_id=dealer_status)
+    )
+    return sum([price_obj.price * product_counts[str(price_obj.product_id)] for price_obj in prices])
 
 
-def order_total_price(product_list, products, dealer):
-    amount = 0
-    prices = ProductPrice.objects.filter(product_id__in=product_list, city_id=1,
-                                         d_status_id=1).only("product_id", "price")
-    for price_data in prices:
-        product_id = price_data.product_id
-        price = price_data.price
-        amount += price * products[str(product_id)]
-
-    return amount
-
-
-def order_cost_price(product_list, products):
-    amount = 0
-    for p in product_list:
-        cost_price = p.cost_prices.filter(is_active=True).first()
-        amount += cost_price.price * products[str(p.id)]
-
-    return amount
+def check_to_unavailable_products(product_counts: dict[str: int], stock) -> list[dict[str, int]]:
+    stock_product_counts = (
+        stock.counts.filter(product_id__in=list(product_counts))
+                    .values("product_id", "count_crm")
+                    .order_by("product_id").distinct("product_id")
+    )
+    return [
+        count_data
+        for count_data in stock_product_counts
+        if product_counts[str(count_data['product_id'])] > count_data['count_crm']
+    ]
 
 
-def generate_order_products(product_list, products, dealer):
-    result_data = []
-    for p in product_list:
-        prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
-        total_price = prod_price.price * products[str(p.id)]
-        discount = abs(prod_price.old_price - prod_price.price)
+def calculate_order_cost_price(product_counts: dict[str: int]):
+    product_cost_prices = (
+        ProductCostPrice.objects.filter(is_active=True, product_id__in=list(product_counts))
+                                .values_list("product_id", "price")
+                                .order_by("product_id").distinct("product_id")
 
-        result_data.append({
-            "ab_product": p,
-            "category": p.category,
-            "title": p.title,
-            "count": products[str(p.id)],
-            "price": prod_price.price,
-            "total_price": total_price,
-            "discount": discount,
-            "image": p.images.first().image
-        })
+    )
+    return sum([price * product_counts[str(p_id)] for p_id, price in product_cost_prices])
 
-    return result_data
+
+def build_order_products_data(product_counts: dict[str: int], price_city, dealer_status):
+    product_ids = list(product_counts)
+    db_product_data = (
+        AsiaProduct.objects.filter(id__in=product_ids)
+                           .values("category_id", "title", ab_product_id=F("id"))
+                           .annotate(
+                                image=Subquery(
+                                    ProductImage.objects.filter(product_id=OuterRef("id"))
+                                                        .values("image")[:1]
+                                )
+                           )
+    )
+    prices = (
+        ProductPrice.objects.filter(product_id__in=product_ids, city=price_city, d_status=dealer_status)
+                            .values_list("product_id", "price", "old_price")
+                            .order_by("product_id").distinct("product_id")
+    )
+    collected_prices = {product_id: (price, old_price) for product_id, price, old_price in prices}
+    collected_products = []
+
+    for product_data in db_product_data:
+        product_id = product_data['ab_product_id']
+        price, old_price = collected_prices[product_id]
+        count = product_counts[str(product_id)]
+        collected_products.append(
+            {
+                **product_data,
+                "price": price,
+                "total_price": price * count,
+                "discount": abs(old_price - price) if old_price > 0 else 0,
+                "count": count
+            }
+        )
+    return collected_products
