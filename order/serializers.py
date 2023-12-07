@@ -88,7 +88,6 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
         data['author'] = dealer
         data['name'] = dealer.name
         data['gmail'] = user.email
-        data['cash_box'] = data['stock'].cash_box
         data['cost_price'] = order_cost_price(product_list, products)
         data['products'] = generate_order_products(product_list, products, dealer)
 
