@@ -1,13 +1,14 @@
 
 from rest_framework import serializers
 
-from .models import *
-from product.models import AsiaProduct, ProductImage, ProductPrice
+from account.models import MyUser
+from product.models import AsiaProduct, ProductImage
+from promotion.models import TargetPresent, Target, Story
 
 
-class StoryListSerializer(serializers.ModelSerializer):
+class StaffListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Story
+        model = MyUser
         fields = ('id', 'image')
 
 
@@ -26,23 +27,15 @@ class StoryDetailSerializer(serializers.ModelSerializer):
 class StoryProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'description', 'avg_rating', 'reviews_count', 'title')
+        fields = ('id', 'description', 'avg_rating', 'reviews_count')
 
     def to_representation(self, instance):
         user = self.context.get('request').user
         rep = super().to_representation(instance)
-        rep['images'] = StoryProductImageSerializer([instance.images.first()], many=True, context=self.context).data
-        rep['price_info'] = StoryProductPriceSerializer(instance.prices.filter(city=user.dealer_profile.price_city,
-                                                   d_status=user.dealer_profile.dealer_status).first(),
-                                                   context=self.context).data
+        rep['images'] = StoryProductImageSerializer(instance.images.first(), context=self.context).data
+        rep['price'] = instance.prices.filter(city=user.dealer_profile.price_city,
+                                              d_status=user.dealer_profile.dealer_status).first().price
         return rep
-
-
-class StoryProductPriceSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = ProductPrice
-        fields = ('price', 'old_price', 'discount', 'discount_status')
 
 
 class StoryProductImageSerializer(serializers.ModelSerializer):

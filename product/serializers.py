@@ -47,11 +47,9 @@ class CollectionListSerializer(serializers.ModelSerializer):
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-    avg_rating = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
-
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'collection', 'avg_rating', 'reviews_count')
+        fields = ('id', 'title', 'collection', 'avg_rating', 'reviews_count', 'description')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -93,8 +91,6 @@ class ProductCountSerializer(serializers.ModelSerializer):
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
-    avg_rating = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False)
-
     class Meta:
         model = AsiaProduct
         exclude = ('is_active', 'is_show', 'is_hit', 'uid', 'created_at', 'updated_at', 'collection')

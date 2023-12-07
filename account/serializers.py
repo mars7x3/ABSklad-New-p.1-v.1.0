@@ -81,8 +81,6 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class BalancePlusSerializer(serializers.ModelSerializer):
-    amount = serializers.DecimalField(max_digits=100, decimal_places=2, coerce_to_string=False)
-
     class Meta:
         model = BalancePlus
         fields = '__all__'
