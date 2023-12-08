@@ -11,11 +11,11 @@ from order.db_request import query_debugger
 from order.models import MyOrder
 from product.models import Category, AsiaProduct
 
+from crm_general.serializers import ActivitySerializer
 from crm_manager.filters import OrderFilter, BalancePlusFilter, WallerFilter
 from crm_manager.paginations import ProfilePagination, AppPaginationClass
 from crm_manager.permissions import OrderPermission
 from crm_manager.serializers import (
-    ActivitySerializer,
     CRMDealerProfileSerializer, CRMWareHouseProfileSerializer, CRMCategorySerializer,
     ManagerOrderSerializer, ManagerShortOrderSerializer,
     CRMProductSerializer, CRMShortProductSerializer,
