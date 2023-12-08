@@ -2,16 +2,28 @@ from django.db import transaction
 from django.db.models import Sum, Q
 from rest_framework import serializers
 
-from account.models import MyUser, DealerProfile, StaffProfile, BalancePlusFile, BalancePlus, Wallet
+from account.models import MyUser, DealerProfile, WarehouseProfile, BalancePlusFile, BalancePlus, Wallet
 from crm_general.serializers import BaseProfileSerializer
-from crm_manager.utils import (
-    order_total_price, build_order_products_data, calculate_order_cost_price, check_to_unavailable_products
-)
 from general_service.models import Stock
 from general_service.serializers import CitySerializer
 from order.models import MyOrder, OrderReceipt, OrderProduct
 from order.tasks import create_order_notification
 from product.models import Category, AsiaProduct, ProductImage, ProductPrice, ProductCount, ProductSize
+
+from .utils import (
+    order_total_price, build_order_products_data, calculate_order_cost_price, check_to_unavailable_products
+)
+
+
+class CRMStockSerializer(serializers.ModelSerializer):
+    city = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Stock
+        exclude = ('is_show', 'is_active', 'uid')
+
+    def get_city(self, instance):
+        return instance.city.title
 
 
 class CRMDealerProfileSerializer(BaseProfileSerializer):
@@ -20,27 +32,41 @@ class CRMDealerProfileSerializer(BaseProfileSerializer):
 
     class Meta:
         model = DealerProfile
-        fields = ('user', 'name', 'city', 'dealer_status', 'phone', 'liability', 'price_city')
+        fields = ('user', 'dealer_status', 'liability', 'city', 'price_city')
         user_status = "dealer"
 
     def validate(self, attrs):
-        attrs['city'] = self.context['request'].user.staff_profile.city
-        attrs['price_city'] = self.context['request'].user.staff_profile.city
+        attrs['city'] = self.context['manager_profile'].city
+        attrs['price_city'] = self.context['manager_profile'].city
         return attrs
 
 
 class CRMWareHouseProfileSerializer(BaseProfileSerializer):
     city = CitySerializer(many=False, read_only=True)
+    stock = CRMStockSerializer(many=False, read_only=True)
+    stock_id = serializers.PrimaryKeyRelatedField(
+        queryset=Stock.objects.filter(is_active=True),
+        write_only=True,
+        required=True
+    )
 
     class Meta:
-        model = StaffProfile
-        fields = ("user", "name", "city", "phone")
+        model = WarehouseProfile
+        fields = ("user", "city", "stock", "stock_id")
         user_status = "warehouse"
 
     def validate(self, attrs):
-        user = self.context['request'].user
-        attrs['city'] = user.staff_profile.city
-        attrs['stock'] = user.staff_profile.stock
+        manager_profile = self.context['manager_profile']
+
+        stock = attrs.pop("stock_id", None)
+        if stock:
+            if not Stock.objects.filter(city=manager_profile.city, id=stock.id).exists():
+                raise serializers.ValidationError({"stock_id": "Не найден или не доступен!"})
+
+            attrs['stock'] = stock
+
+        attrs['city'] = manager_profile.city
+
         return attrs
 
 
@@ -140,7 +166,7 @@ class CRMProductSerializer(CRMShortProductSerializer):
         model = AsiaProduct
         fields = ("id", "uid", "vendor_code", "title", "description", "is_active", "video_link", "made_in",
                   "guarantee", "weight", "package_count", "avg_rating", "reviews_count", "created_at", "updated_at",
-                  "collection", "category",  "counts", "sizes", "images", "prices")
+                  "collection", "category", "counts", "sizes", "images", "prices")
 
     def get_prices(self, instance) -> list[CRMProductPriceSerializer]:
         city = self.context.get('city')
@@ -161,17 +187,6 @@ class CRMOrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderProduct
         exclude = ('id', 'order', 'category', 'ab_product', 'discount')
-
-
-class CRMStockSerializer(serializers.ModelSerializer):
-    city = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = Stock
-        exclude = ('is_show', 'is_active', 'uid')
-
-    def get_city(self, instance):
-        return instance.city.title
 
 
 class ManagerOrderSerializer(serializers.ModelSerializer):

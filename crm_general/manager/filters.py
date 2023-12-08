@@ -1,10 +1,10 @@
-import coreschema
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from rest_framework.filters import BaseFilterBackend
 
-from crm_manager.utils import query_date_to_datetime
 from order.models import MyOrder
+
+from .utils import query_date_to_datetime
 
 
 class OrderFilter(BaseFilterBackend):
@@ -194,6 +194,40 @@ class WallerFilter(BaseFilterBackend):
                 filters['user__user__is_active'] = True
             case "false":
                 filters["user__user__is_active"] = False
+        return filters
+
+    def filter_queryset(self, request, queryset, view):
+        filters = self.get_filters(request)
+        if filters:
+            return queryset.filter(**filters)
+        return queryset
+
+    def get_schema_operation_parameters(self, view):
+        return [
+            {
+                'name': self.active_param,
+                'required': False,
+                'in': 'query',
+                'description': force_str(self.active_description),
+                'schema': {
+                    'type': 'boolean'
+                }
+            }
+        ]
+
+
+class StockFilter(BaseFilterBackend):
+    active_param = "active"
+    active_description = _("Filter active or deactivated stocks")
+
+    def get_filters(self, request):
+        filters = {}
+        active = request.query_params.get(self.active_param, "")
+        match active.lower():
+            case "true":
+                filters['is_active'] = True
+            case "false":
+                filters["is_active"] = False
         return filters
 
     def filter_queryset(self, request, queryset, view):
