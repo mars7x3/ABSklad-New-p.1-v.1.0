@@ -23,11 +23,11 @@ class MyUser(AbstractUser):
     objects = MyUserManager()
 
     STATUS = (
-        ('director', 'Директор'),
+        ('director', 'Директор'),  # has no profile
         ('rop', 'РОП'),
         ('manager', 'Менеджер'),
-        ('marketer', 'Маркетолог'),
-        ('accountant', 'Бухгалтер'),
+        ('marketer', 'Маркетолог'),  # has no profile
+        ('accountant', 'Бухгалтер'),  # has no profile
         ('dealer', 'Дилер'),
         ('warehouse', 'Зав. Склад'),
         ('dealer_1c', 'dealer_1c'),
@@ -37,6 +37,11 @@ class MyUser(AbstractUser):
     status = models.CharField(choices=STATUS, max_length=20, blank=True, null=True)
     uid = models.CharField(max_length=40, default='00000000-0000-0000-0000-000000000000')
     pwd = models.CharField(max_length=40, blank=True, null=True)
+
+    name = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='users', blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'{self.id}.{self.email or self.username}'
@@ -56,22 +61,30 @@ class MyUser(AbstractUser):
     def is_dealer(self) -> bool:
         return self.status == 'dealer'
 
+    @property
+    def is_rop(self) -> bool:
+        return self.status == 'rop'
 
-class StaffProfile(models.Model):
-    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='staff_profile')
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True, related_name='staff_profiles')
-    stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, blank=True, null=True, related_name='staff_profiles')
-    name = models.CharField(max_length=50, blank=True, null=True)
-    phone = models.CharField(max_length=50, blank=True, null=True)
+
+class RopProfile(models.Model):
+    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='rop_profile')
+    cities = models.ManyToManyField(City, related_name='rop_profiles')
+
+
+class ManagerProfile(models.Model):
+    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='manager_profile')
+    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, related_name='manager_profiles')
+
+
+class WarehouseProfile(models.Model):
+    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='warehouse_profile')
+    stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='warehouse_profiles')
 
 
 class DealerProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='dealer_profile')
     city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True, related_name='dealer_profiles')
-    name = models.CharField(max_length=50, blank=True, null=True)
     address = models.CharField(max_length=300, blank=True, null=True)
-    image = models.ImageField(upload_to='dealer_avatar', blank=True, null=True)
-    phone = models.CharField(max_length=50, blank=True, null=True)
     dealer_status = models.ForeignKey(DealerStatus, on_delete=models.SET_NULL, blank=True, null=True,
                                       related_name='dealer_profiles')
     liability = models.PositiveIntegerField(default=0)

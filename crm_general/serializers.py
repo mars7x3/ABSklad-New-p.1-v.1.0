@@ -79,7 +79,8 @@ class CRMUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ("id", "username", "email", "date_joined", "is_active", "pwd", "password")
+        fields = ("id", "username", "email", "name", "image", "phone", "date_joined", "updated_at", "is_active",
+                  "pwd", "password")
         read_only_fields = ("id", "pwd", "date_joined", "is_active")
 
     def validate(self, attrs):
@@ -107,8 +108,6 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
-        print(user_data)
-        print(self._user_status)
         validated_data['user'] = MyUser.objects.create_user(status=self._user_status, **user_data)
         # calling this method `create` should not return an error.
         # Therefore, the validation must be perfect,
