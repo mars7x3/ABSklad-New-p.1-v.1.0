@@ -137,4 +137,3 @@ class FilterMaxMin(models.Model):
     max_price = models.PositiveIntegerField(default=0)
     min_price = models.PositiveIntegerField(default=0)
 
-

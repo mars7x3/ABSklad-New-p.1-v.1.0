@@ -63,7 +63,7 @@ class StaffCRUDView(viewsets.ModelViewSet):
 
 
 class StockCRUDView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDirector]
     queryset = Stock.objects.all()
     serializer_class = StockCRUDSerializer
 
