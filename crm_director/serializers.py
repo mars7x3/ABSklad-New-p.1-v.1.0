@@ -2,6 +2,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from account.models import StaffProfile, MyUser, DealerProfile
+from crm_director.utils import prod_total_amount_crm
 from general_service.models import Stock
 
 
@@ -50,4 +51,11 @@ class StockCRUDSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['city'] = instance.city.title if instance.city else 'Нет города'
+        rep['warehouses'] = StaffProfileSerializer(StaffProfile.objects.filter(stock=instance), many=True,
+                                                   context=self.context).data
+        rep['prod_count_1c'] = sum(instance.counts.only('count_1c').values_list('count_1c', flat=True))
+        rep['prod_amount_1c'] = prod_total_amount_crm(instance)
+        rep['prod_count_crm'] = sum(instance.counts.only('count_crm').values_list('count_crm', flat=True))
+        rep['prod_amount_crm'] = prod_total_amount_crm(instance)
+
         return rep
