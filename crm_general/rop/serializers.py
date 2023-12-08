@@ -28,3 +28,5 @@ class RopManagerSerializer(BaseProfileSerializer):
             attrs['city'] = city
         return attrs
 
+
+

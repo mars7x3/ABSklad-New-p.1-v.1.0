@@ -89,3 +89,7 @@ class DateRangeFilterMixin:
                 }
             }
         ] + super().get_schema_operation_parameters(view)
+
+
+class ActiveFilter(ActiveFilterMixin, BaseFilter):
+    pass

@@ -1,12 +1,28 @@
-from rest_framework import views, viewsets
+from rest_framework import viewsets, generics
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from account.models import ManagerProfile
-from crm_general.paginations import ProfilePagination
-from .filters import ManagerFilter
+from general_service.models import Stock
 
+from product.models import Category
+
+from crm_general.filters import ActiveFilter
+from crm_general.paginations import ProfilePagination
+from crm_general.serializers import CRMCategorySerializer, CRMStockSerializer
+
+from .filters import ManagerFilter
 from .mixins import RopMixin
 from .serializers import RopManagerSerializer
+
+
+class ManagerStockView(RopMixin, generics.ListAPIView):
+    queryset = Stock.objects.all()
+    serializer_class = CRMStockSerializer
+    filter_backends = (ActiveFilter, SearchFilter)
+    search_fields = ("address",)
+
+    def get_queryset(self):
+        return self.queryset.filter(city=self.manager_profile.city)
 
 
 class ManagerRopViewSet(RopMixin, viewsets.ModelViewSet):
@@ -21,3 +37,11 @@ class ManagerRopViewSet(RopMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         return super().get_queryset().filter(city__in=self.rop_profile.cities)
+
+
+class CategoryRopView(RopMixin, generics.ListAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CRMCategorySerializer
+    filter_backends = (SearchFilter,)
+    search_fields = ("title", "slug")
+

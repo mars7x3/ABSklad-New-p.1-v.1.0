@@ -70,6 +70,3 @@ class BalancePlusFilter(ActiveFilterMixin, DateRangeFilterMixin, BaseFilter):
 class WallerFilter(ActiveFilterMixin, BaseFilter):
     active_field = "user__user__is_active"
 
-
-class StockFilter(ActiveFilterMixin, BaseFilter):
-    pass

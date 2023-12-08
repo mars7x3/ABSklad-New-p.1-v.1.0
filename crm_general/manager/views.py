@@ -11,18 +11,18 @@ from order.db_request import query_debugger
 from order.models import MyOrder
 from product.models import Category, AsiaProduct
 
-from crm_general.serializers import ActivitySerializer
-from crm_general.paginations import AppPaginationClass, ProfilePagination
+from crm_general.filters import ActiveFilter
+from crm_general.paginations import ProfilePagination
+from crm_general.serializers import ActivitySerializer, CRMCategorySerializer, CRMStockSerializer
 
-from .filters import OrderFilter, BalancePlusFilter, WallerFilter, StockFilter
+from .filters import OrderFilter, BalancePlusFilter, WallerFilter
 from .mixins import ManagerMixin
 from .permissions import ManagerOrderPermission
 from .serializers import (
-    CRMDealerProfileSerializer, CRMWareHouseProfileSerializer, CRMCategorySerializer,
+    CRMDealerProfileSerializer, CRMWareHouseProfileSerializer,
     ManagerOrderSerializer, ManagerShortOrderSerializer,
     CRMProductSerializer, CRMShortProductSerializer,
-    CRMBalancePlusSerializer, CRMBalancePlusCreateSerializer, CRMWalletSerializer, CRMWalletAmountSerializer,
-    CRMStockSerializer
+    CRMBalancePlusSerializer, CRMBalancePlusCreateSerializer, CRMWalletSerializer, CRMWalletAmountSerializer
 )
 
 
@@ -92,7 +92,6 @@ class OrderManagerViewSet(ManagerMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MyOrder.objects.select_related("stock").all()
     serializer_class = ManagerShortOrderSerializer
     retrieve_serializer_class = ManagerOrderSerializer
-    pagination_class = AppPaginationClass
     filter_backends = (SearchFilter, OrderFilter, OrderingFilter)
     search_fields = ("name",)
     ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
@@ -158,7 +157,6 @@ class OrderManagerCreateView(ManagerMixin, generics.CreateAPIView):
 class WalletManagerViewSet(ManagerMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Wallet.objects.all()
     serializer_class = CRMWalletSerializer
-    pagination_class = AppPaginationClass
     filter_backends = (WallerFilter,)
 
     @extend_schema(
@@ -182,7 +180,6 @@ class BalanceHistoryManagerViewSet(ManagerMixin, viewsets.ReadOnlyModelViewSet):
     queryset = BalancePlus.objects.all()
     serializer_class = CRMBalancePlusSerializer
     parser_classes = (parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser)
-    pagination_class = AppPaginationClass
     filter_backends = (BalancePlusFilter,)
 
     def get_queryset(self):
@@ -196,8 +193,7 @@ class BalancePlusManagerView(ManagerMixin, generics.CreateAPIView):
 class ManagerStockView(ManagerMixin, generics.ListAPIView):
     queryset = Stock.objects.all()
     serializer_class = CRMStockSerializer
-    pagination_class = AppPaginationClass
-    filter_backends = (StockFilter, SearchFilter)
+    filter_backends = (ActiveFilter, SearchFilter)
     search_fields = ("address",)
 
     def get_queryset(self):

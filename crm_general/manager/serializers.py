@@ -1,9 +1,9 @@
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Sum
 from rest_framework import serializers
 
 from account.models import MyUser, DealerProfile, WarehouseProfile, BalancePlusFile, BalancePlus, Wallet
-from crm_general.serializers import BaseProfileSerializer
+from crm_general.serializers import BaseProfileSerializer, CRMStockSerializer
 from general_service.models import Stock
 from general_service.serializers import CitySerializer
 from order.models import MyOrder, OrderReceipt, OrderProduct
@@ -13,17 +13,6 @@ from product.models import Category, AsiaProduct, ProductImage, ProductPrice, Pr
 from .utils import (
     order_total_price, build_order_products_data, calculate_order_cost_price, check_to_unavailable_products
 )
-
-
-class CRMStockSerializer(serializers.ModelSerializer):
-    city = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = Stock
-        exclude = ('is_show', 'is_active', 'uid')
-
-    def get_city(self, instance):
-        return instance.city.title
 
 
 class CRMDealerProfileSerializer(BaseProfileSerializer):
@@ -68,43 +57,6 @@ class CRMWareHouseProfileSerializer(BaseProfileSerializer):
         attrs['city'] = manager_profile.city
 
         return attrs
-
-
-class CRMCategorySerializer(serializers.ModelSerializer):
-    crm_count = serializers.SerializerMethodField(read_only=True)
-    orders_count = serializers.SerializerMethodField(read_only=True)
-    count_1c = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = Category
-        fields = ("slug", "title", "is_active", "uid", "image", "crm_count", "orders_count", "count_1c")
-
-    def get_stock(self):
-        return self.context.get("stock", None)
-
-    def get_crm_count(self, instance) -> int:
-        stock = self.get_stock()
-        return sum(
-            instance.products.annotate(
-                counts_sum=Sum("counts__count", filter=Q(counts__stock_id=stock.id) if stock else None)
-            ).values_list('counts_sum', flat=True)
-        )
-
-    def get_orders_count(self, instance) -> int:
-        stock = self.get_stock()
-        return sum(
-            instance.products.annotate(
-                orders_count=Sum('order_products__count',
-                                 filter=Q(
-                                     order_products__order__is_active=True,
-                                     order_products__order__status="Оплачено",
-                                     order_products__order__stock_id=stock.id,
-                                 ) if stock else None)
-            ).values_list("orders_count", flat=True)
-        )
-
-    def get_count_1c(self, instance) -> int:
-        return self.get_crm_count(instance) + self.get_orders_count(instance)
 
 
 class CRMProductCountSerializer(serializers.ModelSerializer):

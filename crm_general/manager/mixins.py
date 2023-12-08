@@ -16,4 +16,5 @@ class ManagerMixin:
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context.setdefault("manager_profile", self.manager_profile)
+        context.setdefault("stock_ids", [self.manager_profile.stock_id])
         return context
