@@ -1,6 +1,6 @@
 from django.db.models import Sum, DecimalField, Q, Value
 from drf_spectacular.utils import extend_schema
-from rest_framework import viewsets, generics, mixins, parsers, status
+from rest_framework import viewsets, generics, mixins, parsers
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
@@ -16,7 +16,7 @@ from crm_manager.paginations import ProfilePagination, AppPaginationClass
 from crm_manager.permissions import OrderPermission
 from crm_manager.serializers import (
     ActivitySerializer,
-    CRMDealerProfileSerializer, CRMStaffProfileSerializer, CRMCategorySerializer,
+    CRMDealerProfileSerializer, CRMWareHouseProfileSerializer, CRMCategorySerializer,
     ManagerOrderSerializer, ManagerShortOrderSerializer,
     CRMProductSerializer, CRMShortProductSerializer,
     CRMBalancePlusSerializer, CRMBalancePlusCreateSerializer, CRMWalletSerializer, CRMWalletAmountSerializer
@@ -64,7 +64,7 @@ class WareHouseViewSet(
     viewsets.GenericViewSet
 ):
     queryset = StaffProfile.objects.select_related("user", "city").filter(user__status="warehouse")
-    serializer_class = CRMStaffProfileSerializer
+    serializer_class = CRMWareHouseProfileSerializer
     pagination_class = ProfilePagination
     filter_backends = (OrderingFilter,)
     ordering_fields = ("user__date_joined",)

@@ -83,7 +83,7 @@ class CRMDealerProfileSerializer(BaseProfileSerializer):
         return attrs
 
 
-class CRMStaffProfileSerializer(BaseProfileSerializer):
+class CRMWareHouseProfileSerializer(BaseProfileSerializer):
     city = CitySerializer(many=False, read_only=True)
 
     class Meta:
