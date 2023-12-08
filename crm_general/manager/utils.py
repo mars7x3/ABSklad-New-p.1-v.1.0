@@ -1,19 +1,6 @@
-import logging
-
 from django.db.models import Subquery, OuterRef, F
-from django.utils import timezone
-from rest_framework.exceptions import ValidationError
 
 from product.models import AsiaProduct, ProductPrice, ProductImage, ProductCostPrice
-
-
-def query_date_to_datetime(date_string: str):
-    try:
-        date = timezone.datetime.strptime(date_string, "%Y-%m-%d")
-        return timezone.make_aware(date)
-    except Exception as e:
-        logging.error(e)
-        raise ValidationError(detail="Wrong format of date %s " % date_string)
 
 
 def order_total_price(product_counts, price_city, dealer_status):

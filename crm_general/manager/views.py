@@ -37,8 +37,8 @@ class DealerManagerViewSet(
     serializer_class = CRMDealerProfileSerializer
     pagination_class = ProfilePagination
     filter_backends = (SearchFilter, OrderingFilter)
-    search_fields = ("name",)
-    ordering_fields = ("name", "user__date_joined")
+    search_fields = ("user__name",)
+    ordering_fields = ("user__name", "user__date_joined")
     lookup_field = 'user_id'
     lookup_url_kwarg = 'user_id'
 
@@ -69,8 +69,9 @@ class WareHouseManagerViewSet(
     queryset = WarehouseProfile.objects.select_related("user", "city", "stock")
     serializer_class = CRMWareHouseProfileSerializer
     pagination_class = ProfilePagination
-    filter_backends = (OrderingFilter,)
-    ordering_fields = ("user__date_joined",)
+    filter_backends = (SearchFilter, OrderingFilter,)
+    search_fields = ("user__name",)
+    ordering_fields = ("user__name", "user__date_joined",)
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
 

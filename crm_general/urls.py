@@ -7,6 +7,9 @@ from .manager.views import (
     BalanceHistoryManagerViewSet, BalancePlusManagerView, WalletManagerViewSet, OrderManagerCreateView,
     ManagerStockView
 )
+from .rop.views import (
+    ManagerRopViewSet
+)
 
 manager_router = SimpleRouter()
 manager_router.register("dealers", DealerManagerViewSet)
@@ -27,5 +30,13 @@ manager_urlpatterns = [
     path('manager/order/create/', OrderManagerCreateView.as_view(), name="crm_general-manager-order-create"),
 ]
 
+rop_router = SimpleRouter()
+rop_router.register("managers", ManagerRopViewSet)
+
+
+rop_urlpatterns = [
+    path('rop/', include(rop_router.urls)),
+]
+
 # + some_urlpatterns
-urlpatterns = manager_urlpatterns
+urlpatterns = manager_urlpatterns + rop_urlpatterns

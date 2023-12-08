@@ -225,7 +225,7 @@ class ManagerOrderSerializer(serializers.ModelSerializer):
         if user:
             dealer = user.dealer_profile
             attrs['author'] = dealer
-            attrs['name'] = dealer.name
+            attrs['name'] = user.name
             attrs['gmail'] = user.email
         else:
             dealer = self.instance.author
