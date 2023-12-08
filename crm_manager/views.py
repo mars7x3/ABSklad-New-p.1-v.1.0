@@ -12,8 +12,9 @@ from order.models import MyOrder
 from product.models import Category, AsiaProduct
 
 from crm_general.serializers import ActivitySerializer
+from crm_general.paginations import ProfilePagination
 from crm_manager.filters import OrderFilter, BalancePlusFilter, WallerFilter
-from crm_manager.paginations import ProfilePagination, AppPaginationClass
+from crm_manager.paginations import AppPaginationClass
 from crm_manager.permissions import OrderPermission
 from crm_manager.serializers import (
     CRMDealerProfileSerializer, CRMWareHouseProfileSerializer, CRMCategorySerializer,
