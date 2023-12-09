@@ -70,6 +70,8 @@ class ProductCostPrice(models.Model):
 
 
 class ProductPrice(models.Model):
+    objects = models.Manager()
+
     STATUS = (
         ('Per', 'Per'),
         ('Sum', 'Sum'),

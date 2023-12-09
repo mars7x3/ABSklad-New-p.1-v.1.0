@@ -11,6 +11,15 @@ from .rop.views import (
     ManagerRopViewSet
 )
 
+from .director.views import *
+
+director_router = SimpleRouter()
+director_router.register("director/staff/crud", StaffCRUDView)
+director_router.register("director/stock/crud", StockCRUDView)
+director_urlpatterns = [
+    path('', include(director_router.urls)),
+]
+
 manager_router = SimpleRouter()
 manager_router.register("dealers", DealerManagerViewSet)
 manager_router.register("warehouses", WalletManagerViewSet)
@@ -39,4 +48,6 @@ rop_urlpatterns = [
 ]
 
 # + some_urlpatterns
-urlpatterns = manager_urlpatterns + rop_urlpatterns
+urlpatterns = manager_urlpatterns + rop_urlpatterns + director_urlpatterns
+
+

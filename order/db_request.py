@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from django.db import connection, reset_queries
 import time
 import functools
@@ -16,6 +18,7 @@ def query_debugger(func):
 
         end_queries = len(connection.queries)
 
+        pprint(connection.queries)
         print(f"Function : {func.__name__}")
         print(f"Number of Queries : {end_queries - start_queries}")
         print(f"Finished in : {(end - start):.2f}s")
