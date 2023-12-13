@@ -1,4 +1,4 @@
-
+from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers
 from django.db import transaction
 
@@ -52,9 +52,18 @@ class StockSerializer(serializers.ModelSerializer):
 
 
 class MyOrderCreateSerializer(serializers.ModelSerializer):
+    products = serializers.DictField(
+        child=serializers.IntegerField(min_value=1),
+        write_only=True,
+        required=True,
+        allow_empty=False
+    )
+
     class Meta:
         model = MyOrder
         exclude = ('cost_price', 'is_active', 'uid', 'updated_at', 'author')
+        read_only_fields = ('name', 'gmail', 'phone', 'address', 'price',   "status", "comment", "released_at",
+                            "paid_at", "products")
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -66,7 +75,7 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        products = request.data.get('products')
+        products = request.data.pop('products')
         user = request.user
         dealer = user.dealer_profile
 
@@ -82,7 +91,7 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'text': 'У вас недостаточно средств на балансе!'})
 
         data['author'] = dealer
-        data['name'] = dealer.name
+        data['name'] = dealer.user.name
         data['gmail'] = user.email
         data['cost_price'] = order_cost_price(product_list, products)
         data['products'] = generate_order_products(product_list, products, dealer)
@@ -145,3 +154,70 @@ class CartProductCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCount
         fields = ('stock', 'count_crm', 'arrival_time')
+
+
+class CartProductSerializer(serializers.Serializer):
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=AsiaProduct.objects.filter(is_active=True),
+        write_only=True,
+        required=True
+    )
+    count = serializers.IntegerField()
+
+    def create(self, validated_data):
+        raise NotImplementedError("not implemented!")
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError("not implemented!")
+
+
+class CartItemSerializer(serializers.Serializer):
+    stock = serializers.PrimaryKeyRelatedField(
+        queryset=Stock.objects.filter(is_active=True),
+        write_only=True,
+        required=True
+    )
+    products = CartProductSerializer(many=True, required=True, write_only=True)
+
+    def create(self, validated_data):
+        raise NotImplementedError("not implemented!")
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError("not implemented!")
+
+
+@extend_schema_serializer(
+    examples=[
+         OpenApiExample(
+            'Success example',
+            description='',
+            value={
+                'text': "Success!"
+            },
+            response_only=True
+        ),
+    ]
+)
+class CartCreateSerializer(serializers.Serializer):
+    carts = CartItemSerializer(many=True, write_only=True, required=True)
+
+    def save(self, **kwargs):
+        user = self.context['request'].user
+        dealer = user.dealer_profile
+
+        for cart_data in self.validated_data['carts']:
+            cart, _ = Cart.objects.get_or_create(dealer=dealer, stock=cart_data['stock'])
+            cart.cart_products.all().delete()
+
+            cart_product_list = [
+                CartProduct(cart=cart, product=product_data['id'], count=product_data['count'])
+                for product_data in cart_data['products']
+            ]
+            CartProduct.objects.bulk_create(cart_product_list)
+        return {"text": "Success!"}
+
+    def create(self, validated_data):
+        raise NotImplementedError("not implemented!")
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError("not implemented!")

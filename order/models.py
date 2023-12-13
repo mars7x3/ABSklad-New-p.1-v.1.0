@@ -41,6 +41,9 @@ class MyOrder(models.Model):
     class Meta:
         ordering = ('-created_at',)
 
+    def __str__(self):
+        return self.author.user.name
+
 
 class OrderMoney(models.Model):
     order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='order_moneys')

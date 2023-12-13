@@ -11,3 +11,14 @@ class CartProductInline(admin.TabularInline):
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
     inlines = [CartProductInline]
+
+
+class OrderProductInline(admin.TabularInline):
+    model = OrderProduct
+    max_num = 100
+    extra = 0
+
+
+@admin.register(MyOrder)
+class MyOrderAdmin(admin.ModelAdmin):
+    inlines = [OrderProductInline]

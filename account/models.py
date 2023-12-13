@@ -92,7 +92,7 @@ class DealerProfile(models.Model):
     push_notification = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.name
+        return self.user.name
 
 
 class DealerStore(models.Model):

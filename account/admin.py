@@ -24,7 +24,8 @@ class MyUserAdmin(UserAdmin):
         )
     )
     fieldsets = (
-        (_("Personal info"), {"fields": ("email", "username", "password", "pwd", "status", "uid")}),
+        (_("Personal info"), {"fields": ("email", "username", "password", "pwd", "status", "uid",
+                                         "name", "phone", "image")}),
         (
             _("Permissions"),
             {

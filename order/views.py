@@ -1,5 +1,5 @@
 import datetime
-
+from drf_yasg.utils import swagger_auto_schema
 
 from rest_framework import status, viewsets, generics
 from rest_framework.decorators import action
@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from order.main_functions import purchase_analysis
 from order.models import MyOrder, Cart, CartProduct, OrderReceipt
 from order.serializers import MyOrderListSerializer, MyOrderDetailSerializer, MyOrderCreateSerializer, \
-    CartListSerializer
+    CartListSerializer, CartCreateSerializer
 from product.views import AppProductPaginationClass
 
 
@@ -59,6 +59,14 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
 
 
 class MyOrderCreateView(generics.CreateAPIView):
+    """
+    "products": {
+    "product_id": product count
+  },
+    "type_status": "Наличка" ('Наличка', 'Карта', 'Баллы', 'Каспи'),
+  "stock": stock id
+
+    """
     permission_classes = [IsAuthenticated]
     queryset = MyOrder.objects.all()
     serializer_class = MyOrderCreateSerializer
@@ -92,20 +100,30 @@ class CartListView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class CartAddView(APIView):
+class CartAddView(generics.GenericAPIView):
+    serializer_class = CartCreateSerializer
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        dealer = request.user.dealer_profile
-        carts = request.data.get('carts')
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        for c in carts:
-            cart, _ = Cart.objects.get_or_create(dealer=dealer, stock_id=c.get('stock'))
-            print(cart)
-            cart.cart_products.all().delete()
-            cart_product_list = [CartProduct(cart=cart, product_id=p.get('id'), count=p.get('count')) for p in
-                                 c.get('products')]
-            CartProduct.objects.bulk_create(cart_product_list)
+        if serializer.is_valid():
+            dealer = request.user.dealer_profile
+            carts = request.data.get('carts')
 
-        return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+            for c in carts:
+                cart, _ = Cart.objects.get_or_create(dealer=dealer, stock_id=c.get('stock'))
+                print(cart)
+                cart.cart_products.all().delete()
+                cart_product_list = [CartProduct(cart=cart, product_id=p.get('id'), count=p.get('count')) for p in
+                                     c.get('products')]
+                CartProduct.objects.bulk_create(cart_product_list)
+            return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+        else:
+            return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
