@@ -12,10 +12,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        author_profile = instance.author.dealer_profile
-        if author_profile.image:
-            representation['author_image'] = self.context['request'].build_absolute_uri(author_profile.image.url)
-        representation['author_name'] = author_profile.name
+        dealer = instance.author
+        if dealer.image:
+            representation['author_image'] = self.context['request'].build_absolute_uri(dealer.image.url)
+        representation['author_name'] = dealer.name
 
         return representation
 
@@ -105,9 +105,15 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         rep['price_info'] = ProductPriceListSerializer(instance.prices.filter(city=dealer.price_city,
                                                                               d_status=dealer.dealer_status).first(),
                                                        context=self.context).data
+        image_list = ReviewImage.objects.filter(review__product=instance, review__is_active=True)
+        rep['reviews_images'] = ReviewsImagesSerializer(image_list, many=True, context=self.context).data
         if instance.category:
             rep['category'] = instance.category.title
         return rep
 
 
+class ReviewsImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReviewImage
+        fields = ('image',)
 
