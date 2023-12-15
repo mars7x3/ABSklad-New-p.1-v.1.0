@@ -2,7 +2,7 @@ from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers
 from django.db import transaction
 
-from product.models import ProductCount
+from product.models import ProductCount, ProductPrice
 from .models import *
 from .tasks import create_order_notification
 from .utils import check_product_count, order_total_price, order_cost_price, get_product_list, generate_order_products
@@ -125,7 +125,7 @@ class CartListSerializer(serializers.ModelSerializer):
 class CartProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartProduct
-        fields = ('product', 'count')
+        fields = ('count',)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -143,11 +143,16 @@ class CartAsiaProductSerializer(serializers.ModelSerializer):
         dealer = self.context.get('request').user.dealer_profile
         price = instance.prices.filter(d_status=dealer.dealer_status, city=dealer.price_city).first()
         rep['image'] = self.context['request'].build_absolute_uri(instance.images.first().image.url)
-        rep['price'] = price.price
-        rep['old_price'] = price.old_price
+        rep['price_info'] = CartAsiaProductPriceSerializer(price, context=self.context).data
         rep['counts'] = CartProductCountSerializer(instance.counts.all(), many=True, context=self.context).data
 
         return rep
+
+
+class CartAsiaProductPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductPrice
+        fields = ('price', 'old_price', 'discount', 'discount_status')
 
 
 class CartProductCountSerializer(serializers.ModelSerializer):
@@ -156,7 +161,7 @@ class CartProductCountSerializer(serializers.ModelSerializer):
         fields = ('stock', 'count_crm', 'arrival_time')
 
 
-class CartProductSerializer(serializers.Serializer):
+class CartCreateProductSerializer(serializers.Serializer):
     id = serializers.PrimaryKeyRelatedField(
         queryset=AsiaProduct.objects.filter(is_active=True),
         write_only=True,
@@ -171,13 +176,13 @@ class CartProductSerializer(serializers.Serializer):
         raise NotImplementedError("not implemented!")
 
 
-class CartItemSerializer(serializers.Serializer):
+class CartCreateItemSerializer(serializers.Serializer):
     stock = serializers.PrimaryKeyRelatedField(
         queryset=Stock.objects.filter(is_active=True),
         write_only=True,
         required=True
     )
-    products = CartProductSerializer(many=True, required=True, write_only=True)
+    products = CartCreateProductSerializer(many=True, required=True, write_only=True)
 
     def create(self, validated_data):
         raise NotImplementedError("not implemented!")
@@ -199,7 +204,7 @@ class CartItemSerializer(serializers.Serializer):
     ]
 )
 class CartCreateSerializer(serializers.Serializer):
-    carts = CartItemSerializer(many=True, write_only=True, required=True)
+    carts = CartCreateItemSerializer(many=True, write_only=True, required=True)
 
     def save(self, **kwargs):
         user = self.context['request'].user
