@@ -15,7 +15,10 @@ from .director.views import *
 
 director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
-director_router.register("director/stock/crud", StockCRUDView)
+director_router.register("director/balance/list", BalanceListView)
+
+
+# director_router.register("director/stock/crud", StockCRUDView)
 director_urlpatterns = [
     path('', include(director_router.urls)),
 ]

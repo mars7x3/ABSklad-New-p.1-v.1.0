@@ -38,7 +38,7 @@ class MyUser(AbstractUser):
     uid = models.CharField(max_length=40, default='00000000-0000-0000-0000-000000000000')
     pwd = models.CharField(max_length=40, blank=True, null=True)
 
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, blank=True, null=True)
     image = models.ImageField(upload_to='users', blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -103,7 +103,7 @@ class DealerStore(models.Model):
 
 
 class Wallet(models.Model):
-    user = models.OneToOneField(DealerProfile, on_delete=models.CASCADE, null=True, related_name='wallet')
+    dealer = models.OneToOneField(DealerProfile, on_delete=models.CASCADE, blank=True, null=True, related_name='wallet')
     amount_crm = models.DecimalField(default=0, max_digits=100, decimal_places=2)
     amount_1c = models.DecimalField(default=0, max_digits=100, decimal_places=2)
 

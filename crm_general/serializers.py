@@ -3,7 +3,7 @@ from django.db.models import Sum, Q
 from rest_framework import serializers
 
 from account.models import MyUser
-from general_service.models import Stock
+from general_service.models import Stock, City
 from product.models import AsiaProduct, ProductImage, Category
 from promotion.models import TargetPresent, Target, Story
 
@@ -180,6 +180,23 @@ class CRMStockSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
         exclude = ('is_show', 'is_active', 'uid')
+
+    def get_city(self, instance):
+        return instance.city.title
+
+
+class CRMCitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        fields = ('title', 'slug', 'id')
+
+
+class ABStockSerializer(serializers.ModelSerializer):
+    city = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Stock
+        exclude = ('is_show', 'is_active', 'uid', 'schedule')
 
     def get_city(self, instance):
         return instance.city.title

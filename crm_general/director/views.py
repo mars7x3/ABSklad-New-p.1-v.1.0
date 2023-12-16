@@ -1,41 +1,39 @@
-from collections import OrderedDict
-
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from account.models import MyUser
+from account.models import MyUser, Wallet
 from crm_general.director.permissions import IsDirector
-from crm_general.director.serializers import StaffCRUDSerializer, StockCRUDSerializer
+from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSerializer
 from general_service.models import Stock
+from crm_general.views import CRMPaginationClass
 from order.db_request import query_debugger
 from product.models import ProductPrice
 
 
-class AppPaginationClass(PageNumberPagination):
-    page_size = 1
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-    def get_paginated_response(self, data):
-        return Response(OrderedDict([
-            ('total_pages', self.page.paginator.num_pages),
-            ('page', self.page.number),
-            ('next', self.get_next_link()),
-            ('previous', self.get_previous_link()),
-            ('results', data),
-            ('results_count', len(data)),
-            ('total_results', self.page.paginator.count),
-        ]))
-
-
 class StaffCRUDView(viewsets.ModelViewSet):
+    """
+    #rop
+        "profile_data": {
+            "cities": [id, id]
+        }
+
+    #manager
+    "profile_data": {
+        "city": id
+    }
+
+    #rop
+    "profile_data": {
+        "stock": id
+    }
+    """
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = MyUser.objects.prefetch_related('manager_profile', 'rop_profile',
                                                'warehouse_profile').filter(status__in=['rop', 'manager', 'marketer',
-                                                                                       'accountant', 'warehouse'])
+                                                                                       'accountant', 'warehouse',
+                                                                                       'director'])
     serializer_class = StaffCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):
@@ -64,34 +62,40 @@ class StaffCRUDView(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class StockCRUDView(viewsets.ModelViewSet):
+class BalanceListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = Stock.objects.select_related('city').all()
-    serializer_class = StockCRUDSerializer
+    queryset = Wallet.objects.all()
+    serializer_class = BalanceListSerializer
 
-    @query_debugger
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
 
-    def get_queryset(self):
-        from django.db.models import F, Sum, IntegerField
-        from django.db.models import OuterRef, Subquery
-
-        return super().get_queryset().annotate(
-            total_sum=Sum(
-                F('counts__count_crm') * Subquery(
-                    ProductPrice.objects.filter(
-                        city=OuterRef('city'),
-                        product_id=OuterRef('counts__product_id'),
-                        d_status__discount=0
-                    ).values('price')[:1]
-                ), output_field=IntegerField()
-            ),
-            total_count=Sum('counts__count_crm'),
-        )
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+# class StockCRUDView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated, IsDirector]
+#     queryset = Stock.objects.select_related('city').all()
+#     serializer_class = StockCRUDSerializer
+#
+#     @query_debugger
+#     def list(self, request, *args, **kwargs):
+#         return super().list(request, *args, **kwargs)
+#
+#     def get_queryset(self):
+#         from django.db.models import F, Sum, IntegerField
+#         from django.db.models import OuterRef, Subquery
+#
+#         return super().get_queryset().annotate(
+#             total_sum=Sum(
+#                 F('counts__count_crm') * Subquery(
+#                     ProductPrice.objects.filter(
+#                         city=OuterRef('city'),
+#                         product_id=OuterRef('counts__product_id'),
+#                         d_status__discount=0
+#                     ).values('price')[:1]
+#                 ), output_field=IntegerField()
+#             ),
+#             total_count=Sum('counts__count_crm'),
+#         )
+#
+#     def destroy(self, request, *args, **kwargs):
+#         instance = self.get_object()
+#         instance.is_active = not instance.is_active
+#         instance.save()
+#         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
