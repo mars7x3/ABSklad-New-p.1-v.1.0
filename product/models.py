@@ -24,6 +24,7 @@ class Category(models.Model):
 class Collection(models.Model):
     title = models.CharField(max_length=200)
     slug = models.CharField(max_length=200, unique=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.title
@@ -38,6 +39,7 @@ class AsiaProduct(models.Model):
     is_active = models.BooleanField(default=False)
     is_show = models.BooleanField(default=False)
     is_hit = models.BooleanField(default=False)
+    is_discount = models.BooleanField(default=False)
     uid = models.CharField(max_length=40, default='00000000-0000-0000-0000-000000000000')
     title = models.CharField(max_length=500)
     vendor_code = models.CharField(max_length=50, blank=True, null=True)

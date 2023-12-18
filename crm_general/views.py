@@ -1,12 +1,14 @@
 from collections import OrderedDict
 
 from rest_framework.response import Response
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
-from crm_general.serializers import StaffListSerializer
+from crm_general.permissions import IsStaff
+from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer
+from product.models import Collection
 
 
 class CRMPaginationClass(PageNumberPagination):
@@ -31,5 +33,16 @@ class StaffListView(viewsets.ReadOnlyModelViewSet):
     queryset = MyUser.objects.exclude(status__in=['dealer', 'dealer_1c'])
     serializer_class = StaffListSerializer
 
+
+class CollectionCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = Collection.objects.all()
+    serializer_class = CollectionCRUDSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 

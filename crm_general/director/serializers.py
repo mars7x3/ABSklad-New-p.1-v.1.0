@@ -1,9 +1,12 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile
+from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
+from order.models import MyOrder
+from product.models import AsiaProduct, Collection, Category
+from promotion.models import Discount
 
 
 class StaffCRUDSerializer(serializers.ModelSerializer):
@@ -77,7 +80,6 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
 
 class WarehouseProfileSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = WarehouseProfile
         exclude = ('id', 'user')
@@ -121,18 +123,83 @@ class BalanceListSerializer(serializers.ModelSerializer):
         return rep
 
 
+class BalanceHistoryListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalanceHistory
+        fields = ('amount', 'balance', 'status', 'action_id', 'created_at')
+
+
 class BalanceDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('dealer_status', )
+        fields = ('dealer_status', 'city')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['dealer_status'] = instance.dealer_status.title if instance.dealer_status.title else '---'
-        rep['dealer_status'] = instance.user.name
+        rep['status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['name'] = instance.user.name
+        rep['user_id'] = instance.user.id
+        last_transaction = instance.balance_history.filter(is_active=True, amount__gte=0).last()
+        rep['last_repl'] = last_transaction.created_at if last_transaction else '---'
 
         return rep
 
+
+class DirectorProductListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title', 'is_active', 'collection', 'category', 'is_discount')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['collection_title'] = instance.collection.title if instance.collection else '---'
+        rep['category_title'] = instance.category.title if instance.category else '---'
+        rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
+        cost_price = instance.cost_prices.filter(is_active=True).first()
+        rep['cost_price'] = cost_price.price if cost_price else '---'
+        return rep
+
+
+class DirectorCollectionListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collection
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['categories_count'] = len(set(instance.products.values_list('category', flat=True)))
+        rep['products_count'] = sum(instance.products.values_list('counts__count_crm', flat=True))
+        return rep
+
+
+class CollectionCategoryListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ('title', 'is_active', 'id', 'slug')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['products_count'] = sum(instance.products.values_list('counts__count_crm', flat=True))
+        return rep
+
+
+class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title', 'is_active', 'is_discount', 'vendor_code', 'created_at')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
+        cost_price = instance.cost_prices.filter(is_active=True).first()
+        rep['cost_price'] = cost_price.price if cost_price else '---'
+        rep['avg_check'] = sum(instance.order_products.filter(order__is_active=True,
+                                                              order__status__in=['Отправлено', 'Успешно', 'Оплачено',
+                                                                                 'Ожидание']).values_list('total_price',
+                                                                                                          flat=True))
+
+        return rep
 
 # class StockCRUDSerializer(serializers.ModelSerializer):
 #     class Meta:

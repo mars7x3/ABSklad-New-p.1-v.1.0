@@ -52,3 +52,5 @@ admin.site.register(Notification)
 admin.site.register(Wallet)
 
 admin.site.register(BalancePlus)
+admin.site.register(BalanceHistory)
+

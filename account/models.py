@@ -110,6 +110,9 @@ class Wallet(models.Model):
     def __str__(self):
         return f'{self.id}'
 
+    class Meta:
+        ordering = ('-amount_1c',)
+
 
 class BalancePlus(models.Model):
     dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, null=True, related_name='balances')
@@ -153,3 +156,18 @@ class VerifyCode(models.Model):
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='verify_codes')
     code = models.CharField(max_length=4)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class BalanceHistory(models.Model):
+    STATUS = (
+        ('order', 'order'),
+        ('wallet', 'wallet')
+    )
+    dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='balance_history')
+    amount = models.DecimalField(decimal_places=2, max_digits=100, default=0)
+    balance = models.DecimalField(decimal_places=2, max_digits=100, default=0)
+    status = models.CharField(max_length=10, choices=STATUS)
+    action_id = models.IntegerField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+

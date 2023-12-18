@@ -12,14 +12,26 @@ from .rop.views import (
 )
 
 from .director.views import *
+from .views import *
 
 director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
 director_router.register("director/balance/list", BalanceListView)
+director_router.register("director/product/list", DirectorProductListView)
+director_router.register("director/collection/list", DirectorCollectionListView)
+
 
 
 # director_router.register("director/stock/crud", StockCRUDView)
 director_urlpatterns = [
+    path('director/balance/list/total/', BalanceListTotalView.as_view()),
+    path('director/balance/history/list/', BalanceHistoryListView.as_view()),
+    path('director/balance/history/total/', TotalEcoBalanceView.as_view()),
+    path('director/collection/category/list/', CollectionCategoryListView.as_view()),
+    path('director/collection/category/product/list/', CollectionCategoryProductListView.as_view()),
+
+
+
     path('', include(director_router.urls)),
 ]
 
@@ -50,7 +62,16 @@ rop_urlpatterns = [
     path('rop/', include(rop_router.urls)),
 ]
 
+
+crm_router = SimpleRouter()
+crm_router.register("crm/collection/crud", CollectionCRUDView)
+
+crm_urlpatterns = [
+    path('', include(crm_router.urls)),
+]
+
+
 # + some_urlpatterns
-urlpatterns = manager_urlpatterns + rop_urlpatterns + director_urlpatterns
+urlpatterns = manager_urlpatterns + rop_urlpatterns + director_urlpatterns + crm_urlpatterns
 
 

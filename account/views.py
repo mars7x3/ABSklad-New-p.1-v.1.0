@@ -177,12 +177,12 @@ class BalanceHistoryListView(viewsets.ReadOnlyModelViewSet):
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
         kwargs = {}
-        price = request.query_params.get('start')
+        start = request.query_params.get('start')
         end = request.query_params.get('end')
         is_success = request.query_params.get('is_success')
 
-        if price and end:
-            start_date = timezone.make_aware(datetime.datetime.strptime(price, "%d-%m-%Y"))
+        if start and end:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
             end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
             kwargs['created_at__gte'] = start_date
             kwargs['created_at__lte'] = end_date

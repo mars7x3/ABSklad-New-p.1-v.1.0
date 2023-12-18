@@ -2,8 +2,8 @@
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from promotion.models import Story, Target
-from promotion.serializers import StoryListSerializer, StoryDetailSerializer, TargetSerializer
+from promotion.models import Story
+from promotion.serializers import StoryListSerializer, StoryDetailSerializer
 
 
 class StoriesListView(viewsets.ReadOnlyModelViewSet):
@@ -17,13 +17,6 @@ class StoriesListView(viewsets.ReadOnlyModelViewSet):
             return StoryDetailSerializer
 
 
-class TargetListView(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated]
-    queryset = Target.objects.filter(is_active=True)
-    serializer_class = TargetSerializer
 
-    def get_queryset(self):
-        queryset = self.request.user.dealer_profile.targets.filter(is_active=True)
-        return queryset
 
 

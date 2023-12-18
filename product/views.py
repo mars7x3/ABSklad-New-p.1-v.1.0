@@ -46,7 +46,7 @@ class CategoryListView(viewsets.ReadOnlyModelViewSet):
 
 class CollectionListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Collection.objects.all()
+    queryset = Collection.objects.filter(is_active=True)
     serializer_class = CollectionListSerializer
 
 

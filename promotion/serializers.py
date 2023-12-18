@@ -51,32 +51,3 @@ class StoryProductImageSerializer(serializers.ModelSerializer):
         fields = ('image',)
 
 
-class TargetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Target
-        exclude = ('dealer', 'id')
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['presents'] = TargetPresentSerializer(instance.presents.all(), many=True, context=self.context).data
-
-        return rep
-
-
-class TargetPresentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TargetPresent
-        exclude = ('id', 'target')
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['product'] = TargetPresentProductSerializer(instance.product).data
-
-        return rep
-
-
-class TargetPresentProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AsiaProduct
-        fields = ('title',)
-

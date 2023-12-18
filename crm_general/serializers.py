@@ -4,8 +4,8 @@ from rest_framework import serializers
 
 from account.models import MyUser
 from general_service.models import Stock, City
-from product.models import AsiaProduct, ProductImage, Category
-from promotion.models import TargetPresent, Target, Story
+from product.models import AsiaProduct, ProductImage, Category, Collection
+from promotion.models import Story
 
 
 class StaffListSerializer(serializers.ModelSerializer):
@@ -44,36 +44,6 @@ class StoryProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = ('image',)
-
-
-class TargetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Target
-        exclude = ('dealer', 'id')
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['presents'] = TargetPresentSerializer(instance.presents.all(), many=True, context=self.context).data
-
-        return rep
-
-
-class TargetPresentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TargetPresent
-        exclude = ('id', 'target')
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['product'] = TargetPresentProductSerializer(instance.product).data
-
-        return rep
-
-
-class TargetPresentProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AsiaProduct
-        fields = ('title',)
 
 
 class CRMUserSerializer(serializers.ModelSerializer):
@@ -200,3 +170,11 @@ class ABStockSerializer(serializers.ModelSerializer):
 
     def get_city(self, instance):
         return instance.city.title
+
+
+class CollectionCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collection
+        fields = '__all__'
+
+
