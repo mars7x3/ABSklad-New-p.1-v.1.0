@@ -128,6 +128,10 @@ class BalanceHistoryListSerializer(serializers.ModelSerializer):
         model = BalanceHistory
         fields = ('amount', 'balance', 'status', 'action_id', 'created_at')
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['dealer_name'] = instance.dealer.user.name
+        return rep
 
 class BalanceDealerSerializer(serializers.ModelSerializer):
     class Meta:
