@@ -7,7 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
 from crm_general.permissions import IsStaff
-from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer
+from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
+    StockListSerializer
+from general_service.models import City, Stock
 from product.models import Collection
 
 
@@ -44,5 +46,17 @@ class CollectionCRUDView(viewsets.ModelViewSet):
         instance.is_active = not instance.is_active
         instance.save()
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class CityListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = City.objects.filter(is_active=True)
+    serializer_class = CityListSerializer
+
+
+class StockListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Stock.objects.filter(is_active=True)
+    serializer_class = StockListSerializer
 
 

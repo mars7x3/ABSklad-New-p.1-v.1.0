@@ -65,6 +65,8 @@ rop_urlpatterns = [
 
 crm_router = SimpleRouter()
 crm_router.register("crm/collection/crud", CollectionCRUDView)
+crm_router.register("crm/city/list", CityListView)
+crm_router.register("crm/stock/list", StockListView)
 
 crm_urlpatterns = [
     path('', include(crm_router.urls)),

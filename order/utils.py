@@ -47,7 +47,10 @@ def generate_order_products(product_list, products, dealer):
     for p in product_list:
         prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
         total_price = prod_price.price * products[str(p.id)]
-        discount = abs(prod_price.old_price - prod_price.price)
+        if prod_price.discount > 0:
+            discount = products[str(p.id)] * (prod_price.old_price - prod_price.price)
+        else:
+            discount = 0
 
         result_data.append({
             "ab_product": p,

@@ -178,3 +178,14 @@ class CollectionCRUDSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CityListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        fields = '__all__'
+
+
+class StockListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        fields = '__all__'
+
