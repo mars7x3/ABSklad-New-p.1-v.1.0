@@ -18,7 +18,7 @@ director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
 director_router.register("director/product/detail", DirectorProductCRUDView)
 director_router.register("director/discount/crud", DirectorDiscountCRUDView)
-director_router.register("director/dealer/list", DirectorDealerListStatusView)
+director_router.register("director/dealer/list", DirectorDealerListView)
 
 director_urlpatterns = [
     path("director/collection/list/", DirectorCollectionListView.as_view()),
@@ -73,6 +73,9 @@ crm_urlpatterns = [
     path('crm/product/images/create/', ProductImagesCreate.as_view()),
     path("crm/city/list/", CityListView.as_view()),
     path("crm/stock/list/", StockListView.as_view()),
+    path("crm/user/image/cd", UserImageCDView.as_view()),
+
+
     path('', include(crm_router.urls)),
 ]
 

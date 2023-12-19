@@ -90,6 +90,7 @@ class DealerProfile(models.Model):
     liability = models.PositiveIntegerField(default=0)
     price_city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)
     push_notification = models.BooleanField(default=True)
+    birthday = models.DateField(blank=True, null=True)
 
     def __str__(self):
         return self.user.name

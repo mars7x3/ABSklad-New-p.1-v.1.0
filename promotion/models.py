@@ -54,7 +54,7 @@ class MotivationPresent(models.Model):
         ('money', 'Деньги'),
         ('text', 'Прочее')
     )
-    motivation = models.ForeignKey(Motivation, on_delete=models.CASCADE, related_name='presents')
+    condition = models.ForeignKey(MotivationCondition, on_delete=models.CASCADE, null=True, related_name='presents')
     status = models.CharField(max_length=10, choices=STATUS, default='money')
     product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, blank=True, null=True,
                                 related_name='present_products')

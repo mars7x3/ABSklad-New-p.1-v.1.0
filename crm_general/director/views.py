@@ -337,7 +337,7 @@ class DirectorDiscountDealerStatusView(generics.ListAPIView):
     serializer_class = DirectorDiscountDealerStatusSerializer
 
 
-class DirectorDealerListStatusView(viewsets.ReadOnlyModelViewSet):
+class DirectorDealerListView(viewsets.ReadOnlyModelViewSet):
     """
     URL/search/?city_slug=taraz&name=nurbek&start_date=%d-%m-%Y&end_date=%d-%m-%Y
     """
@@ -364,6 +364,17 @@ class DirectorDealerListStatusView(viewsets.ReadOnlyModelViewSet):
         page = self.paginate_queryset(queryset)
         response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
         return self.get_paginated_response(response_data)
+
+
+class DirectorDealerCRUDView(mixins.CreateModelMixin,
+                                   mixins.RetrieveModelMixin,
+                                   mixins.UpdateModelMixin,
+                                   mixins.DestroyModelMixin,
+                                   GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = MyUser.objects.all()
+    serializer_class = DirectorDealerSerializer
+
 
 
 # class StockCRUDView(viewsets.ModelViewSet):

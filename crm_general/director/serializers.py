@@ -5,12 +5,12 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
-    DealerStatus
+    DealerStatus, DealerStore
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
 from order.models import MyOrder
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage
-from promotion.models import Discount
+from promotion.models import Discount, Motivation, MotivationPresent
 
 
 class StaffCRUDSerializer(serializers.ModelSerializer):
@@ -276,7 +276,7 @@ class DirectorDiscountDealerStatusSerializer(serializers.ModelSerializer):
 class DirectorDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('id', 'city')
+        fields = ('city',)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -285,6 +285,7 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         end_date = request.query_params.get('end_date')
         start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+        rep['id'] = instance.user.id
         rep['name'] = instance.user.name
         rep['pds_amount'] = sum(instance.user.money_docs.filter(is_active=True, created_at__gte=start_date,
                                                                 created_at__lte=end_date
@@ -300,6 +301,64 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         rep['balance'] = instance.wallet.amount_crm
 
         return rep
+
+
+class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['profile'] = DirectorDealerProfileSerializer(instance.dealer_profile, context=self.context).data
+        return rep
+
+
+class DirectorDealerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerProfile
+        exclude = ('id', 'user')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['price_city'] = instance.price_city.title if instance.price_city else '---'
+        rep['dealer_status'] = instance.dealer_status.title if instance.dealer_status else '---'
+        rep['balance_crm'] = instance.wallet.amount_crm
+        rep['balance_1c'] = instance.wallet.amount_1c
+        rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores, many=True, context=self.context).data
+        rep['motivations'] = DirDealerMotivationSerializer(instance.motivations, many=True, context=self.context).data
+
+        return rep
+
+
+class DirectorDealerStoreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerStore
+        exclude = ('id', 'dealer')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        return rep
+
+
+class DirDealerMotivationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Motivation
+        exclude = ('dealers',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['presents'] = DirDealerMotivationPresentSerializer(instance.presents, many=True, context=self.context).data
+        return rep
+
+
+class DirDealerMotivationPresentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotivationPresent
+        exclude = ('id', 'motivation')
+
 
 # class StockCRUDSerializer(serializers.ModelSerializer):
 #     class Meta:

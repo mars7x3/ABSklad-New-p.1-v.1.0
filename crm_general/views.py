@@ -32,7 +32,7 @@ class CRMPaginationClass(PageNumberPagination):
 
 
 class StaffListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaff]
     queryset = MyUser.objects.exclude(status__in=['dealer', 'dealer_1c'])
     serializer_class = StaffListSerializer
 
@@ -50,13 +50,13 @@ class CollectionCRUDView(viewsets.ModelViewSet):
 
 
 class CityListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaff]
     queryset = City.objects.filter(is_active=True)
     serializer_class = CityListSerializer
 
 
 class StockListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaff]
     queryset = Stock.objects.filter(is_active=True)
     serializer_class = StockListSerializer
 
@@ -65,7 +65,7 @@ class ProductImagesCreate(APIView):
     """
     {"product_id": "product_id", "images": [file, file], "delete_ids": [image_id, image_id]}
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaff]
 
     def post(self, request):
         product_id = request.data.get('product_id')
@@ -80,3 +80,23 @@ class ProductImagesCreate(APIView):
                 ProductImage.objects.bulk_create([ProductImage(product=product, image=i) for i in images])
             return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
         return Response({'text': 'Продукт отсутствует!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserImageCDView(APIView):
+    """
+    {"user_id": user_id, "is_delete": bool(true/false), "image": file}
+    """
+    permission_classes = [IsAuthenticated, IsStaff]
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        image = request.FILES.get('image')
+        is_delete = request.data.get('is_delete')
+        user = MyUser.objects.filter(id=user_id).first()
+        if is_delete:
+            user.image.delete()
+            return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+        user.image = image
+        user.save()
+        image_url = request.build_absolute_uri(user.image.url)
+        return Response({"url": image_url}, status=status.HTTP_200_OK)
