@@ -145,6 +145,7 @@ class CartAsiaProductSerializer(serializers.ModelSerializer):
         rep['image'] = self.context['request'].build_absolute_uri(instance.images.first().image.url)
         rep['price_info'] = CartAsiaProductPriceSerializer(price, context=self.context).data
         rep['counts'] = CartProductCountSerializer(instance.counts.all(), many=True, context=self.context).data
+        rep['collection'] = instance.collection.title if instance.collection else '---'
 
         return rep
 
