@@ -1,16 +1,17 @@
 from collections import OrderedDict
 
 from rest_framework.response import Response
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
 from account.models import MyUser
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer
 from general_service.models import City, Stock
-from product.models import Collection
+from product.models import Collection, AsiaProduct, ProductImage
 
 
 class CRMPaginationClass(PageNumberPagination):
@@ -30,7 +31,7 @@ class CRMPaginationClass(PageNumberPagination):
         ]))
 
 
-class StaffListView(viewsets.ReadOnlyModelViewSet):
+class StaffListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     queryset = MyUser.objects.exclude(status__in=['dealer', 'dealer_1c'])
     serializer_class = StaffListSerializer
@@ -48,15 +49,34 @@ class CollectionCRUDView(viewsets.ModelViewSet):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class CityListView(viewsets.ReadOnlyModelViewSet):
+class CityListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     queryset = City.objects.filter(is_active=True)
     serializer_class = CityListSerializer
 
 
-class StockListView(viewsets.ReadOnlyModelViewSet):
+class StockListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Stock.objects.filter(is_active=True)
     serializer_class = StockListSerializer
 
 
+class ProductImagesCreate(APIView):
+    """
+    {"product_id": "product_id", "images": [file, file], "delete_ids": [image_id, image_id]}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        product_id = request.data.get('product_id')
+        images = request.FILES.getlist('images')
+        delete_ids = request.data.get('delete_ids')
+        product = AsiaProduct.objects.filter(id=product_id).first()
+        if product:
+            delete_images = product.images.filter(id__in=delete_ids)
+            if delete_images:
+                delete_images.delete()
+            if images:
+                ProductImage.objects.bulk_create([ProductImage(product=product, image=i) for i in images])
+            return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+        return Response({'text': 'Продукт отсутствует!'}, status=status.HTTP_400_BAD_REQUEST)

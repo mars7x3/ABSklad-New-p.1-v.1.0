@@ -26,7 +26,7 @@ class Stock(models.Model):
     is_active = models.BooleanField(default=True)
     is_show = models.BooleanField(default=True)
 
-    def __str__(self):
+    def __str__(self): 
         return f'{self.city.title} | {self.address}'
 
 

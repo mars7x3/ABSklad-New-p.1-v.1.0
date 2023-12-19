@@ -110,10 +110,10 @@ class ProductSize(models.Model):
 class ProductImage(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='images')
     image = models.FileField(upload_to='product-images')
-    position = models.PositiveIntegerField()
+    position = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:
-        ordering = ('position',)
+        ordering = ('id',)
 
 
 class Review(models.Model):

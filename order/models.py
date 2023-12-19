@@ -45,14 +45,6 @@ class MyOrder(models.Model):
         return self.author.user.name
 
 
-class OrderMoney(models.Model):
-    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='order_moneys')
-    amount = models.DecimalField(max_digits=100, decimal_places=2, default=0)
-    cash_box = models.ForeignKey(CashBox, on_delete=models.SET_NULL, blank=True, null=True, related_name='order_moneys')
-    uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-
 class OrderReceipt(models.Model):
     order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='order_receipts')
     file = models.FileField(upload_to='order-check')

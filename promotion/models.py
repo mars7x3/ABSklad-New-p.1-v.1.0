@@ -63,26 +63,19 @@ class MotivationPresent(models.Model):
 
 
 class Discount(models.Model):
-    # banner = models.OneToOneField(Banner, on_delete=models.SET_NULL, blank=True, null=True, related_name='discount')
-    title = models.CharField(max_length=300)
+    STATUS = (
+        ('Per', 'Per'),
+        ('Sum', 'Sum'),
+    )
     is_active = models.BooleanField(default=False)
-    discount_amount = models.DecimalField(max_digits=100, decimal_places=2)
-    discount_status = models.BooleanField(default=False)
-    start_date = models.DateTimeField(blank=True, null=True)
-    end_date = models.DateTimeField(blank=True, null=True)
+    title = models.CharField(max_length=300)
+    status = models.CharField(max_length=5, choices=STATUS, default='Per')
+    amount = models.DecimalField(max_digits=100, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+    products = models.ManyToManyField(AsiaProduct, related_name='discount_products')
+    cities = models.ManyToManyField(City, related_name='discount_cities')
+    dealer_statuses = models.ManyToManyField(DealerStatus, related_name='discount_d_statuses')
 
-
-class DiscountProduct(models.Model):
-    discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='discount_products')
-    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='discount_products')
-
-
-class DiscountCity(models.Model):
-    discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='discount_cities')
-    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='discount_cities')
-
-
-class DiscountDealerStatus(models.Model):
-    discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='discount_d_statuses')
-    dealer_status = models.ForeignKey(DealerStatus, on_delete=models.CASCADE, related_name='discount_d_statuses')
 

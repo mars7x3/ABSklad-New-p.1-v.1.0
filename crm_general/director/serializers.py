@@ -1,11 +1,15 @@
+import datetime
+
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
-from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory
+from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
+    DealerStatus
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
 from order.models import MyOrder
-from product.models import AsiaProduct, Collection, Category
+from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage
 from promotion.models import Discount
 
 
@@ -133,6 +137,7 @@ class BalanceHistoryListSerializer(serializers.ModelSerializer):
         rep['dealer_name'] = instance.dealer.user.name
         return rep
 
+
 class BalanceDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
@@ -198,10 +203,101 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
         cost_price = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_price.price if cost_price else '---'
+        last_15_days = timezone.now() - timezone.timedelta(days=15)
+        rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
+                                                                  order__is_active=True,
+                                                                  order__status__in=['Отправлено', 'Оплачено',
+                                                                                     'Успешно'])
+                                  .values_list('count'))) / 15, 2)
         rep['avg_check'] = sum(instance.order_products.filter(order__is_active=True,
                                                               order__status__in=['Отправлено', 'Успешно', 'Оплачено',
-                                                                                 'Ожидание']).values_list('total_price',
-                                                                                                          flat=True))
+                                                                                 'Ожидание']
+                                                              ).values_list('total_price', flat=True))
+
+        return rep
+
+
+class DirectorProductCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
+        rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
+        return rep
+
+
+class DirectorProductSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductSize
+        exclude = ('product', 'id')
+
+
+class DirectorProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        exclude = ('product', 'position')
+
+
+class DirectorDiscountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Discount
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['products'] = DirectorDiscountProductSerializer(instance.products, many=True).data
+        rep['cities'] = DirectorDiscountCitySerializer(instance.cities, many=True).data
+        rep['dealer_statuses'] = DirectorDiscountDealerStatusSerializer(instance.dealer_statuses, many=True).data
+
+        return rep
+
+
+class DirectorDiscountProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title')
+
+
+class DirectorDiscountCitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        fields = ('id', 'title')
+
+
+class DirectorDiscountDealerStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerStatus
+        fields = ('id', 'title')
+
+
+class DirectorDealerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerProfile
+        fields = ('id', 'city')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        request = self.context.get('request')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
+        end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+        rep['name'] = instance.user.name
+        rep['pds_amount'] = sum(instance.user.money_docs.filter(is_active=True, created_at__gte=start_date,
+                                                                created_at__lte=end_date
+                                                                ).values_list('amount', flat=True))
+        rep['shipment_amount'] = sum(instance.orders.filter(is_active=True, status__in=['Успешно', 'Отправлено'],
+                                                            released_at__gte=start_date, released_at__lte=end_date
+                                                            ).values_list('price', flat=True))
+        rep['city'] = instance.city.title if instance.city else '---'
+        rep['status'] = True if instance.wallet.amount_crm > 50000 else False
+        last_order = instance.orders.filter(is_active=True, status__in=['Успешно', 'Отправлено', 'Оплачено',
+                                                                        'Ожидание']).last()
+        rep['last_date'] = str(last_order.paid_at) if last_order else '---'
+        rep['balance'] = instance.wallet.amount_crm
 
         return rep
 
