@@ -136,7 +136,7 @@ class CartProductSerializer(serializers.ModelSerializer):
 class CartAsiaProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('title', 'collection')
+        fields = ('title', 'collection', 'id')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
