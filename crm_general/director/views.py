@@ -338,7 +338,9 @@ class DirectorDiscountDealerStatusView(generics.ListAPIView):
 
 
 class DirectorDealerListStatusView(viewsets.ReadOnlyModelViewSet):
-
+    """
+    URL/search/?city_slug=taraz&name=nurbek&start_date=%d-%m-%Y&end_date=%d-%m-%Y
+    """
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = DealerProfile.objects.all().select_related('user').prefetch_related('orders', 'wallet',
                                                                                    'user__money_docs')
@@ -355,13 +357,13 @@ class DirectorDealerListStatusView(viewsets.ReadOnlyModelViewSet):
             kwargs['user__name__icontains'] = name
 
         city_slug = request.query_params.get('city_slug')
-        if name:
+        if city_slug:
             kwargs['city__slug'] = city_slug
 
         queryset = queryset.filter(**kwargs)
-        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-
-        return Response(response_data, status=status.HTTP_200_OK)
+        page = self.paginate_queryset(queryset)
+        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return self.get_paginated_response(response_data)
 
 
 # class StockCRUDView(viewsets.ModelViewSet):
