@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db.models import Sum, Q
 from rest_framework import serializers
 
-from account.models import MyUser
+from account.models import MyUser, DealerStatus
 from general_service.models import Stock, City
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
@@ -188,4 +188,17 @@ class StockListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
         fields = '__all__'
+
+
+class DealerStatusListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerStatus
+        fields = '__all__'
+
+
+class CategoryListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
 

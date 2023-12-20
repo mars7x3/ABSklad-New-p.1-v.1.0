@@ -14,12 +14,13 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorProductListSerializer, DirectorCollectionListSerializer, CollectionCategoryListSerializer, \
     CollectionCategoryProductListSerializer, DirectorProductCRUDSerializer, DirectorDiscountSerializer, \
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
-    DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer
+    DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
+    DirDealerCartProductSerializer
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
 from order.db_request import query_debugger
-from order.models import MyOrder
+from order.models import MyOrder, CartProduct
 from product.models import ProductPrice, AsiaProduct, Collection, Category
 from promotion.models import Discount
 
@@ -394,6 +395,35 @@ class DirectorDealerCRUDView(mixins.CreateModelMixin,
         instance.is_active = not instance.is_active
         instance.save()
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class DirectorDealerOrderListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        start = request.data.get('start')
+        end = request.data.get('end')
+        start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
+        end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+        user = MyUser.objects.filter(id=user_id).first()
+        orders = user.dealer_profile.orders.filter(created_at__gte=start_date, created_at__lte=end_date, is_active=True,
+                                                   status_in=['Оплачено', 'Отправлено', 'Ожидание', 'Успешно'])
+        response_data = DirDealerOrderSerializer(orders, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DirectorDealerCartListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        user = MyUser.objects.filter(id=user_id).first()
+        cart_prods = CartProduct.objects.filter(cart__in=user.dealer_profile.carts.all())
+        response_data = DirDealerCartProductSerializer(cart_prods, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
 
 # class StockCRUDView(viewsets.ModelViewSet):
 #     permission_classes = [IsAuthenticated, IsDirector]

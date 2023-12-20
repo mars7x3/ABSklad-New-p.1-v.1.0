@@ -6,12 +6,12 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from account.models import MyUser
+from account.models import MyUser, DealerStatus
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
-    StockListSerializer
+    StockListSerializer, DealerStatusListSerializer, CategoryListSerializer
 from general_service.models import City, Stock
-from product.models import Collection, AsiaProduct, ProductImage
+from product.models import Collection, AsiaProduct, ProductImage, Category
 
 
 class CRMPaginationClass(PageNumberPagination):
@@ -59,6 +59,18 @@ class StockListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsStaff]
     queryset = Stock.objects.filter(is_active=True)
     serializer_class = StockListSerializer
+
+
+class DealerStatusListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = DealerStatus.objects.all()
+    serializer_class = DealerStatusListSerializer
+
+
+class CategoryListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = Category.objects.filter(is_active=True)
+    serializer_class = CategoryListSerializer
 
 
 class ProductImagesCreate(APIView):

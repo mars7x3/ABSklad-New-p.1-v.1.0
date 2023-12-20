@@ -75,6 +75,10 @@ crm_urlpatterns = [
     path('crm/product/images/create/', ProductImagesCreate.as_view()),
     path("crm/city/list/", CityListView.as_view()),
     path("crm/stock/list/", StockListView.as_view()),
+    path("crm/dealer-status/list/", DealerStatusListView.as_view()),
+    path("crm/category/list/", CategoryListView.as_view()),
+
+
     path("crm/user/image/cd", UserImageCDView.as_view()),
 
 

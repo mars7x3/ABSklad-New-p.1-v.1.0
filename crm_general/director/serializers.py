@@ -9,7 +9,7 @@ from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile,
 from crm_general.director.utils import get_motivation_done
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
-from order.models import MyOrder
+from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage
 from promotion.models import Discount, Motivation, MotivationPresent
 
@@ -372,6 +372,33 @@ class DirDealerMotivationPresentSerializer(serializers.ModelSerializer):
     class Meta:
         model = MotivationPresent
         exclude = ('id', 'motivation')
+
+
+class DirDealerOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyOrder
+        fields = '__all__'
+
+
+class DirDealerCartProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartProduct
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        price = instance.product.prices.filter(city=instance.cart.dealer.price_city,
+                                               d_status=instance.cart.dealer.dealer_status).first()
+        count = instance.product.counts.filter(stock=instance.cart.stock).first()
+        rep['prod_title'] = instance.product.title
+        rep['prod_category'] = instance.product.category.title
+        rep['price'] = price.price * instance.count
+        rep['discount_price'] = price.old_price - price.price * instance.count if price.discount > 0 else 0
+        rep['crm_count'] = count.count_crm
+        rep['stock_city'] = instance.stock.city.title
+
+        return rep
+
 
 
 # class StockCRUDSerializer(serializers.ModelSerializer):

@@ -89,11 +89,12 @@ class ReturnOrderProduct(models.Model):
 
 class Cart(models.Model):
     dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='carts')
-    stock = models.OneToOneField(Stock, on_delete=models.CASCADE, related_name='cart')
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='cart')
 
 
 class CartProduct(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='cart_products')
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='cart_products')
     count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
