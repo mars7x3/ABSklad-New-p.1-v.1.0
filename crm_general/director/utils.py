@@ -44,4 +44,58 @@ def prod_total_amount_crm(stock):
     #     print(amount)
 
 
+def get_motivation_done(dealer):
+    response_data = []
+    for m in dealer.motivations.filter(is_active=True):
+        m_data = {"title": m.title}
+        for c in m.conditions.all():
+            if c.status == 'category':
+                for c_c in c.condition_prods.all():
+                    total_count = 0
+                    orders = dealer.orders.filter(
+                        is_active=True, status__in=['Отправлено', 'Оплачено', 'Успешно', 'Ожидание'],
+                        paid_at__gte=m.start_date)
+                    for o in orders:
+                        total_count += sum(o.order_products.filter(category=c_c.category
+                                                                   ).values_list('count', flat=True))
+                    per = c_c.count / 100 * total_count
+                    m_data['per'] = per
+                    m_data['total_count'] = c_c.count
+                    m_data['done_count'] = total_count
+                    m_data['category_title'] = c_c.category.title
 
+            elif c.status == 'product':
+                for c_p in c.condition_prods.all():
+                    total_count = 0
+                    orders = dealer.orders.filter(
+                        is_active=True, status__in=['Отправлено', 'Оплачено', 'Успешно', 'Ожидание'],
+                        paid_at__gte=m.start_date)
+                    for o in orders:
+                        total_count += sum(o.order_products.filter(ab_product=c_p.product
+                                                                   ).values_list('count', flat=True))
+                    per = c_p.count / 100 * total_count
+                    m_data['per'] = per
+                    m_data['total_count'] = c_p.count
+                    m_data['done_count'] = total_count
+                    m_data['product_title'] = c_p.product.title
+
+            elif c.status == 'money':
+
+                total_price = sum(dealer.orders.filter(
+                    is_active=True, status__in=['Отправлено', 'Оплачено', 'Успешно', 'Ожидание'],
+                    paid_at__gte=m.start_date).values_list('price', flat=True))
+                per = c.money / 100 * total_price
+                m_data['per'] = per
+                m_data['total_amount'] = c.money
+                m_data['done_amount'] = total_price
+            m_data['presents'] = [
+                {
+                    "status": p.status,
+                    "product": p.product,
+                    "money": p.money,
+                    "text": p.text
+                 }
+                for p in c.presents.all()
+            ]
+        response_data.append(m_data)
+    return response_data

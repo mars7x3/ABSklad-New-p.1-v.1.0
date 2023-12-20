@@ -60,8 +60,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             context=self.context
         ).data
         rep['images'] = ProductImageSerializer([instance.images.first()], many=True, context=self.context).data
-        if instance.collection:
-            rep['collection'] = instance.collection.title
+        rep['collection'] = instance.collection.title if instance.collection else '---'
 
         return rep
 
@@ -107,8 +106,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                                                        context=self.context).data
         image_list = ReviewImage.objects.filter(review__product=instance, review__is_active=True)
         rep['reviews_images'] = ReviewsImagesSerializer(image_list, many=True, context=self.context).data
-        if instance.category:
-            rep['category'] = instance.category.title
+        rep['category'] = instance.category.title if instance.category else '---'
+        rep['collection'] = instance.collection.title if instance.collection else '---'
+
         return rep
 
 

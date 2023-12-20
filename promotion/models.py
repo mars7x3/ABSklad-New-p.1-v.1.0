@@ -37,13 +37,13 @@ class MotivationCondition(models.Model):
 
 
 class ConditionCategory(models.Model):
-    condition = models.ForeignKey(Motivation, on_delete=models.CASCADE, related_name='condition_cats')
+    condition = models.ForeignKey(MotivationCondition, on_delete=models.CASCADE, related_name='condition_cats')
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='condition_cats')
     count = models.IntegerField(default=0)
 
 
 class ConditionProduct(models.Model):
-    condition = models.ForeignKey(Motivation, on_delete=models.CASCADE, related_name='condition_prods')
+    condition = models.ForeignKey(MotivationCondition, on_delete=models.CASCADE, related_name='condition_prods')
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='condition_prods')
     count = models.IntegerField(default=0)
 

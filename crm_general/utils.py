@@ -11,3 +11,7 @@ def string_date_to_datetime(date_string: str):
     except Exception as e:
         logging.error(e)
         raise ValidationError(detail="Wrong format of date %s " % date_string)
+
+
+
+

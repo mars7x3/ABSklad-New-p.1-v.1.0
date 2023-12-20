@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
+from crm_general.director.utils import get_motivation_done
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
 from order.models import MyOrder
@@ -322,12 +323,12 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['city_title'] = instance.city.title if instance.city else '---'
-        rep['price_city'] = instance.price_city.title if instance.price_city else '---'
+        rep['price_city_title'] = instance.price_city.title if instance.price_city else '---'
         rep['dealer_status'] = instance.dealer_status.title if instance.dealer_status else '---'
         rep['balance_crm'] = instance.wallet.amount_crm
         rep['balance_1c'] = instance.wallet.amount_1c
         rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores, many=True, context=self.context).data
-        rep['motivations'] = DirDealerMotivationSerializer(instance.motivations, many=True, context=self.context).data
+        rep['motivations'] = get_motivation_done(instance)
 
         return rep
 
@@ -340,17 +341,6 @@ class DirectorDealerStoreSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['city_title'] = instance.city.title if instance.city else '---'
-        return rep
-
-
-class DirDealerMotivationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Motivation
-        exclude = ('dealers',)
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['presents'] = DirDealerMotivationPresentSerializer(instance.presents, many=True, context=self.context).data
         return rep
 
 

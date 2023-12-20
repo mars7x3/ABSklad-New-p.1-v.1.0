@@ -14,7 +14,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorProductListSerializer, DirectorCollectionListSerializer, CollectionCategoryListSerializer, \
     CollectionCategoryProductListSerializer, DirectorProductCRUDSerializer, DirectorDiscountSerializer, \
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
-    DirectorDealerSerializer
+    DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
@@ -324,6 +324,20 @@ class DirectorDiscountAsiaProductView(generics.ListAPIView):
     queryset = AsiaProduct.objects.filter(is_active=True, is_discount=False)
     serializer_class = DirectorDiscountProductSerializer
 
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        category = request.query_params.get('category')
+        if category:
+            kwargs['category__slug'] = category
+
+        queryset = queryset.filter(**kwargs)
+        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
 
 class DirectorDiscountCityView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsDirector]
@@ -367,13 +381,13 @@ class DirectorDealerListView(viewsets.ReadOnlyModelViewSet):
 
 
 class DirectorDealerCRUDView(mixins.CreateModelMixin,
-                                   mixins.RetrieveModelMixin,
-                                   mixins.UpdateModelMixin,
-                                   mixins.DestroyModelMixin,
-                                   GenericViewSet):
+                               mixins.RetrieveModelMixin,
+                               mixins.UpdateModelMixin,
+                               mixins.DestroyModelMixin,
+                               GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = MyUser.objects.all()
-    serializer_class = DirectorDealerSerializer
+    serializer_class = DirectorDealerCRUDSerializer
 
 
 
