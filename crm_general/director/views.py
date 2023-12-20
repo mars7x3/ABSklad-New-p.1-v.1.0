@@ -389,7 +389,11 @@ class DirectorDealerCRUDView(mixins.CreateModelMixin,
     queryset = MyUser.objects.all()
     serializer_class = DirectorDealerCRUDSerializer
 
-
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 # class StockCRUDView(viewsets.ModelViewSet):
 #     permission_classes = [IsAuthenticated, IsDirector]

@@ -18,7 +18,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'username', 'status', 'phone', 'pwd', 'email', 'is_active', 'date_joined', 'image',
-                  'updated_at', 'password')
+                  'updated_at', 'password', 'name')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -307,12 +307,36 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
 class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at')
+        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['profile'] = DirectorDealerProfileSerializer(instance.dealer_profile, context=self.context).data
         return rep
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            profile = self.context.get('request').data.get('profile')
+            user = MyUser.objects.create_user(**validated_data)
+            profile_serializer = DirectorDealerProfileSerializer(data=profile)
+            profile_serializer.is_valid(raise_exception=True)
+            profile_serializer.save(user=user)
+            Wallet.objects.create(dealer=user.dealer_profile)
+            return user
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            profile = self.context.get('request').data.get('profile')
+            for key, value in validated_data.items():
+                setattr(instance, key, value)
+            instance.pwd = validated_data.get('password')
+            instance.set_password(validated_data.get('password'))
+            instance.save()
+
+            profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
+            profile_serializer.is_valid(raise_exception=True)
+            profile_serializer.save()
+            return instance
 
 
 class DirectorDealerProfileSerializer(serializers.ModelSerializer):

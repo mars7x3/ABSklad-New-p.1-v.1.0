@@ -97,5 +97,5 @@ def get_motivation_done(dealer):
                  }
                 for p in c.presents.all()
             ]
-        response_data.append(m_data)
+            response_data.append(m_data)
     return response_data
