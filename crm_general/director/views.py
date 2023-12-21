@@ -15,7 +15,8 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     CollectionCategoryProductListSerializer, DirectorProductCRUDSerializer, DirectorDiscountSerializer, \
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
-    DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer
+    DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
+    DirectorPriceListSerializer
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
@@ -498,8 +499,11 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
 
 class DirectorPriceListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = Motivation.objects.all()
-    serializer_class = DirectorMotivationCRUDSerializer
+    queryset = AsiaProduct.objects.all()
+    serializer_class = DirectorPriceListSerializer
+
+
+
 # class StockCRUDView(viewsets.ModelViewSet):
 #     permission_classes = [IsAuthenticated, IsDirector]
 #     queryset = Stock.objects.select_related('city').all()

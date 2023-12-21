@@ -10,7 +10,7 @@ from crm_general.director.utils import get_motivation_done
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
 from order.models import MyOrder, Cart, CartProduct
-from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage
+from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice
 from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
     ConditionProduct
 
@@ -398,7 +398,7 @@ class DirDealerCartProductSerializer(serializers.ModelSerializer):
         rep['price'] = price.price * instance.count
         rep['discount_price'] = price.old_price - price.price * instance.count if price.discount > 0 else 0
         rep['crm_count'] = count.count_crm
-        rep['stock_city'] = instance.stock.city.title
+        rep['stock_city'] = instance.cart.stock.city.title
 
         return rep
 
@@ -501,6 +501,30 @@ class MotivationPresentSerializer(serializers.ModelSerializer):
         rep['product_title'] = instance.product.title if instance.product else '---'
         return rep
 
+
+class DirectorPriceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        cost_price = instance.cost_prices.filter(is_active=True).last()
+        rep['cost_price'] = cost_price.price if cost_price else '---'
+        rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0),
+                                                           many=True, context=self.context).data
+        return rep
+
+
+class DirectorProductPriceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductPrice
+        fields = ('price', 'city')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        return rep
 
 # class StockCRUDSerializer(serializers.ModelSerializer):
 #     class Meta:
