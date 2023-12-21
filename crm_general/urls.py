@@ -14,6 +14,12 @@ from .rop.views import (
 from .director.views import *
 from .views import *
 
+from .marketer.views import (
+    MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeDestroyView,
+    MarketerBannerModelViewSet, DealerStatusListView, MarketerStoryViewSet, CRMNotificationView
+)
+
+
 director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
 director_router.register("director/product/detail", DirectorProductCRUDView)
@@ -94,7 +100,22 @@ crm_urlpatterns = [
 ]
 
 
+marketer_router = SimpleRouter()
+marketer_router.register('product', MarketerProductRUViewSet)
+marketer_router.register('collection', MarketerCollectionModelViewSet)
+marketer_router.register('category', MarketerCategoryModelViewSet)
+marketer_router.register('banner', MarketerBannerModelViewSet)
+marketer_router.register('story', MarketerStoryViewSet)
+marketer_router.register('crm-notification', CRMNotificationView)
+
+
+marketer_urlpatterns = [
+    path('marketer/product-sizes/<int:pk>/', ProductSizeDestroyView.as_view({'delete': 'destroy'})),
+    path('marketer/dealer-status/list/', DealerStatusListView.as_view({'get': 'list'})),
+    path('marketer/', include(marketer_router.urls)),
+]
+
 # + some_urlpatterns
-urlpatterns = manager_urlpatterns + rop_urlpatterns + director_urlpatterns + crm_urlpatterns
+urlpatterns = manager_urlpatterns + rop_urlpatterns + director_urlpatterns + crm_urlpatterns + marketer_urlpatterns
 
 

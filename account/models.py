@@ -137,9 +137,12 @@ class Notification(models.Model):
         ('notif', 'Оповещение'),
         ('chat', 'Чат'),
         ('balance', 'Пополнение баланса'),
-
+        ('motivation', 'Мотивация'),
     )
+
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='notifications')
+    notification = models.ForeignKey('CRMNotification', on_delete=models.SET_NULL, related_name='crm_notification',
+                                     blank=True, null=True)
     status = models.CharField(choices=STATUS, max_length=10, blank=True, null=True)
     image = models.FileField(upload_to='notification', blank=True, null=True)
     is_read = models.BooleanField(default=False)
@@ -172,3 +175,22 @@ class BalanceHistory(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+
+class CRMNotification(models.Model):
+    STATUS = (
+        ('order', 'Заказ'),
+        ('news', 'Новости'),
+        ('action', 'Акция'),
+        ('notif', 'Оповещение'),
+        ('chat', 'Чат'),
+        ('balance', 'Пополнение баланса'),
+        ('motivation', 'Мотивация'),
+    )
+
+    users = models.ManyToManyField(MyUser, related_name='crm_notifications')
+    image = models.FileField(upload_to='notification', blank=True, null=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    dispatch_date = models.DateTimeField()
+    status = models.CharField(choices=STATUS, max_length=100, default='notif')
+    link_id = models.CharField(max_length=100)
