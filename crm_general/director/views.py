@@ -436,7 +436,7 @@ class DirectorDealerOrderListView(APIView):
         end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
         user = MyUser.objects.filter(id=user_id).first()
         orders = user.dealer_profile.orders.filter(created_at__gte=start_date, created_at__lte=end_date, is_active=True,
-                                                   status_in=['Оплачено', 'Отправлено', 'Ожидание', 'Успешно'])
+                                                   status__in=['Оплачено', 'Отправлено', 'Ожидание', 'Успешно'])
         response_data = DirDealerOrderSerializer(orders, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
