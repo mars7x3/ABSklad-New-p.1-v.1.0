@@ -25,3 +25,15 @@ class AppPaginationClass(PageNumberPagination):
             ('results_count', len(data)),
             ('total_results', self.page.paginator.count),
         ]))
+
+
+class ProductPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 40
+    page_size_query_param = 'page_size'
+
+
+class GeneralPurposePagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 40
+    page_size_query_param = 'page_size'
