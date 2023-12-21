@@ -77,7 +77,7 @@ class StaffCRUDView(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class BalanceListView(generics.ListAPIView):
+class BalanceListView(viewsets.ReadOnlyModelViewSet):
     """
     *QueryParams:
     {
@@ -219,7 +219,7 @@ class TotalEcoBalanceView(APIView):
         return Response({"amount_eco": amount_eco, "amount_crm": amount_crm}, status=status.HTTP_200_OK)
 
 
-class DirectorProductListView(generics.ListAPIView):
+class DirectorProductListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.all().prefetch_related('prices', 'counts').select_related('category', 'collection')
     serializer_class = DirectorProductListSerializer
@@ -322,7 +322,7 @@ class DirectorDiscountCRUDView(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class DirectorDiscountAsiaProductView(generics.ListAPIView):
+class DirectorDiscountAsiaProductView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.filter(is_active=True, is_discount=False)
     serializer_class = DirectorDiscountProductSerializer

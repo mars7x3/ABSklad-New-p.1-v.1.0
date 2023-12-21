@@ -413,6 +413,7 @@ class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         with transaction.atomic():
             conditions = self.context['request'].data['conditions']
+            condition_cats = conditions['condition_cats']
             dealers = validated_data.pop('dealers')
             motivation = Motivation.objects.create(**validated_data)
             motivation.dealers.add(*dealers)
