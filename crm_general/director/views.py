@@ -496,6 +496,10 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
+class DirectorPriceListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = Motivation.objects.all()
+    serializer_class = DirectorMotivationCRUDSerializer
 # class StockCRUDView(viewsets.ModelViewSet):
 #     permission_classes = [IsAuthenticated, IsDirector]
 #     queryset = Stock.objects.select_related('city').all()
