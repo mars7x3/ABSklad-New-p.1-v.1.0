@@ -24,6 +24,7 @@ director_router.register("director/motivation/crud", DirectorMotivationCRUDView)
 director_router.register("director/product/list", DirectorProductListView)
 director_router.register("director/balance/list", BalanceListView)
 director_router.register("director/discount/product/list", DirectorDiscountAsiaProductView)
+director_router.register("director/price/list", DirectorPriceListView)
 
 
 director_urlpatterns = [
@@ -39,7 +40,8 @@ director_urlpatterns = [
     path('director/dealer/cart/list/', DirectorDealerCartListView.as_view()),
     path('director/dealer/balance-history/list/', DirectorBalanceHistoryListView.as_view()),
     path('director/dealer/total-amounts/', DirectorTotalAmountView.as_view()),
-    path('director/price/list/', DirectorPriceListView.as_view()),
+    path('director/price/create/', DirectorPriceCreateView.as_view()),
+
 
 
     path('', include(director_router.urls)),

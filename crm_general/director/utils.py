@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db.models import Q, OuterRef, Subquery
 
 from general_service.models import Stock
@@ -49,6 +51,7 @@ def get_motivation_done(dealer):
     for m in dealer.motivations.filter(is_active=True):
         m_data = {"title": m.title}
         for c in m.conditions.all():
+            m_data['status'] = c.status
             if c.status == 'category':
                 for c_c in c.condition_cats.all():
                     total_count = 0
@@ -58,12 +61,11 @@ def get_motivation_done(dealer):
                     for o in orders:
                         total_count += sum(o.order_products.filter(category=c_c.category
                                                                    ).values_list('count', flat=True))
-                    per = c_c.count / 100 * total_count
-                    m_data['per'] = per
+                    per = total_count * 100 / c_c.count
+                    m_data['per'] = round(per)
                     m_data['total_count'] = c_c.count
                     m_data['done_count'] = total_count
                     m_data['category_title'] = c_c.category.title
-                    print(m_data)
 
             elif c.status == 'product':
                 for c_p in c.condition_prods.all():
@@ -74,8 +76,8 @@ def get_motivation_done(dealer):
                     for o in orders:
                         total_count += sum(o.order_products.filter(ab_product=c_p.product
                                                                    ).values_list('count', flat=True))
-                    per = c_p.count / 100 * total_count
-                    m_data['per'] = per
+                    per = total_count * 100 / c_p.count
+                    m_data['per'] = round(per)
                     m_data['total_count'] = c_p.count
                     m_data['done_count'] = total_count
                     m_data['product_title'] = c_p.product.title
@@ -85,8 +87,8 @@ def get_motivation_done(dealer):
                 total_price = sum(dealer.orders.filter(
                     is_active=True, status__in=['Отправлено', 'Оплачено', 'Успешно', 'Ожидание'],
                     paid_at__gte=m.start_date).values_list('price', flat=True))
-                per = c.money / 100 * total_price
-                m_data['per'] = per
+                per = total_price * 100 / c.money
+                m_data['per'] = round(per)
                 m_data['total_amount'] = c.money
                 m_data['done_amount'] = total_price
             m_data['presents'] = [

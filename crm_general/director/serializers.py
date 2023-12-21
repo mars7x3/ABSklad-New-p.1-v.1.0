@@ -207,11 +207,11 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
                                                                   order__is_active=True,
                                                                   order__status__in=['Отправлено', 'Оплачено',
                                                                                      'Успешно'])
-                                  .values_list('count'))) / 15, 2)
-        rep['avg_check'] = sum(instance.order_products.filter(order__is_active=True,
-                                                              order__status__in=['Отправлено', 'Успешно', 'Оплачено',
-                                                                                 'Ожидание']
-                                                              ).values_list('total_price', flat=True))
+                                   .values_list('count'))) / 15, 2)
+        avg_check = instance.order_products.filter(order__is_active=True,
+                                                   order__status__in=['Отправлено', 'Успешно', 'Оплачено', 'Ожидание']
+                                                   ).values_list('total_price', flat=True)
+        rep['avg_check'] = sum(avg_check) / len(avg_check)
 
         return rep
 
@@ -287,7 +287,7 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         rep['id'] = instance.user.id
         rep['name'] = instance.user.name
         balance_histories = instance.balance_histories.filter(is_active=True, created_at__gte=start_date,
-                                                                   created_at__lte=end_date)
+                                                              created_at__lte=end_date)
         rep['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
         rep['shipment_amount'] = sum(balance_histories.filter(status='order').values_list('amount', flat=True))
         rep['balance'] = balance_histories.last().balance if balance_histories else 0

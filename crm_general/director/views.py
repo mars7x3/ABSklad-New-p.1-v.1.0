@@ -22,7 +22,7 @@ from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
 from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
-from product.models import ProductPrice, AsiaProduct, Collection, Category
+from product.models import ProductPrice, AsiaProduct, Collection, Category, ProductCostPrice
 from promotion.models import Discount, Motivation
 
 
@@ -78,7 +78,7 @@ class StaffCRUDView(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class BalanceListView(viewsets.ReadOnlyModelViewSet):
+class BalanceListView(mixins.ListModelMixin, GenericViewSet):
     """
     *QueryParams:
     {
@@ -220,7 +220,7 @@ class TotalEcoBalanceView(APIView):
         return Response({"amount_eco": amount_eco, "amount_crm": amount_crm}, status=status.HTTP_200_OK)
 
 
-class DirectorProductListView(viewsets.ReadOnlyModelViewSet):
+class DirectorProductListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.all().prefetch_related('prices', 'counts').select_related('category', 'collection')
     serializer_class = DirectorProductListSerializer
@@ -323,7 +323,7 @@ class DirectorDiscountCRUDView(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class DirectorDiscountAsiaProductView(viewsets.ReadOnlyModelViewSet):
+class DirectorDiscountAsiaProductView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.filter(is_active=True, is_discount=False)
     serializer_class = DirectorDiscountProductSerializer
@@ -355,7 +355,7 @@ class DirectorDiscountDealerStatusView(generics.ListAPIView):
     serializer_class = DirectorDiscountDealerStatusSerializer
 
 
-class DirectorDealerListView(viewsets.ReadOnlyModelViewSet):
+class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
     """
     URL/search/?city_slug=taraz&name=nurbek&start_date=%d-%m-%Y&end_date=%d-%m-%Y
     """
@@ -497,10 +497,57 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class DirectorPriceListView(generics.ListAPIView):
+class DirectorPriceListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.all()
     serializer_class = DirectorPriceListSerializer
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        title = request.query_params.get('title')
+        if title:
+            kwargs['title__icontains'] = title
+
+        category = request.query_params.get('category')
+        if category:
+            kwargs['category__slug'] = category
+
+        queryset = queryset.filter(**kwargs)
+        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DirectorPriceCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        product_id = request.data.get('id')
+        c_price = request.data.get('cost_price')
+        prices = request.data.get('prices')
+        product = AsiaProduct.objects.filter(id=product_id).first()
+        cost_price = product.cost_prices.filter(is_active=True).first()
+        if cost_price.price != c_price:
+            cost_price.is_active = False
+            cost_price.save()
+            ProductCostPrice.objects.create(product=product, price=c_price)
+
+        d_statuses = DealerStatus.objects.all()
+        price_data = []
+        for p in prices:
+            city = City.objects.get(id=p['city'])
+            for s in d_statuses:
+                price_data.append(ProductPrice(
+                    product=product,
+                    city=city,
+                    d_status=s,
+                    price=p['price']
+                ))
+        product.prices.all().delete()
+        ProductPrice.objects.bulk_create(price_data)
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
 
