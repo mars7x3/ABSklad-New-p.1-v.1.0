@@ -21,7 +21,7 @@ class Motivation(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     is_active = models.BooleanField(default=True)
-    dealers = models.ManyToManyField(DealerProfile, related_name='motivations')
+    dealers = models.ManyToManyField(DealerProfile, blank=True, related_name='motivations')
 
 
 class MotivationCondition(models.Model):
