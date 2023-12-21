@@ -20,6 +20,7 @@ director_router.register("director/product/detail", DirectorProductCRUDView)
 director_router.register("director/discount/crud", DirectorDiscountCRUDView)
 director_router.register("director/dealer/list", DirectorDealerListView)
 director_router.register("director/dealer/crud", DirectorDealerCRUDView)
+director_router.register("director/motivation/crud", DirectorMotivationCRUDView)
 
 
 director_urlpatterns = [

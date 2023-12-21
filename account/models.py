@@ -93,7 +93,7 @@ class DealerProfile(models.Model):
     birthday = models.DateField(blank=True, null=True)
 
     def __str__(self):
-        return self.user.name
+        return f'{self.id} - {self.user.name}'
 
 
 class DealerStore(models.Model):

@@ -11,7 +11,8 @@ from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABSto
 from general_service.models import Stock, City
 from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage
-from promotion.models import Discount, Motivation, MotivationPresent
+from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
+    ConditionProduct
 
 
 class StaffCRUDSerializer(serializers.ModelSerializer):
@@ -399,6 +400,103 @@ class DirDealerCartProductSerializer(serializers.ModelSerializer):
 
         return rep
 
+
+class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Motivation
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['dealers'] = MotivationDealerSerializer(instance.dealers, many=True, context=self.context).data
+        rep['conditions'] = MotivationConditionSerializer(instance.conditions, many=True, context=self.context).data
+
+        return rep
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            conditions = self.context['request'].data['conditions']
+            dealers = validated_data.pop('dealers')
+            motivation = Motivation.objects.create(**validated_data)
+            motivation.dealers.add(*dealers)
+            motivation.save()
+            MotivationCondition.objects.create(motivation=motivation, **conditions)
+
+            return motivation
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            profile = self.context.get('request').data.get('profile')
+            for key, value in validated_data.items():
+                setattr(instance, key, value)
+            instance.pwd = validated_data.get('password')
+            instance.set_password(validated_data.get('password'))
+            instance.save()
+
+            profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
+            profile_serializer.is_valid(raise_exception=True)
+            profile_serializer.save()
+            return instance
+
+
+class MotivationDealerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerProfile
+        fields = ('id',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['user_name'] = instance.user.name
+        return rep
+
+
+class MotivationConditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotivationCondition
+        exclude = ('motivation',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['condition_cats'] = MotivationConditionCategorySerializer(instance.condition_cats,
+                                                                      many=True, context=self.context).data
+        rep['condition_prods'] = MotivationConditionProductSerializer(instance.condition_prods,
+                                                                      many=True, context=self.context).data
+        rep['presents'] = MotivationPresentSerializer(instance.presents, many=True, context=self.context).data
+
+        return rep
+
+
+class MotivationConditionCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionCategory
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['category_title'] = instance.category.title if instance.category else '---'
+        return rep
+
+
+class MotivationConditionProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionProduct
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['product_title'] = instance.product.title if instance.product else '---'
+        return rep
+
+
+class MotivationPresentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotivationPresent
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['product_title'] = instance.product.title if instance.product else '---'
+        return rep
 
 
 # class StockCRUDSerializer(serializers.ModelSerializer):

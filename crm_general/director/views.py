@@ -15,14 +15,14 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     CollectionCategoryProductListSerializer, DirectorProductCRUDSerializer, DirectorDiscountSerializer, \
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
-    DirDealerCartProductSerializer
+    DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
 from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
 from product.models import ProductPrice, AsiaProduct, Collection, Category
-from promotion.models import Discount
+from promotion.models import Discount, Motivation
 
 
 class StaffCRUDView(viewsets.ModelViewSet):
@@ -65,11 +65,13 @@ class StaffCRUDView(viewsets.ModelViewSet):
 
         if name:
             kwargs['name__icontains'] = name
-        if status:
+
+        if u_status:
             kwargs['status'] = u_status
+
         if is_active:
             kwargs['is_active'] = bool(int(is_active))
-
+        print(kwargs)
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -423,6 +425,21 @@ class DirectorDealerCartListView(APIView):
         response_data = DirDealerCartProductSerializer(cart_prods, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
+
+class DirectorMotivationCRUDView(mixins.CreateModelMixin,
+                                 mixins.RetrieveModelMixin,
+                                 mixins.UpdateModelMixin,
+                                 mixins.DestroyModelMixin,
+                                 GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = Motivation.objects.all()
+    serializer_class = DirectorMotivationCRUDSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
 # class StockCRUDView(viewsets.ModelViewSet):
