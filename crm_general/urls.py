@@ -21,12 +21,13 @@ director_router.register("director/discount/crud", DirectorDiscountCRUDView)
 director_router.register("director/dealer/list", DirectorDealerListView)
 director_router.register("director/dealer/crud", DirectorDealerCRUDView)
 director_router.register("director/motivation/crud", DirectorMotivationCRUDView)
+director_router.register("director/product/list", DirectorProductListView)
+director_router.register("director/balance/list", BalanceListView)
+director_router.register("director/discount/product/list", DirectorDiscountAsiaProductView)
 
 
 director_urlpatterns = [
     path("director/collection/list/", DirectorCollectionListView.as_view()),
-    path("director/product/list/", DirectorProductListView.as_view()),
-    path("director/balance/list/", BalanceListView.as_view()),
     path('director/balance/list/total/', BalanceListTotalView.as_view()),
     path('director/balance/history/list/', BalanceHistoryListView.as_view()),
     path('director/balance/history/total/', TotalEcoBalanceView.as_view()),
@@ -34,7 +35,6 @@ director_urlpatterns = [
     path('director/collection/category/product/list/', CollectionCategoryProductListView.as_view()),
     path('director/discount/dealer-status/list/', DirectorDiscountDealerStatusView.as_view()),
     path('director/discount/city/list/', DirectorDiscountCityView.as_view()),
-    path('director/discount/product/list/', DirectorDiscountAsiaProductView.as_view()),
 
 
     path('', include(director_router.urls)),
