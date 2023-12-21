@@ -50,7 +50,7 @@ def get_motivation_done(dealer):
         m_data = {"title": m.title}
         for c in m.conditions.all():
             if c.status == 'category':
-                for c_c in c.condition_prods.all():
+                for c_c in c.condition_cats.all():
                     total_count = 0
                     orders = dealer.orders.filter(
                         is_active=True, status__in=['Отправлено', 'Оплачено', 'Успешно', 'Ожидание'],
@@ -63,6 +63,7 @@ def get_motivation_done(dealer):
                     m_data['total_count'] = c_c.count
                     m_data['done_count'] = total_count
                     m_data['category_title'] = c_c.category.title
+                    print(m_data)
 
             elif c.status == 'product':
                 for c_p in c.condition_prods.all():

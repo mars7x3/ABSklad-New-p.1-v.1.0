@@ -164,7 +164,7 @@ class BalanceHistory(models.Model):
         ('order', 'order'),
         ('wallet', 'wallet')
     )
-    dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='balance_history')
+    dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='balance_histories')
     amount = models.DecimalField(decimal_places=2, max_digits=100, default=0)
     balance = models.DecimalField(decimal_places=2, max_digits=100, default=0)
     status = models.CharField(max_length=10, choices=STATUS)

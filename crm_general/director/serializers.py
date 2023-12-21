@@ -286,18 +286,17 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
         rep['id'] = instance.user.id
         rep['name'] = instance.user.name
-        rep['pds_amount'] = sum(instance.user.money_docs.filter(is_active=True, created_at__gte=start_date,
-                                                                created_at__lte=end_date
-                                                                ).values_list('amount', flat=True))
-        rep['shipment_amount'] = sum(instance.orders.filter(is_active=True, status__in=['Успешно', 'Отправлено'],
-                                                            released_at__gte=start_date, released_at__lte=end_date
-                                                            ).values_list('price', flat=True))
+        balance_histories = instance.balance_histories.filter(is_active=True, created_at__gte=start_date,
+                                                                   created_at__lte=end_date)
+        rep['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
+        rep['shipment_amount'] = sum(balance_histories.filter(status='order').values_list('amount', flat=True))
+        rep['balance'] = balance_histories.last().balance if balance_histories else 0
+
         rep['city'] = instance.city.title if instance.city else '---'
         rep['status'] = True if instance.wallet.amount_crm > 50000 else False
         last_order = instance.orders.filter(is_active=True, status__in=['Успешно', 'Отправлено', 'Оплачено',
                                                                         'Ожидание']).last()
         rep['last_date'] = str(last_order.paid_at) if last_order else '---'
-        rep['balance'] = instance.wallet.amount_crm
 
         return rep
 
@@ -346,7 +345,7 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['city_title'] = instance.city.title if instance.city else '---'
         rep['price_city_title'] = instance.price_city.title if instance.price_city else '---'
-        rep['dealer_status'] = instance.dealer_status.title if instance.dealer_status else '---'
+        rep['dealer_status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
         rep['balance_crm'] = instance.wallet.amount_crm
         rep['balance_1c'] = instance.wallet.amount_1c
         rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores, many=True, context=self.context).data
@@ -375,6 +374,12 @@ class DirDealerMotivationPresentSerializer(serializers.ModelSerializer):
 class DirDealerOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
+        fields = '__all__'
+
+
+class DirBalanceHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalanceHistory
         fields = '__all__'
 
 

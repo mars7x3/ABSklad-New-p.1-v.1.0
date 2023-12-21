@@ -35,7 +35,10 @@ director_urlpatterns = [
     path('director/collection/category/product/list/', CollectionCategoryProductListView.as_view()),
     path('director/discount/dealer-status/list/', DirectorDiscountDealerStatusView.as_view()),
     path('director/discount/city/list/', DirectorDiscountCityView.as_view()),
-
+    path('director/dealer/order/list/', DirectorDealerOrderListView.as_view()),
+    path('director/dealer/cart/list/', DirectorDealerCartListView.as_view()),
+    path('director/dealer/balance-history/list/', DirectorBalanceHistoryListView.as_view()),
+    path('director/dealer/total-amounts/', DirectorTotalAmountView.as_view()),
 
     path('', include(director_router.urls)),
 ]

@@ -46,6 +46,7 @@ admin.site.register(DealerProfile)
 admin.site.register(RopProfile)
 admin.site.register(ManagerProfile)
 admin.site.register(WarehouseProfile)
+admin.site.register(DealerStore)
 
 admin.site.register(DealerStatus)
 admin.site.register(Notification)

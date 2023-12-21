@@ -112,3 +112,4 @@ class UserImageCDView(APIView):
         user.save()
         image_url = request.build_absolute_uri(user.image.url)
         return Response({"url": image_url}, status=status.HTTP_200_OK)
+
