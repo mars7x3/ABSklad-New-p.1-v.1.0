@@ -104,7 +104,7 @@ class MotivationPresentSerializer(serializers.ModelSerializer):
 class BannerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active')
+        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active', 'products')
 
 
 class BannerSerializer(serializers.ModelSerializer):
