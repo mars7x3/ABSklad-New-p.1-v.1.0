@@ -9,9 +9,9 @@ from order.models import OrderProduct, MyOrder
 def purchase_analysis(request):
     order_statuses = {
         "all": None,
-        "active": ['Ожидание', 'Новый', 'Оплачено'],
-        "done": ['Отправлено', 'Успешно'],
-        "cancel": ['Отказано']
+        "active": ['wait', 'created', 'paid'],
+        "done": ['sent', 'success'],
+        "cancel": ['rejected']
     }
     start = request.data.get('start')
     end = request.data.get('end')

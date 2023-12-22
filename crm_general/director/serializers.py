@@ -205,11 +205,11 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         last_15_days = timezone.now() - timezone.timedelta(days=15)
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
-                                                                  order__status__in=['Отправлено', 'Оплачено',
-                                                                                     'Успешно'])
+                                                                  order__status__in=['sent', 'paid',
+                                                                                     'success'])
                                    .values_list('count'))) / 15, 2)
         avg_check = instance.order_products.filter(order__is_active=True,
-                                                   order__status__in=['Отправлено', 'Успешно', 'Оплачено', 'Ожидание']
+                                                   order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
         rep['avg_check'] = sum(avg_check) / len(avg_check)
 
@@ -295,8 +295,8 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
 
         rep['city'] = instance.city.title if instance.city else '---'
         rep['status'] = True if instance.wallet.amount_crm > 50000 else False
-        last_order = instance.orders.filter(is_active=True, status__in=['Успешно', 'Отправлено', 'Оплачено',
-                                                                        'Ожидание']).last()
+        last_order = instance.orders.filter(is_active=True, status__in=['success', 'sent', 'paid',
+                                                                        'wait']).last()
         rep['last_date'] = str(last_order.paid_at) if last_order else '---'
 
         return rep

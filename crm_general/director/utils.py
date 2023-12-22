@@ -61,7 +61,7 @@ def get_motivation_done(dealer):
 
         conditions = motivation.conditions.all()
         orders = dealer.orders.filter(
-            is_active=True, status__in=['Отправлено', 'Оплачено', 'Успешно', 'Ожидание'],
+            is_active=True, status__in=['sent', 'sent', 'success', 'wait'],
             paid_at__gte=motivation.start_date)
 
         for condition in conditions:
