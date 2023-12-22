@@ -285,6 +285,7 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
         rep['id'] = instance.user.id
+        rep['is_active'] = instance.user.is_active
         rep['name'] = instance.user.name
         balance_histories = instance.balance_histories.filter(is_active=True, created_at__gte=start_date,
                                                               created_at__lte=end_date)
@@ -420,37 +421,80 @@ class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             conditions = self.context['request'].data['conditions']
             dealers = validated_data.pop('dealers')
+
             motivation = Motivation.objects.create(**validated_data)
             motivation.dealers.add(*dealers)
             motivation.save()
+
             condition_cats = []
             condition_prods = []
+            presents = []
+
             for c in conditions:
                 condition = MotivationCondition.objects.create(motivation=motivation, status=c['status'],
                                                                money=c['money'], text=c['text'])
                 match c['status']:
                     case 'category':
                         for cat in c['condition_cats']:
-                            ConditionCategory(condition=condition, count=cat['count'], category_id=cat['category'])
+                            condition_cats.append(ConditionCategory(condition=condition, count=cat['count'],
+                                                                    category_id=cat['category']))
 
                     case 'product':
-                        pass
+                        for prod in c['condition_prods']:
+                            condition_prods.append(ConditionCategory(condition=condition, count=prod['count'],
+                                                                     product_id=prod['product']))
+                for pres in c['presents']:
+                    presents.append(MotivationPresent(
+                        condition=condition, status=pres['status'], money=pres['money'], text=pres['text']
+                    ))
+            ConditionCategory.objects.bulk_create(condition_cats)
+            ConditionProduct.objects.bulk_create(condition_prods)
+            MotivationPresent.objects.bulk_create(presents)
 
             return motivation
 
     def update(self, instance, validated_data):
         with transaction.atomic():
-            profile = self.context.get('request').data.get('profile')
+            conditions = self.context['request'].data['conditions']
+            dealers = validated_data.pop('dealers')
+            motivation = instance
+            if motivation.is_active:
+                if timezone.now() > motivation.start_date:
+                    serializers.ValidationError('Активные мотивации нельзя изменять!')
             for key, value in validated_data.items():
-                setattr(instance, key, value)
-            instance.pwd = validated_data.get('password')
-            instance.set_password(validated_data.get('password'))
-            instance.save()
+                setattr(motivation, key, value)
+            motivation.dealers.clear()
+            motivation.dealers.add(*dealers)
+            motivation.save()
+            motivation.conditions.all().delete()
 
-            profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
-            profile_serializer.is_valid(raise_exception=True)
-            profile_serializer.save()
-            return instance
+            condition_cats = []
+            condition_prods = []
+            presents = []
+
+            for c in conditions:
+                condition = MotivationCondition.objects.create(motivation=motivation, status=c['status'],
+                                                               money=c['money'], text=c['text'])
+                match c['status']:
+                    case 'category':
+                        for cat in c['condition_cats']:
+                            condition_cats.append(ConditionCategory(condition=condition, count=cat['count'],
+                                                                    category_id=cat['category']))
+
+                    case 'product':
+                        for prod in c['condition_prods']:
+                            condition_prods.append(ConditionCategory(condition=condition, count=prod['count'],
+                                                                     product_id=prod['product']))
+                for pres in c['presents']:
+                    presents.append(MotivationPresent(
+                        condition=condition, status=pres['status'], money=pres['money'], text=pres['text']
+                    ))
+
+            ConditionCategory.objects.bulk_create(condition_cats)
+            ConditionProduct.objects.bulk_create(condition_prods)
+            MotivationPresent.objects.bulk_create(presents)
+
+            return motivation
 
 
 class MotivationDealerSerializer(serializers.ModelSerializer):
