@@ -419,12 +419,22 @@ class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         with transaction.atomic():
             conditions = self.context['request'].data['conditions']
-            condition_cats = conditions['condition_cats']
             dealers = validated_data.pop('dealers')
             motivation = Motivation.objects.create(**validated_data)
             motivation.dealers.add(*dealers)
             motivation.save()
-            MotivationCondition.objects.create(motivation=motivation, **conditions)
+            condition_cats = []
+            condition_prods = []
+            for c in conditions:
+                condition = MotivationCondition.objects.create(motivation=motivation, status=c['status'],
+                                                               money=c['money'], text=c['text'])
+                match c['status']:
+                    case 'category':
+                        for cat in c['condition_cats']:
+                            ConditionCategory(condition=condition, count=cat['count'], category_id=cat['category'])
+
+                    case 'product':
+                        pass
 
             return motivation
 
@@ -496,11 +506,6 @@ class MotivationPresentSerializer(serializers.ModelSerializer):
     class Meta:
         model = MotivationPresent
         fields = '__all__'
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['product_title'] = instance.product.title if instance.product else '---'
-        return rep
 
 
 class DirectorPriceListSerializer(serializers.ModelSerializer):

@@ -551,6 +551,8 @@ class DirectorPriceCreateView(APIView):
 
 
 
+
+
 # class StockCRUDView(viewsets.ModelViewSet):
 #     permission_classes = [IsAuthenticated, IsDirector]
 #     queryset = Stock.objects.select_related('city').all()
