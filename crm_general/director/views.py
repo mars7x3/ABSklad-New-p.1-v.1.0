@@ -581,6 +581,7 @@ class DirectorTaskCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = CRMTask.objects.all()
     serializer_class = DirectorTaskCRUDSerializer
+    pagination_class = CRMPaginationClass
 
 
 

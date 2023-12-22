@@ -1,10 +1,11 @@
 from collections import OrderedDict
 
 from rest_framework.response import Response
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, mixins
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
 from account.models import MyUser, DealerStatus
 from crm_general.permissions import IsStaff
@@ -61,7 +62,8 @@ class StockListView(generics.ListAPIView):
     serializer_class = StockListSerializer
 
 
-class DealerStatusListView(generics.ListAPIView):
+class DealerStatusListView(mixins.ListModelMixin,
+                           GenericViewSet):
     permission_classes = [IsAuthenticated, IsStaff]
     queryset = DealerStatus.objects.all()
     serializer_class = DealerStatusListSerializer

@@ -604,7 +604,14 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         executors = self.context['request'].data['executor']
+        files = self.context['request'].FILES.getlist('files')
         task = CRMTask.objects.create(**validated_data)
+
+        files_list = []
+        for f in files:
+            files_list.append(CRMTaskResponse(file=f, task=task))
+        CRMTaskFile.objects.bulk_create(files_list)
+
         executors_list = []
         for e in executors:
             executors_list.append(CRMTaskResponse(executor_id=e, task=task))
@@ -613,10 +620,25 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         executors = self.context['request'].data['executor']
-        task = CRMTask.objects.create(**validated_data)
+        files = self.context['request'].FILES.getlist('files')
+        delete_files = self.context['request'].data['delete_files']
+
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+
+        if delete_files:
+            instance.files.filter(id__in=delete_files).delete()
+
+        files_list = []
+        for f in files:
+            files_list.append(CRMTaskResponse(file=f, task=instance))
+        CRMTaskFile.objects.bulk_create(files_list)
+
         executors_list = []
         for e in executors:
-            executors_list.append(CRMTaskResponse(executor_id=e, task=task))
+            executors_list.append(CRMTaskResponse(executor_id=e, task=instance))
+        instance.task_responses.all().delete()
         CRMTaskResponse.objects.bulk_create(executors_list)
 
 
