@@ -51,3 +51,63 @@ class StoryProductImageSerializer(serializers.ModelSerializer):
         fields = ('image',)
 
 
+class MotivationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Motivation
+        exclude = ('dealers',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['conditions'] = MotivationConditionSerializer(instance.conditions, many=True, context=self.context).data
+
+        return rep
+
+
+class MotivationConditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotivationCondition
+        exclude = ('id', 'motivation')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['presents'] = MotivationPresentSerializer(instance.presents, many=True, context=self.context).data
+
+        match instance.status:
+            case 'category':
+                rep['condition_cats'] = ConditionCategorySerializer(instance.condition_cats, many=True,
+                                                                    context=self.context).data
+            case 'product':
+                rep['condition_prods'] = ConditionProductSerializer(instance.condition_prods, many=True,
+                                                                    context=self.context).data
+
+        return rep
+
+
+class ConditionCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionCategory
+        exclude = ('id', 'condition')
+
+
+class ConditionProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionProduct
+        exclude = ('id', 'condition')
+
+
+class MotivationPresentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotivationPresent
+        exclude = ('id', 'condition')
+
+
+class BannerListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['products'] = StoryProductSerializer(instance.products.all(),
+                                                 many=True, context=self.context).data
+        return rep

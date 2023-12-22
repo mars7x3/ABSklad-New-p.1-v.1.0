@@ -5,6 +5,7 @@ from .models import *
 admin.site.register(Story)
 admin.site.register(Discount)
 admin.site.register(Motivation)
+admin.site.register(Banner)
 
 
 class ConditionCategoryInline(admin.TabularInline):
