@@ -27,6 +27,8 @@ director_router.register("director/discount/crud", DirectorDiscountCRUDView)
 director_router.register("director/dealer/list", DirectorDealerListView)
 director_router.register("director/dealer/crud", DirectorDealerCRUDView)
 director_router.register("director/motivation/crud", DirectorMotivationCRUDView)
+director_router.register("director/motivation/dealer/list", DirectorMotivationDealerListView)
+
 director_router.register("director/product/list", DirectorProductListView)
 director_router.register("director/balance/list", BalanceListView)
 director_router.register("director/discount/product/list", DirectorDiscountAsiaProductView)
