@@ -52,14 +52,11 @@ class ConditionProduct(models.Model):
 
 class MotivationPresent(models.Model):
     STATUS = (
-        ('product', 'Товар'),
         ('money', 'Деньги'),
         ('text', 'Прочее')
     )
     condition = models.ForeignKey(MotivationCondition, on_delete=models.CASCADE, null=True, related_name='presents')
     status = models.CharField(max_length=10, choices=STATUS, default='money')
-    product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, blank=True, null=True,
-                                related_name='present_products')
     money = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     expense = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     text = models.TextField(blank=True, null=True)
