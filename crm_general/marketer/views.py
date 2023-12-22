@@ -52,6 +52,7 @@ class MarketerProductRUViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMi
 
 class MarketerCollectionModelViewSet(ListModelMixin,
                                      RetrieveModelMixin,
+                                     CreateModelMixin,
                                      UpdateModelMixin,
                                      GenericViewSet):
     queryset = Collection.objects.all()
@@ -62,6 +63,7 @@ class MarketerCollectionModelViewSet(ListModelMixin,
 
 class MarketerCategoryModelViewSet(ListModelMixin,
                                    RetrieveModelMixin,
+                                   CreateModelMixin,
                                    UpdateModelMixin,
                                    GenericViewSet):
     queryset = Category.objects.all()
@@ -84,6 +86,7 @@ class ProductSizeDestroyView(DestroyModelMixin, GenericViewSet):
 class MarketerBannerModelViewSet(ListModelMixin,
                                  RetrieveModelMixin,
                                  UpdateModelMixin,
+                                 CreateModelMixin,
                                  GenericViewSet):
     queryset = Banner.objects.prefetch_related('cities', 'products').all()
     permission_classes = [IsAuthenticated, IsMarketer]
@@ -95,11 +98,16 @@ class MarketerBannerModelViewSet(ListModelMixin,
         queryset = self.queryset
         status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
+        start_date = self.request.query_params.get('start_time')
+        end_date = self.request.query_params.get('end_time')
 
         if status == 'active':
             queryset = queryset.filter(is_active=True)
         elif status == 'inactive':
             queryset = queryset.filter(is_active=False)
+
+        if start_date and end_date:
+            queryset = queryset.filter(start_time__gte=start_date, end_time__lte=end_date)
 
         if search:
             queryset = queryset.filter(title__icontains=search)
