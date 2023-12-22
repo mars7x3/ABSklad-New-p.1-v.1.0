@@ -36,10 +36,10 @@ import requests
 # Stock.objects.filter(counts__product_id=1)
 
 
-from product.models import AsiaProduct, ProductCount, ProductPrice, ProductSize
-from general_service.models import Stock, City
-from account.models import DealerStatus
-
+# from product.models import AsiaProduct, ProductCount, ProductPrice, ProductSize
+# from general_service.models import Stock, City
+# from account.models import DealerStatus
+#
 # products = AsiaProduct.objects.all()
 # count_list = []
 # price_list = []
@@ -71,13 +71,14 @@ from account.models import DealerStatus
 #                 )
 #             )
 #
+#
 # ProductPrice.objects.bulk_create(price_list)
 # ProductCount.objects.bulk_create(count_list)
 # ProductSize.objects.bulk_create(size_list)
 
 
-from account.models import MyUser
+# from account.models import MyUser
+#
+# u = MyUser.objects.filter(name__icontains='Асан', status__in=['rop', 'manager', 'marketer',
+#                                                               'accountant', 'warehouse', 'director'])
 
-u = MyUser.objects.filter(name__icontains='Асан', status__in=['rop', 'manager', 'marketer',
-                                                                                       'accountant', 'warehouse',
-                                                                                       'director'])

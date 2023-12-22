@@ -83,13 +83,12 @@ rop_urlpatterns = [
 
 crm_router = SimpleRouter()
 crm_router.register("crm/collection/crud", CollectionCRUDView)
-
+crm_router.register("crm/dealer-status/list", DealerStatusListView)
 
 crm_urlpatterns = [
     path('crm/product/images/create/', ProductImagesCreate.as_view()),
     path("crm/city/list/", CityListView.as_view()),
     path("crm/stock/list/", StockListView.as_view()),
-    path("crm/dealer-status/list/", DealerStatusListView.as_view()),
     path("crm/category/list/", CategoryListView.as_view()),
 
 
