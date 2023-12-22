@@ -7,12 +7,12 @@ from product.models import AsiaProduct, Category
 
 class MyOrder(models.Model):
     STATUS = (
-        ('Новый', 'Новый'),
-        ('Оплачено', 'Оплачено'),
-        ('Отправлено', 'Отправлено'),
-        ('Ожидание', 'Ожидание'),
-        ('Отказано', 'Отказано'),
-        ('Успешно', 'Успешно')
+        ('created', 'created'),
+        ('paid', 'paid'),
+        ('sent', 'sent'),
+        ('wait', 'wait'),
+        ('rejected', 'rejected'),
+        ('success', 'success')
     )
     TYPE_STATUS = (
         ('cash', 'cash'),
@@ -28,7 +28,7 @@ class MyOrder(models.Model):
     stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='orders')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
-    status = models.CharField(choices=STATUS, max_length=15, default='Новый')
+    status = models.CharField(choices=STATUS, max_length=15, default='created')
     type_status = models.CharField(choices=TYPE_STATUS, max_length=15, blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -67,12 +67,12 @@ class OrderProduct(models.Model):
 
 class ReturnOrder(models.Model):
     STATUS = (
-        ('Новый', 'Новый'),
-        ('Успешно', 'Успешно'),
-        ('Отказано', 'Отказано'),
+        ('created', 'created'),
+        ('success', 'success'),
+        ('rejected', 'rejected'),
     )
     order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='returns')
-    status = models.CharField(max_length=10, choices=STATUS, default='Новый')
+    status = models.CharField(max_length=10, choices=STATUS, default='rejected')
     created_at = models.DateTimeField(auto_now_add=True)
     moder_comment = models.TextField(blank=True, null=True)
 

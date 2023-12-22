@@ -13,6 +13,12 @@ class MyOrderListSerializer(serializers.ModelSerializer):
         model = MyOrder
         fields = ('id', 'price', 'created_at', 'status')
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['stock'] = StockSerializer(instance.stock, context=self.context).data
+
+        return rep
+
 
 class MyOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
