@@ -9,8 +9,10 @@ from django.utils import timezone
 
 from rest_framework import serializers
 
-from account.models import MyUser, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory, RopProfile, \
-    WarehouseProfile, BalancePlus, BalancePlusFile
+from account.models import (
+    MyUser, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory,
+    BalancePlus, BalancePlusFile
+)
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
 from general_service.models import Stock
 from general_service.serializers import CitySerializer
@@ -160,6 +162,7 @@ class DealerStatusSerializer(serializers.ModelSerializer):
 
 
 class DealerProfileListSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(read_only=True)
     city = CitySerializer(many=False, read_only=True)
     incoming_funds = serializers.SerializerMethodField(read_only=True)
     shipment_amount = serializers.SerializerMethodField(read_only=True)
@@ -171,10 +174,10 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
         model = DealerProfile
         fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
                   "balance_amount")
-        extra_kwargs = {
-            "id": {"source": "user_id", "read_only": True},
-            "name": {"source": "user__name", "read_only": True},
-        }
+        extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
+
+    def get_name(self, instance):
+        return instance.user.name
 
     def get_balance_amount(self, instance) -> Decimal:
         try:
@@ -201,14 +204,15 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 class DealerBirthdaySerializer(serializers.ModelSerializer):
     city = CitySerializer(many=False, read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
+    name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
         fields = ("id", "name", "birthday", "city", "dealer_status")
-        extra_kwargs = {
-            "id": {"source": "user_id", "read_only": True},
-            "name": {"source": "user__name", "read_only": True},
-        }
+        extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
+
+    def get_name(self, instance) -> str:
+        return instance.user.name
 
 
 class ShortWalletSerializer(serializers.ModelSerializer):
@@ -277,7 +281,7 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartProduct
-        fields = ("id", "product_name", "count", "amount", "created_at", "discount", "stock_city", "stock_count")
+        fields = ("id", "product_name", "count", "amount", "discount", "stock_city", "stock_count")
         extra_kwargs = {"id": {"read_only": True, "source": "cart_id"}}
 
     def get_product_name(self, instance) -> str:
@@ -321,7 +325,7 @@ class CollectionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Collection
-        fields = ("slug", "title", "categories_count", "products_count", "created_at")
+        fields = ("slug", "title", "categories_count", "products_count")
 
     def get_categories_count(self, instance):
         return instance.products.aggregate(
@@ -412,7 +416,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductDetailSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True)
     sizes = ProductSizeSerializer(many=True)
-    collection = serializers.SlugRelatedField(slug_field="title")
+    collection = serializers.SlugRelatedField(slug_field="title", read_only=True)
 
     class Meta:
         model = AsiaProduct
@@ -430,7 +434,7 @@ class WalletListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Wallet
-        fields = ("id", "dealer", "amount_1c", "paid_amount", "amount_crm", "city", "status",
+        fields = ("id", "name", "amount_1c", "paid_amount", "amount_crm", "city", "status",
                   "last_replenishment_date")
 
     def get_name(self, instance):
@@ -447,7 +451,7 @@ class WalletListSerializer(serializers.ModelSerializer):
     def get_status(self, instance):
         return instance.dealer.dealer_status.title
 
-    def last_replenishment_date(self, instance) -> datetime:
+    def get_last_replenishment_date(self, instance) -> datetime:
         last_replenishment = instance.dealer.balance_history.filter(status="wallet").last()
         if last_replenishment:
             return last_replenishment.created_at
@@ -536,7 +540,7 @@ class ReturnOrderDetailSerializer(serializers.ModelSerializer):
     products = OrderReturnProductSerializer(many=True, read_only=True, source="return_products")
     moder_comment = serializers.CharField(write_only=True, required=True)
     status = serializers.ChoiceField(
-        choices=((status, name) for status, name in ReturnOrder.STATUS if name != "Новый"),
+        choices=[(status, name) for status, name in ReturnOrder.STATUS if name != "Новый"],
         write_only=True,
         required=True
     )

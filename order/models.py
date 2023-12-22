@@ -89,7 +89,7 @@ class ReturnOrderProduct(models.Model):
 
 class Cart(models.Model):
     dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='carts')
-    stock = models.OneToOneField(Stock, on_delete=models.CASCADE, related_name='cart')
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='carts')
 
 
 class CartProduct(models.Model):

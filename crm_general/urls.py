@@ -9,9 +9,6 @@ from .manager.views import (
     ReturnListAPIView, ReturnRetrieveAPIView, ReturnUpdateAPIView,
     BalancePlusManagerView
 )
-from .rop.views import (
-    ManagerRopViewSet
-)
 
 from .director.views import *
 from .views import *
@@ -82,7 +79,7 @@ manager_urlpatterns = [
 
 # --------------------------- ROP
 rop_router = SimpleRouter()
-rop_router.register("managers", ManagerRopViewSet)
+# rop_router.register("managers", ManagerRopViewSet)
 
 
 rop_urlpatterns = [

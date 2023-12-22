@@ -32,7 +32,7 @@ class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
     )
     serializer_class = ShortOrderSerializer
     pagination_class = AppPaginationClass
-    filter_backends = (FilterByFields, filters.SearchFilter, filters.OrderingFilter,)
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter,)
     search_fields = ("name", "id")
     ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
     filter_by_fields = {
@@ -89,16 +89,16 @@ class OrderCreateAPIView(BaseOrderMixin, generics.CreateAPIView):
 # -------------------------------------------------------- DEALERS
 class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
-        DealerProfile.objects.select_related("user__name", "city", "dealer_status")
+        DealerProfile.objects.select_related("user", "city", "dealer_status")
                              .prefetch_related("balance_history", "orders")
-                             .only("user_id", "user__name", "birthday", "city", "dealer_status", "balance_history",
+                             .only("user_id", "birthday", "city", "dealer_status", "balance_history",
                                    "orders")
                              .all()
     )
     serializer_class = DealerProfileListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
-    search_fields = ("user__name", "user__id")
+    # search_fields = ("user__name", "user__id")
     filter_by_fields = {
         "start_date": {"by": "orders__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "orders__created_at__date__lte", "type": "date", "pipline": string_date_to_date}
@@ -147,14 +147,14 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
 
 class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
     queryset = (
-        DealerProfile.objects.select_related("user__name", "city", "dealer_status")
-                             .only("user_id", "user__name", "birthday", "city", "dealer_status")
+        DealerProfile.objects.select_related("user", "city", "dealer_status")
+                             .only("user_id", "user", "birthday", "city", "dealer_status")
                              .all()
     )
     serializer_class = DealerBirthdaySerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
-    search_fields = ("user__name", "user__id")
+    search_fields = ("user__name",)
     filter_by_fields = {
         "start_date": {"by": "birthday__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "birthday__lte", "type": "date", "pipline": string_date_to_date}
@@ -256,7 +256,7 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
 class ProductRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
     queryset = (
         AsiaProduct.objects.select_related("collection__title")
-                           .prefetch_selected("images", "sizes")
+                           .prefetch_related("images", "sizes")
                            .only("id", "diagram", "title", "vendor_code", "description", "collection__title",
                                  "weight", "package_count", "made_in", "created_at", "updated_at")
                            .all()
@@ -321,7 +321,9 @@ class ReturnListAPIView(BaseManagerMixin, generics.ListAPIView):
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("order__name", "order__email")
     filter_by_fields = {
-        "status": {"by": "status", "type": "string", "enum": [ro_status for ro_status, _ in ReturnOrder.STATUS]},
+        "status": {"by": "status", "type": "string", "addition_schema_params": {
+            "enum": [ro_status for ro_status, _ in ReturnOrder.STATUS]
+        }},
         "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date},
     }
