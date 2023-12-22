@@ -106,6 +106,12 @@ class BannerListSerializer(serializers.ModelSerializer):
         model = Banner
         exclude = ('groups', 'cities', 'clicks', 'status', 'is_active')
 
+
+class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active')
+
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['products'] = StoryProductSerializer(instance.products.all(),

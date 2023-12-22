@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from promotion.models import Story, Motivation, Banner
-from promotion.serializers import StoryListSerializer, StoryDetailSerializer, MotivationSerializer, BannerListSerializer
+from promotion.serializers import StoryListSerializer, StoryDetailSerializer, MotivationSerializer, \
+    BannerListSerializer, BannerSerializer
 from promotion.utils import get_motivation_data
 
 
@@ -33,6 +34,12 @@ class BannerListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Banner.objects.filter(is_active=True, status='app')
     serializer_class = BannerListSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return BannerListSerializer
+        else:
+            return BannerSerializer
 
     def get_queryset(self):
         dealer = self.request.user.dealer_profile
