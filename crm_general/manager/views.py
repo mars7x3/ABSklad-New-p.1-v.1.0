@@ -173,7 +173,10 @@ class DealerRetrieveAPIView(BaseDealerViewMixin, generics.RetrieveAPIView):
 
 
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
-    queryset = BalanceHistory.objects.all()
+    queryset = (
+        BalanceHistory.objects.only("id", "created_at", "status", "amount", "balance")
+                              .all()
+    )
     serializer_class = DealerBalanceHistorySerializer
     filter_backends = (FilterByFields,)
     filter_by_fields = {
@@ -189,7 +192,10 @@ class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.List
 
 
 class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
-    queryset = CartProduct.objects.all()
+    queryset = (
+        CartProduct.objects.select_related("product", "cart")
+                           .all()
+    )
     serializer_class = DealerBasketProductSerializer
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("product__title",)
@@ -205,14 +211,20 @@ class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView)
 
 # --------------------------------------------------------- PRODUCTS
 class CollectionListAPIView(BaseManagerMixin, generics.ListAPIView):
-    queryset = Collection.objects.all()
+    queryset = (
+        Collection.objects.only("slug", "title", "created_at")
+                          .all()
+    )
     serializer_class = CollectionSerializer
     filter_backends = (filters.SearchFilter,)
     search_fields = ("title",)
 
 
 class CategoryListAPIView(BaseManagerMixin, generics.ListAPIView):
-    queryset = Category.objects.all()
+    queryset = (
+        Category.objects.only("slug", "title", "is_active")
+                        .all()
+    )
     serializer_class = ShortCategorySerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -223,7 +235,11 @@ class CategoryListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 
 class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
-    queryset = ProductPrice.objects.all()
+    queryset = (
+        ProductPrice.objects.select_related("product")
+                            .only("product", "price")
+                            .all()
+    )
     serializer_class = ProductPriceListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -238,7 +254,13 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 
 class ProductRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
-    queryset = AsiaProduct.objects.all()
+    queryset = (
+        AsiaProduct.objects.select_related("collection__title")
+                           .prefetch_selected("images", "sizes")
+                           .only("id", "diagram", "title", "vendor_code", "description", "collection__title",
+                                 "weight", "package_count", "made_in", "created_at", "updated_at")
+                           .all()
+    )
     serializer_class = ProductDetailSerializer
     lookup_field = "id",
     lookup_url_kwarg = "product_id"
@@ -246,7 +268,11 @@ class ProductRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
 
 # ----------------------------------------------- BALANCES
 class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = Wallet.objects.all()
+    queryset = (
+        Wallet.objects.select_related("dealer", "dealer__dealer_status", "dealer__city", "dealer__balance_history")
+                      .only("id", "dealer", "amount_1c", "amount_crm")
+                      .all()
+    )
     serializer_class = WalletListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -284,7 +310,12 @@ class BalancePlusManagerView(BaseManagerMixin, generics.CreateAPIView):
 
 # ---------------------------------------- RETURNS
 class ReturnListAPIView(BaseManagerMixin, generics.ListAPIView):
-    queryset = ReturnOrder.objects.all()
+    queryset = (
+        ReturnOrder.objects.select_related("order", "order__author__city", "order__stock", "order__stock__city")
+                           .only("id", "order__name", "order__phone", "order__gmail", "order__stock__city__title",
+                                 "order__author__city__title", "price", "status", "moder_comment")
+                           .all()
+    )
     serializer_class = ReturnOrderListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -300,7 +331,12 @@ class ReturnListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 
 class ReturnRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
-    queryset = ReturnOrder.objects.all()
+    queryset = (
+        ReturnOrder.objects.prefetch_related("return_products")
+                           .select_related("order", "order__stock", "return_products__product")
+                           .only("order", "return_products", "created_at")
+                           .all()
+    )
     serializer_class = ReturnOrderDetailSerializer
     lookup_field = "id"
     lookup_url_kwarg = "return_id"
