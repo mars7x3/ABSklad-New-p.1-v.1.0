@@ -16,7 +16,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
-    DirectorPriceListSerializer, DirectorMotivationDealerListSerializer
+    DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer
 from crm_general.models import CRMTask
 
 from general_service.models import Stock, City
@@ -500,7 +500,7 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
 
 class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = DealerProfile.objects.all().select_related('user')
+    queryset = DealerProfile.objects.filter(user__is_active=True).select_related('user')
     serializer_class = DirectorMotivationDealerListSerializer
 
     @action(detail=False, methods=['get'])
@@ -580,7 +580,7 @@ class DirectorPriceCreateView(APIView):
 class DirectorTaskCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = CRMTask.objects.all()
-    serializer_class = DirectorPriceListSerializer
+    serializer_class = DirectorTaskCRUDSerializer
 
 
 

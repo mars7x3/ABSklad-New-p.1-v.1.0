@@ -611,6 +611,14 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
         CRMTaskResponse.objects.bulk_create(executors_list)
         return task
 
+    def update(self, instance, validated_data):
+        executors = self.context['request'].data['executor']
+        task = CRMTask.objects.create(**validated_data)
+        executors_list = []
+        for e in executors:
+            executors_list.append(CRMTaskResponse(executor_id=e, task=task))
+        CRMTaskResponse.objects.bulk_create(executors_list)
+
 
 class DirectorTaskResponseSerializer(serializers.ModelSerializer):
     class Meta:

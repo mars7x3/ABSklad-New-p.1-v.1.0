@@ -131,7 +131,7 @@ class MarketerBannerModelViewSet(ListModelMixin,
         return paginator.get_paginated_response(serializer.data)
 
 
-class DealerStatusListView(ListModelMixin, GenericViewSet):
+class MarketerDealerStatusListView(ListModelMixin, GenericViewSet):
     queryset = DealerStatus.objects.all()
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = DealerStatusSerializer
