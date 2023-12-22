@@ -203,8 +203,8 @@ class TotalEcoBalanceView(APIView):
 
     def post(self, request):
         user_id = request.data.get('user_id')
-        kwargs = {'is_active': True, 'author__user_id': user_id, 'status__in': ['Успешно', 'Отправлено', 'Оплачено',
-                                                                                'Ожидание']}
+        kwargs = {'is_active': True, 'author__user_id': user_id, 'status__in': ['success', 'sent', 'paid',
+                                                                                'wait']}
         start_date = request.data.get('start_date')
         end_date = request.data.get('end_date')
 
@@ -436,7 +436,7 @@ class DirectorDealerOrderListView(APIView):
         end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
         user = MyUser.objects.filter(id=user_id).first()
         orders = user.dealer_profile.orders.filter(created_at__gte=start_date, created_at__lte=end_date, is_active=True,
-                                                   status__in=['Оплачено', 'Отправлено', 'Ожидание', 'Успешно'])
+                                                   status__in=['paid', 'sent', 'wait', 'success'])
         response_data = DirDealerOrderSerializer(orders, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 

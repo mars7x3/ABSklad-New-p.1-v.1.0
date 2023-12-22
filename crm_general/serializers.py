@@ -130,11 +130,11 @@ class CRMCategorySerializer(serializers.ModelSerializer):
                     'order_products__count',
                     filter=Q(
                         order_products__order__is_active=True,
-                        order_products__order__status="Оплачено",
+                        order_products__order__status="paid",
                         order_products__order__stock_id__in=stock_ids,
                     ) if stock_ids else Q(
                         order_products__order__is_active=True,
-                        order_products__order__status="Оплачено",
+                        order_products__order__status="paid",
                     )
                 )
             ).values_list("orders_count", flat=True)
