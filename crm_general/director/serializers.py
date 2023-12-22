@@ -7,6 +7,7 @@ from rest_framework import serializers
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
 from crm_general.director.utils import get_motivation_done
+from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
 from order.models import MyOrder, Cart, CartProduct
@@ -367,6 +368,17 @@ class DirectorDealerStoreSerializer(serializers.ModelSerializer):
         return rep
 
 
+class DirectorMotivationDealerListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerProfile
+        fields = ('id',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.user.name
+        return rep
+
+
 class DirDealerMotivationPresentSerializer(serializers.ModelSerializer):
     class Meta:
         model = MotivationPresent
@@ -575,6 +587,62 @@ class DirectorProductPriceListSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['city_title'] = instance.city.title if instance.city else '---'
         return rep
+
+
+class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTask
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['creator'] = DirectorTaskUserSerializer(instance.creator, context=self.context).data
+        rep['files'] = DirectorTaskFileSerializer(instance.files, many=True, context=self.context).data
+        rep['responses'] = DirectorTaskResponseSerializer(instance.task_responses, many=True, context=self.context).data
+
+        return rep
+
+    def create(self, validated_data):
+        executors = self.context['request'].data['executor']
+        task = CRMTask.objects.create(**validated_data)
+        executors_list = []
+        for e in executors:
+            executors_list.append(CRMTaskResponse(executor_id=e, task=task))
+        CRMTaskResponse.objects.bulk_create(executors_list)
+        return task
+
+
+class DirectorTaskResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponse
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['executor'] = DirectorTaskUserSerializer(instance.executor, context=self.context).data
+        rep['files'] = DirectorTaskFileSerializer(instance.response_files, many=True, context=self.context).data
+        rep['grade'] = instance.grade.title if instance.grade else '---'
+
+        return rep
+
+
+class DirectorTaskResponseFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponseFile
+        fields = '__all__'
+
+
+class DirectorTaskFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskFile
+        fields = '__all__'
+
+
+class DirectorTaskUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'status')
+
 
 # class StockCRUDSerializer(serializers.ModelSerializer):
 #     class Meta:

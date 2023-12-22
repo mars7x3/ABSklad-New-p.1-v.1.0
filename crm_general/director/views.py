@@ -16,7 +16,8 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
-    DirectorPriceListSerializer
+    DirectorPriceListSerializer, DirectorMotivationDealerListSerializer
+from crm_general.models import CRMTask
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
@@ -497,6 +498,32 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
+class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = DealerProfile.objects.all().select_related('user')
+    serializer_class = DirectorMotivationDealerListSerializer
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+        name = request.query_params.get('name')
+        if name:
+            kwargs['user__name__icontains'] = name
+
+        city_slug = request.query_params.get('city_slug')
+        if city_slug:
+            kwargs['city__slug'] = city_slug
+
+        dealer_status = request.query_params.get('dealer_status')
+        if dealer_status:
+            kwargs['dealer_status_id'] = dealer_status
+
+        queryset = queryset.filter(**kwargs)
+        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
 class DirectorPriceListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.all()
@@ -550,6 +577,10 @@ class DirectorPriceCreateView(APIView):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
+class DirectorTaskCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = CRMTask.objects.all()
+    serializer_class = DirectorPriceListSerializer
 
 
 
