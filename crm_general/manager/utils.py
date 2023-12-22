@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Subquery, OuterRef, F
 
 from product.models import AsiaProduct, ProductPrice, ProductImage, ProductCostPrice
@@ -46,14 +47,17 @@ def build_order_products_data(product_counts: dict[str: int], price_city, dealer
                                 )
                            )
     )
+    filters = dict(product_id__in=product_ids, city=price_city, d_status=dealer_status)
     prices = (
-        ProductPrice.objects.filter(product_id__in=product_ids, city=price_city, d_status=dealer_status)
+        ProductPrice.objects.filter(**filters)
                             .values_list("product_id", "price", "old_price")
                             .order_by("product_id").distinct("product_id")
     )
     collected_prices = {product_id: (price, old_price) for product_id, price, old_price in prices}
-    collected_products = []
+    if not collected_prices:
+        raise ObjectDoesNotExist("ProductPrice with filters %s does not exists" % filters)
 
+    collected_products = []
     for product_data in db_product_data:
         product_id = product_data['ab_product_id']
         price, old_price = collected_prices[product_id]

@@ -96,7 +96,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
 
 class ActivitySerializer(serializers.Serializer):
-    active = serializers.BooleanField(read_only=True, default=False)
+    is_active = serializers.BooleanField(read_only=True, default=False)
 
 
 class CRMCategorySerializer(serializers.ModelSerializer):
