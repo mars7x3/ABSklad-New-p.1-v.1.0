@@ -15,10 +15,10 @@ class MyOrder(models.Model):
         ('Успешно', 'Успешно')
     )
     TYPE_STATUS = (
-        ('Наличка', 'Наличка'),
-        ('Карта', 'Карта'),
-        ('Баллы', 'Баллы'),
-        ('Каспи', 'Каспи')
+        ('cash', 'cash'),
+        ('visa', 'visa'),
+        ('wallet', 'wallet'),
+        ('kaspi', 'kaspi')
     )
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     name = models.CharField(max_length=100, blank=True, null=True)

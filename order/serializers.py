@@ -85,13 +85,13 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
         product_list = get_product_list(products)
         data['price'] = order_total_price(product_list, products, dealer)
 
-        if data['type_status'] == 'Баллы':
+        if data['type_status'] == 'wallet':
             data['status'] = 'Оплачено'
             if data['price'] > dealer.wallet.amount_crm:
                 raise serializers.ValidationError({'text': 'У вас недостаточно средств на балансе!'})
 
         data['author'] = dealer
-        data['name'] = dealer.user.name
+        data['name'] = user.name
         data['gmail'] = user.email
         data['cost_price'] = order_cost_price(product_list, products)
         data['products'] = generate_order_products(product_list, products, dealer)

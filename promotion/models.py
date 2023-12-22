@@ -61,6 +61,7 @@ class MotivationPresent(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, blank=True, null=True,
                                 related_name='present_products')
     money = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    expense = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     text = models.TextField(blank=True, null=True)
 
 
