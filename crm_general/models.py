@@ -13,10 +13,11 @@ class CRMTask(models.Model):
     status = models.CharField(max_length=20, choices=STATUS, default='created')
     title = models.CharField(max_length=300)
     text = models.TextField()
-    end_date = models.DateField()
+    end_date = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='tasks')
+    is_active = models.BooleanField(default=True)
 
 
 class CRMTaskFile(models.Model):
@@ -37,6 +38,6 @@ class CRMTaskResponse(models.Model):
 
 
 class CRMTaskResponseFile(models.Model):
-    task = models.ForeignKey(CRMTask, on_delete=models.CASCADE, related_name='response_files')
+    task = models.ForeignKey(CRMTaskResponse, on_delete=models.CASCADE, related_name='response_files')
     file = models.ImageField(upload_to='response')
 

@@ -16,8 +16,9 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
-    DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer
-from crm_general.models import CRMTask
+    DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
+    DirectorTaskListSerializer, DirectorMotivationListSerializer
+from crm_general.models import CRMTask, CRMTaskResponse
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
@@ -498,6 +499,58 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
+class DirectorMotivationListView(mixins.ListModelMixin, mixins.RetrieveModelMixin, GenericViewSet):
+
+    # TODO: Ты остановился здесь
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = Motivation.objects.all()
+
+    def get_serializer_class(self):
+        if self.detail:
+            return DirectorMotivationListSerializer
+        return DirectorMotivationListSerializer
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+        name = request.query_params.get('name')
+        if name:
+            kwargs['user__name__icontains'] = name
+
+        city_slug = request.query_params.get('city_slug')
+        if city_slug:
+            kwargs['city__slug'] = city_slug
+
+        dealer_status = request.query_params.get('dealer_status')
+        if dealer_status:
+            kwargs['dealer_status_id'] = dealer_status
+
+        queryset = queryset.filter(**kwargs)
+        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DirectorMotivationTotalView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        kwargs = {}
+        name = request.data.get('name')
+        if name:
+            kwargs['user__name__icontains'] = name
+
+        city_slug = request.data.get('city_slug')
+        if city_slug:
+            kwargs['city__slug'] = city_slug
+
+        dealer_status = request.data.get('dealer_status')
+        if dealer_status:
+            kwargs['dealer_status_id'] = dealer_status
+
+        queryset = queryset.filter(**kwargs)
+
+
 class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = DealerProfile.objects.filter(user__is_active=True).select_related('user')
@@ -577,13 +630,65 @@ class DirectorPriceCreateView(APIView):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class DirectorTaskCRUDView(viewsets.ModelViewSet):
+class DirectorTaskCRUDView(mixins.CreateModelMixin,
+                           mixins.RetrieveModelMixin,
+                           mixins.UpdateModelMixin,
+                           mixins.DestroyModelMixin,
+                           GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = CRMTask.objects.all()
     serializer_class = DirectorTaskCRUDSerializer
-    pagination_class = CRMPaginationClass
 
 
+class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = CRMTask.objects.filter(is_active=True)
+    serializer_class = DirectorTaskListSerializer
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        title = request.query_params.get('title')
+        if title:
+            kwargs['title__icontains'] = title
+
+        task_status = request.query_params.get('status')
+        if task_status:
+            kwargs['status'] = task_status
+
+        category = request.query_params.get('my_tasks')
+        if category:
+            kwargs['creator'] = request.user
+
+        overdue = request.query_params.get('overdue')
+        if overdue:
+            kwargs['end_date__lte'] = timezone.now()
+
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        if start_date and end_date:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
+            end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+            kwargs['created_at_gte'] = start_date
+            kwargs['created_at__lte'] = end_date
+
+        queryset = queryset.filter(**kwargs)
+        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DirectorGradeView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        response_id = request.data['response_id']
+        grade_id = request.data['grade_id']
+        response_task = CRMTaskResponse.objects.filter(id=response_id).first()
+        response_task.grade_id = grade_id
+        response_task.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 # class StockCRUDView(viewsets.ModelViewSet):
 #     permission_classes = [IsAuthenticated, IsDirector]
