@@ -18,7 +18,9 @@ from .marketer.views import (
     MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeDestroyView,
     MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView
 )
-from .warehouse_manager.views import WareHouseOrderView
+from .warehouse_manager.views import (
+    WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet
+)
 
 director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
@@ -123,6 +125,9 @@ marketer_urlpatterns = [
 
 warehouse_manager_router = SimpleRouter()
 warehouse_manager_router.register('order', WareHouseOrderView, basename='warehouse-order')
+warehouse_manager_router.register('product', WareHouseProductViewSet, basename='warehouse-product')
+warehouse_manager_router.register('category', WareHouseCategoryViewSet, basename='warehouse-category')
+warehouse_manager_router.register('collection', WareHouseCollectionViewSet, basename='warehouse-collection')
 
 warehouse_manager_urlpatterns = [
     path('warehouse-manager/', include(warehouse_manager_router.urls)),
