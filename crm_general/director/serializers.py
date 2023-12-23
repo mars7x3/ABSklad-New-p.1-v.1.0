@@ -726,16 +726,23 @@ class DirectorTaskListSerializer(serializers.ModelSerializer):
 
         return rep
 
-# class StockCRUDSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Stock
-#         exclude = ('uid', 'is_show')
-#
-#     def to_representation(self, instance):
-#         rep = super().to_representation(instance)
-#         rep['city'] = instance.city.title if instance.city else 'Нет города'
-#         rep['warehouses'] = instance.warehouse_profiles.values_list("user__name", flat=True)
-#         rep['prod_amount_crm'] = instance.total_sum
-#         rep['prod_count_crm'] = instance.total_count
-#
-#         return rep
+
+class StockCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        exclude = ('uid', 'is_show')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city'] = instance.city.title if instance.city else '---'
+        rep['warehouses'] = instance.warehouse_profiles.values_list("user__name", flat=True)
+        rep['prod_amount_crm'] = instance.total_sum
+        rep['prod_count_crm'] = instance.total_count
+        rep['norm_count'] = instance.norm_count - instance.total_count
+        return rep
+
+
+class DirectorDealerListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('status', 'name', 'id')

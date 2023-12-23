@@ -17,7 +17,8 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
-    DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer
+    DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockCRUDSerializer, \
+    DirectorDealerListSerializer
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade
 
 from general_service.models import Stock, City
@@ -690,34 +691,41 @@ class DirectorGradeView(APIView):
         response_task.save()
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
-# class StockCRUDView(viewsets.ModelViewSet):
-#     permission_classes = [IsAuthenticated, IsDirector]
-#     queryset = Stock.objects.select_related('city').all()
-#     serializer_class = StockCRUDSerializer
-#
-#     @query_debugger
-#     def list(self, request, *args, **kwargs):
-#         return super().list(request, *args, **kwargs)
-#
-#     def get_queryset(self):
-#         from django.db.models import F, Sum, IntegerField
-#         from django.db.models import OuterRef, Subquery
-#
-#         return super().get_queryset().annotate(
-#             total_sum=Sum(
-#                 F('counts__count_crm') * Subquery(
-#                     ProductPrice.objects.filter(
-#                         city=OuterRef('city'),
-#                         product_id=OuterRef('counts__product_id'),
-#                         d_status__discount=0
-#                     ).values('price')[:1]
-#                 ), output_field=IntegerField()
-#             ),
-#             total_count=Sum('counts__count_crm'),
-#         )
-#
-#     def destroy(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         instance.is_active = not instance.is_active
-#         instance.save()
-#         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+class StockCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = Stock.objects.select_related('city').all()
+    serializer_class = StockCRUDSerializer
+
+    def get_queryset(self):
+        from django.db.models import F, Sum, IntegerField
+        from django.db.models import OuterRef, Subquery
+
+        return super().get_queryset().annotate(
+            total_sum=Sum(
+                F('counts__count_crm') * Subquery(
+                    ProductPrice.objects.filter(
+                        city=OuterRef('city'),
+                        product_id=OuterRef('counts__product_id'),
+                        d_status__discount=0
+                    ).values('price')[:1]
+                ), output_field=IntegerField()
+            ),
+            total_count=Sum('counts__count_crm'),
+            norm_count=Sum('counts__count_norm'),
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class DirectorStaffListView(mixins.RetrieveModelMixin,
+                            mixins.ListModelMixin,
+                            GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = MyUser.objects.filter(status__in=['director', 'rop', 'manager', 'marketer', 'accountant', 'dealer',
+                                                 'warehouse', 'dealer_1c', ])
+    serializer_class = DirectorDealerListSerializer

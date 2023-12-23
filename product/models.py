@@ -96,6 +96,7 @@ class ProductCount(models.Model):
     count_crm = models.IntegerField(default=0)
     count_1c = models.IntegerField(default=0)
     count_order = models.IntegerField(default=0)
+    count_norm = models.IntegerField(default=0)
     arrival_time = models.DateTimeField(blank=True, null=True)
 
 

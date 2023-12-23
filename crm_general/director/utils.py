@@ -164,3 +164,7 @@ def get_motivation_margin(motivation):
                 amount += total_amount
 
     return amount
+
+
+def get_motivation_dealer_list(motivation):
+    dealers = motivation.dealers.all()
