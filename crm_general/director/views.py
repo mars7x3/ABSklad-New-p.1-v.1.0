@@ -637,7 +637,7 @@ class DirectorTaskCRUDView(mixins.CreateModelMixin,
 
 class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = CRMTask.objects.filter(is_active=True)
+    queryset = CRMTask.objects.all()
     serializer_class = DirectorTaskListSerializer
 
     @action(detail=False, methods=['get'])
