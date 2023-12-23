@@ -60,6 +60,23 @@ class MarketerCollectionModelViewSet(ListModelMixin,
     pagination_class = ProductPagination
     serializer_class = MarketerCollectionSerializer
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.queryset
+        c_status = self.request.query_params.get('status')
+        search = self.request.query_params.get('search')
+
+        if c_status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif c_status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
+        if search:
+            queryset = queryset.filter(title__icontains=search)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
+
 
 class MarketerCategoryModelViewSet(ListModelMixin,
                                    RetrieveModelMixin,
@@ -123,12 +140,10 @@ class MarketerBannerModelViewSet(ListModelMixin,
 
     @action(methods=['GET'], detail=False, url_path='products/add')
     def get_products_for_banner(self, request, *args, **kwargs):
-        banner_products = Banner.objects.values_list('products')
-        products = AsiaProduct.objects.exclude(id__in=banner_products)
-        paginator = GeneralPurposePagination()
-        page = paginator.paginate_queryset(products, request)
-        serializer = ShortProductSerializer(page, many=True, context=self.get_renderer_context())
-        return paginator.get_paginated_response(serializer.data)
+        category_id = self.request.query_params.get('category_id')
+        products = AsiaProduct.objects.filter(category=category_id)
+        serializer = ShortProductSerializer(products, many=True, context=self.get_renderer_context())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class MarketerDealerStatusListView(ListModelMixin, GenericViewSet):
