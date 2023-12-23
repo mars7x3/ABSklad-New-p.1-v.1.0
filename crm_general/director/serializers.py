@@ -621,7 +621,7 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        executors = self.context['request'].data['executors']
+        executors = self.context['request'].data.getlist('executors')
         files = self.context['request'].FILES.getlist('files')
         task = CRMTask.objects.create(**validated_data)
 
