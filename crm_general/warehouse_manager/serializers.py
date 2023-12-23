@@ -2,7 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from order.models import MyOrder, OrderProduct
-from product.models import AsiaProduct, Collection, Category
+from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
 
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
@@ -69,9 +69,35 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
 
-        rep['avg_check'] = sum(avg_check) / len(avg_check)
+        if len(avg_check) == 0:
+            rep['avg_check'] = 0
+        else:
+            rep['avg_check'] = sum(avg_check) / len(avg_check)
 
         return rep
+
+
+class WareHouseProductSerializer(serializers.ModelSerializer):
+    collection = serializers.SerializerMethodField(read_only=True)
+    category = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = AsiaProduct
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['images'] = MarketerProductImageSerializer(instance.images.all(), many=True, context=self.context).data
+        rep['sizes'] = MarketerProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
+        return rep
+
+    @staticmethod
+    def get_collection(obj):
+        return obj.collection.title
+
+    @staticmethod
+    def get_category(obj):
+        return obj.collection.title
 
 
 class WareHouseCategoryDetailSerializer(serializers.ModelSerializer):
@@ -82,5 +108,14 @@ class WareHouseCategoryDetailSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class MarketerProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ('id', 'image')
 
+
+class MarketerProductSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductSize
+        fields = '__all__'
 
