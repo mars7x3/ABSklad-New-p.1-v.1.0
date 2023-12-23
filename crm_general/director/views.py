@@ -17,8 +17,8 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
-    DirectorTaskListSerializer, DirectorMotivationListSerializer
-from crm_general.models import CRMTask, CRMTaskResponse
+    DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer
+from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
@@ -677,6 +677,12 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DirectorGradeCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = CRMTaskGrade.objects.all()
+    serializer_class = DirectorCRMTaskGradeSerializer
 
 
 class DirectorGradeView(APIView):

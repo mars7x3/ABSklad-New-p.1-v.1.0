@@ -7,7 +7,7 @@ from rest_framework import serializers
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
 from crm_general.director.utils import get_motivation_done, get_motivation_margin
-from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile
+from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City
 from order.models import MyOrder, Cart, CartProduct
@@ -691,6 +691,12 @@ class DirectorTaskUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'name', 'status')
+
+
+class DirectorCRMTaskGradeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskGrade
+        fields = '__all__'
 
 
 class DirectorTaskListSerializer(serializers.ModelSerializer):

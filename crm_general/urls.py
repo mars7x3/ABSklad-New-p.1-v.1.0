@@ -35,6 +35,7 @@ director_router.register("director/discount/product/list", DirectorDiscountAsiaP
 director_router.register("director/price/list", DirectorPriceListView)
 director_router.register("director/task/crud", DirectorTaskCRUDView)
 director_router.register("director/task/list", DirectorTaskListView)
+director_router.register("director/grade/crud", DirectorGradeCRUDView)
 
 
 director_urlpatterns = [
