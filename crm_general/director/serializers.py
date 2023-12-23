@@ -429,6 +429,18 @@ class DirectorMotivationListSerializer(serializers.ModelSerializer):
         return rep
 
 
+class DirectorMotivationDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Motivation
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['margin'] = get_motivation_margin(instance)
+
+        return rep
+
+
 class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = Motivation

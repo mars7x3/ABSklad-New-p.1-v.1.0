@@ -500,8 +500,6 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
 
 
 class DirectorMotivationListView(mixins.ListModelMixin, mixins.RetrieveModelMixin, GenericViewSet):
-
-    # TODO: Ты остановился здесь
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Motivation.objects.all()
 
@@ -514,41 +512,37 @@ class DirectorMotivationListView(mixins.ListModelMixin, mixins.RetrieveModelMixi
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
         kwargs = {}
-        name = request.query_params.get('name')
-        if name:
-            kwargs['user__name__icontains'] = name
+        title = request.query_params.get('title')
+        if title:
+            kwargs['title__icontains'] = title
 
-        city_slug = request.query_params.get('city_slug')
-        if city_slug:
-            kwargs['city__slug'] = city_slug
-
-        dealer_status = request.query_params.get('dealer_status')
-        if dealer_status:
-            kwargs['dealer_status_id'] = dealer_status
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = bool(int(is_active))
 
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class DirectorMotivationTotalView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
-
-    def post(self, request):
-        kwargs = {}
-        name = request.data.get('name')
-        if name:
-            kwargs['user__name__icontains'] = name
-
-        city_slug = request.data.get('city_slug')
-        if city_slug:
-            kwargs['city__slug'] = city_slug
-
-        dealer_status = request.data.get('dealer_status')
-        if dealer_status:
-            kwargs['dealer_status_id'] = dealer_status
-
-        queryset = queryset.filter(**kwargs)
+# class DirectorMotivationTotalView(APIView):
+#     permission_classes = [IsAuthenticated, IsDirector]
+#
+#     def post(self, request):
+#         kwargs = {}
+#         name = request.data.get('name')
+#         if name:
+#             kwargs['user__name__icontains'] = name
+#
+#         city_slug = request.data.get('city_slug')
+#         if city_slug:
+#             kwargs['city__slug'] = city_slug
+#
+#         dealer_status = request.data.get('dealer_status')
+#         if dealer_status:
+#             kwargs['dealer_status_id'] = dealer_status
+#
+#         queryset = queryset.filter(**kwargs)
 
 
 class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
