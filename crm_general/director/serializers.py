@@ -602,6 +602,8 @@ class DirectorProductPriceListSerializer(serializers.ModelSerializer):
 
 
 class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
+    creator = serializers.CharField(read_only=True)
+
     class Meta:
         model = CRMTask
         fields = '__all__'
@@ -613,6 +615,10 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
         rep['responses'] = DirectorTaskResponseSerializer(instance.task_responses, many=True, context=self.context).data
 
         return rep
+
+    def validate(self, attrs):
+        attrs['creator'] = self.context['request'].user
+        return attrs
 
     def create(self, validated_data):
         executors = self.context['request'].data['executors']
