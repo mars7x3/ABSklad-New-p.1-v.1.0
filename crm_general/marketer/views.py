@@ -226,8 +226,8 @@ class CRMNotificationView(ListModelMixin,
         serializer = DiscountSerializer(actions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['GET'], detail=False, url_path='participants')
-    def get_participants(self, request):
-        users = MyUser.objects.filter(status='dealer')
-        serializer = ParticipantsSerializer(users, many=True)
+    @action(methods=['GET'], detail=False, url_path='groups')
+    def get_groups(self, request):
+        users = DealerStatus.objects.all()
+        serializer = DealerStatusSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

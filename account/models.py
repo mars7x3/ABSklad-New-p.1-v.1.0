@@ -187,10 +187,14 @@ class CRMNotification(models.Model):
         ('motivation', 'Мотивация'),
     )
 
-    users = models.ManyToManyField(MyUser, related_name='crm_notifications')
+    users = models.ManyToManyField(MyUser, related_name='crm_notifications', blank=True)
     image = models.FileField(upload_to='notification', blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     dispatch_date = models.DateTimeField()
     status = models.CharField(choices=STATUS, max_length=100, default='notif')
-    link_id = models.CharField(max_length=100)
+    link_id = models.CharField(max_length=100, blank=True, null=True)
+
+    @classmethod
+    def get_status_choices(cls):
+        return cls.STATUS
