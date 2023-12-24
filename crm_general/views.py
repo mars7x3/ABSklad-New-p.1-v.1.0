@@ -40,7 +40,7 @@ class StaffListView(generics.ListAPIView):
 
 class CollectionCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStaff]
-    queryset = Collection.objects.all()
+    queryset = Category.objects.all()
     serializer_class = CollectionCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):

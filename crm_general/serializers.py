@@ -184,6 +184,17 @@ class CollectionCRUDSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class CategoryCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+    def validate(self, attrs):
+        title = translit(attrs['title'], 'ru', reversed=True)
+        attrs['slug'] = title.replace(' ', '_').lower()
+        return attrs
+
+
 class CityListSerializer(serializers.ModelSerializer):
     class Meta:
         model = City
