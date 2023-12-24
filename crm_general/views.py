@@ -10,7 +10,7 @@ from rest_framework.viewsets import GenericViewSet
 from account.models import MyUser, DealerStatus
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
-    StockListSerializer, DealerStatusListSerializer, CategoryListSerializer
+    StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer
 from general_service.models import City, Stock
 from product.models import Collection, AsiaProduct, ProductImage, Category
 
@@ -40,7 +40,7 @@ class StaffListView(generics.ListAPIView):
 
 class CollectionCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStaff]
-    queryset = Category.objects.all()
+    queryset = Collection.objects.all()
     serializer_class = CollectionCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):
@@ -49,6 +49,17 @@ class CollectionCRUDView(viewsets.ModelViewSet):
         instance.save()
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
+
+class CategoryCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = Category.objects.all()
+    serializer_class = CategoryCRUDSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
 class CityListView(generics.ListAPIView):
