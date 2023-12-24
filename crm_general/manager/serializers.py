@@ -218,7 +218,7 @@ class DealerBirthdaySerializer(serializers.ModelSerializer):
 class ShortWalletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wallet
-        fields = "__all__"
+        fields = ("id", "amount_crm", "amount_1c")
 
 
 class DealerStoreSerializer(serializers.ModelSerializer):
@@ -236,12 +236,18 @@ class DealerStoreSerializer(serializers.ModelSerializer):
 class DealerProfileDetailSerializer(BaseProfileSerializer):
     wallet = ShortWalletSerializer(many=False, read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
+    dealer_status_id = serializers.PrimaryKeyRelatedField(
+        queryset=DealerStatus.objects.all(),
+        required=True,
+        write_only=True
+    )
     stores = DealerStoreSerializer(many=True, source="dealer_stores", read_only=True)
+    liability = serializers.IntegerField(required=True)
 
     class Meta:
         model = DealerProfile
-        # TODO: add motivations
-        fields = ("user", "birthday", "city", "dealer_status", "wallet", "stores")
+        fields = ("user", "birthday", "city", "dealer_status", "wallet", "stores", "liability", "dealer_status_id")
+        read_only_fields = ("city",)
         user_status = "dealer"
 
     def validate(self, attrs):
@@ -249,11 +255,9 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         manager_profile_city = view.manager_profile.city
         attrs["city"] = manager_profile_city
         attrs["price_city"] = manager_profile_city
-        dealer_status = attrs.get("dealer_status")
-        if dealer_status and not DealerStatus.objects.filter(id=dealer_status["id"]).exists():
-            raise serializers.ValidationError({"dealer_status": "Неправельный идетификатор"})
+        dealer_status = attrs.pop("dealer_status_id", None)
         if dealer_status:
-            attrs["dealer_status"] = dealer_status["id"]
+            attrs["dealer_status"] = dealer_status
         return attrs
 
 
@@ -290,7 +294,7 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
     def get_amount(self, instance) -> float:
         product_price = instance.product.prices.filter(
             city=instance.cart.dealer.city,
-            d_status=instance.dealer.d_status
+            d_status=instance.cart.dealer.dealer_status
         ).first()
 
         if product_price:
@@ -300,7 +304,7 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
     def get_discount(self, instance) -> dict[str, float | str] | None:
         product_price = instance.product.prices.filter(
             city=instance.cart.dealer.city,
-            d_status=instance.dealer.d_status
+            d_status=instance.cart.dealer.dealer_status
         ).first()
 
         if product_price:
@@ -310,11 +314,11 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
             }
 
     def get_stock_city(self, instance) -> str:
-        if instance.stock.city:
-            return instance.stock.city.title
+        if instance.cart.stock.city:
+            return instance.cart.stock.city.title
 
     def get_stock_count(self, instance) -> int:
-        stock_count = instance.stock.counts.filter(product=instance.product).first()
+        stock_count = instance.cart.stock.counts.filter(product=instance.product).first()
         return stock_count.count_crm if stock_count else 0
 
 
@@ -374,9 +378,9 @@ class ShortProductSerializer(serializers.ModelSerializer):
                         order__is_active=True,
                         order__created_at__gte=fifteen_days_ago,
                         order__status__in=('Отправлено', 'Оплачено', 'Успешно')
-                    ) / Value(15),
+                    ),
                     output_field=FloatField()
-                ),
+                ) / Value(15),
                 precision=2
             )
         )["last_fifteen_days_ratio"]
@@ -440,6 +444,9 @@ class WalletListSerializer(serializers.ModelSerializer):
     def get_name(self, instance):
         return instance.dealer.user.name
 
+    def get_created_at(self, instance):
+        return instance.dealer.balance_history.last().created_at
+
     def get_paid_amount(self, instance) -> float:
         return instance.dealer.orders.filter(is_active=True, paid_at__isnull=False).aggregate(
             amount=Round(Sum("price", output_field=FloatField()), precision=2)
@@ -462,9 +469,9 @@ class ReturnOrderListSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
     city = serializers.SerializerMethodField(read_only=True)
     phone = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
     email = serializers.SerializerMethodField(read_only=True)
     stock_city = serializers.SerializerMethodField(read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
     moderated = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -473,6 +480,9 @@ class ReturnOrderListSerializer(serializers.ModelSerializer):
 
     def get_name(self, instance) -> str:
         return instance.order.name
+
+    def get_price(self, instance) -> float:
+        return instance.return_products.aggregate(price=Sum(F("price") * F("count")))["price"]
 
     def get_city(self, instance) -> str | None:
         if instance.order.author and instance.order.author.city:
@@ -487,9 +497,6 @@ class ReturnOrderListSerializer(serializers.ModelSerializer):
     def get_stock_city(self, instance) -> str | None:
         if instance.order.stock:
             return instance.order.stock.city.title
-
-    def get_price(self, instance) -> float:
-        return instance.order.price
 
     def get_moderated(self, instance) -> bool:
         return instance.status != "Новый"
@@ -536,21 +543,20 @@ class OrderReturnProductSerializer(serializers.ModelSerializer):
 
 class ReturnOrderDetailSerializer(serializers.ModelSerializer):
     order = OrderReturnOrderSerializer(many=False, read_only=True)
-    amount = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
     products = OrderReturnProductSerializer(many=True, read_only=True, source="return_products")
     moder_comment = serializers.CharField(write_only=True, required=True)
     status = serializers.ChoiceField(
         choices=[(status, name) for status, name in ReturnOrder.STATUS if name != "Новый"],
-        write_only=True,
         required=True
     )
 
     class Meta:
         model = ReturnOrder
-        fields = ("order", "amount", "products", "moder_comment", "status", "created_at")
+        fields = ("order", "price", "products", "moder_comment", "status", "created_at")
 
-    def get_amount(self, instance) -> float:
-        return instance.return_products.aggregate(amount=Sum("price") * F("count"))["amount"]
+    def get_price(self, instance) -> float:
+        return instance.return_products.aggregate(price=Sum(F("price") * F("count")))["price"]
 
 
 class BalancePlusSerializer(serializers.ModelSerializer):
