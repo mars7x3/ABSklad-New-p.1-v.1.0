@@ -39,6 +39,8 @@ director_router.register("director/task/crud", DirectorTaskCRUDView)
 director_router.register("director/task/list", DirectorTaskListView)
 director_router.register("director/grade/crud", DirectorGradeCRUDView)
 director_router.register("director/staff/list", DirectorStaffListView)
+director_router.register("director/stock/list", DirectorStockListView)
+director_router.register("director/stock/product/list", DStockProductListView)
 
 
 director_urlpatterns = [
@@ -56,7 +58,6 @@ director_urlpatterns = [
     path('director/dealer/total-amounts/', DirectorTotalAmountView.as_view()),
     path('director/price/create/', DirectorPriceCreateView.as_view()),
     path('director/task/grade/', DirectorGradeView.as_view()),
-
 
 
     path('', include(director_router.urls)),

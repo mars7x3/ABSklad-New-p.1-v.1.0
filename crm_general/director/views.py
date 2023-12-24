@@ -1,5 +1,6 @@
 import datetime
 
+from django.db.models import Case, When
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins, generics
 from rest_framework.decorators import action
@@ -17,8 +18,8 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
-    DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockCRUDSerializer, \
-    DirectorDealerListSerializer
+    DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
+    DirectorDealerListSerializer, StockProductListSerializer
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade
 
 from general_service.models import Stock, City
@@ -692,10 +693,16 @@ class DirectorGradeView(APIView):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class StockCRUDView(viewsets.ModelViewSet):
+class DirectorStockCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Stock.objects.select_related('city').all()
-    serializer_class = StockCRUDSerializer
+    serializer_class = StockListSerializer
+
+
+class DirectorStockListView(mixins.ListModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = Stock.objects.select_related('city').all()
+    serializer_class = StockListSerializer
 
     def get_queryset(self):
         from django.db.models import F, Sum, IntegerField
@@ -715,11 +722,49 @@ class StockCRUDView(viewsets.ModelViewSet):
             norm_count=Sum('counts__count_norm'),
         )
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+class DStockProductListView(mixins.ListModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = AsiaProduct.objects.all()
+    serializer_class = StockProductListSerializer
+
+    def get_queryset(self):
+        from django.db.models import F, Sum, IntegerField
+        stock_id = self.request.query_params.get('stock')
+
+        return super().get_queryset().annotate(
+            total_count=Sum(
+                Case(
+                    When(counts__stock_id=stock_id, then=F('counts__count_crm')),
+                    default=0,
+                    output_field=IntegerField()
+                )
+            ),
+            norm_count=Sum(
+                Case(
+                    When(counts__stock_id=stock_id, then=F('counts__count_norm')),
+                    default=0,
+                    output_field=IntegerField()
+                )
+            ),
+        )
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        title = request.query_params.get('title')
+        if title:
+            kwargs['title__icontains'] = title
+
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = bool(int(is_active))
+
+        queryset = queryset.filter(**kwargs)
+        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class DirectorStaffListView(mixins.RetrieveModelMixin,

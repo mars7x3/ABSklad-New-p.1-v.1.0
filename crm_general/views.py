@@ -50,6 +50,7 @@ class CollectionCRUDView(viewsets.ModelViewSet):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
+
 class CityListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsStaff]
     queryset = City.objects.filter(is_active=True)
