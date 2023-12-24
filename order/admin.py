@@ -22,3 +22,13 @@ class OrderProductInline(admin.TabularInline):
 @admin.register(MyOrder)
 class MyOrderAdmin(admin.ModelAdmin):
     inlines = [OrderProductInline]
+
+
+class ReturnOrderProductInline(admin.StackedInline):
+    model = ReturnOrderProduct
+    extra = 0
+
+
+@admin.register(ReturnOrder)
+class ReturnOrderAdmin(admin.ModelAdmin):
+    inlines = (ReturnOrderProductInline,)
