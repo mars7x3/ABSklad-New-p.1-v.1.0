@@ -33,14 +33,14 @@ def get_motivation_data(dealer):
                         "category": condition_cat.category.id,
                         "category_title": condition_cat.category.title
                     }
-                    condition_data["condition_cats"].append(category_data)
                     total_count = sum(
                         order_products.count
                         for order in orders
                         for order_products in order.order_products.filter(category=condition_cat.category)
                     )
-                    condition_data['done'] = total_count
-                    condition_data['per'] = round(total_count * 100 / condition_cat.count)
+                    category_data['done'] = total_count
+                    category_data['per'] = round(total_count * 100 / condition_cat.count)
+                    condition_data["condition_cats"].append(category_data)
 
             elif condition.status == 'product':
                 condition_data["condition_prods"] = []
@@ -51,15 +51,15 @@ def get_motivation_data(dealer):
                         "product": condition_prod.product.id,
                         "product_title": condition_prod.product.title
                     }
-                    condition_data["condition_prods"].append(product_data)
 
                     total_count = sum(
                         order_products.count
                         for order in orders
                         for order_products in order.order_products.filter(ab_product=condition_prod.product)
                     )
-                    condition_data['done'] = total_count
-                    condition_data['per'] = round(total_count * 100 / condition_prod.count)
+                    product_data['done'] = total_count
+                    product_data['per'] = round(total_count * 100 / condition_prod.count)
+                    condition_data["condition_prods"].append(product_data)
 
             elif condition.status == 'money':
                 condition_data["money"] = condition.money
