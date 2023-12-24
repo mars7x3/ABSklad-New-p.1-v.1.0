@@ -809,7 +809,7 @@ class StockListSerializer(serializers.ModelSerializer):
 class StockProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'collection', 'category', 'vendor_code')
+        fields = ('id', 'title', 'collection', 'category', 'vendor_code', 'is_active')
 
     def to_representation(self, instance):
         stock_id = self.context['request'].query_params.get('stock')
