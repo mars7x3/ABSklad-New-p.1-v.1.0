@@ -22,3 +22,4 @@ asgiref~=3.7.2
 transliterate
 gunicorn
 django-celery-beat==2.5.0
+transliterate

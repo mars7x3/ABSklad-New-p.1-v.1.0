@@ -9,9 +9,9 @@ from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile,
 from crm_general.director.utils import get_motivation_done, get_motivation_margin
 from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
-from general_service.models import Stock, City
+from general_service.models import Stock, City, StockPhone
 from order.models import MyOrder, Cart, CartProduct
-from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice
+from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
 from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
     ConditionProduct
 
@@ -727,18 +727,67 @@ class DirectorTaskListSerializer(serializers.ModelSerializer):
         return rep
 
 
-class StockCRUDSerializer(serializers.ModelSerializer):
+class StockWarehouseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WarehouseProfile
+        fields = ('user',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.user.name
+        return rep
+
+
+class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
         exclude = ('uid', 'is_show')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['city'] = instance.city.title if instance.city else '---'
-        rep['warehouses'] = instance.warehouse_profiles.values_list("user__name", flat=True)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
+        rep['phones'] = StockPhoneSerializer(instance.phones, many=True, context=self.context).data
+
+        return rep
+
+
+class StockPhoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StockPhone
+        fields = ('phone',)
+
+
+class StockListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        exclude = ('uid', 'is_show')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
         rep['prod_amount_crm'] = instance.total_sum
         rep['prod_count_crm'] = instance.total_count
-        rep['norm_count'] = instance.norm_count - instance.total_count
+        rep['norm_count'] = instance.total_count - instance.norm_count
+        return rep
+
+
+class StockProductListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title', 'collection', 'category', 'vendor_code')
+
+    def to_representation(self, instance):
+        stock_id = self.context['request'].query_params.get('stock')
+        rep = super().to_representation(instance)
+        rep['category_title'] = instance.category.title if instance.category else '---'
+        rep['collection'] = instance.collection.title if instance.category else '---'
+        stock = Stock.objects.get(id=stock_id)
+        price = instance.prices.filter(city=stock.city).first()
+        rep['prod_amount_crm'] = instance.total_count * price.price
+        rep['prod_count_crm'] = instance.total_count
+        rep['norm_count'] = instance.total_count - instance.norm_count
         return rep
 
 

@@ -40,7 +40,7 @@ class StaffListView(generics.ListAPIView):
 
 class CollectionCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStaff]
-    queryset = Collection.objects.all()
+    queryset = Category.objects.all()
     serializer_class = CollectionCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):
@@ -48,6 +48,7 @@ class CollectionCRUDView(viewsets.ModelViewSet):
         instance.is_active = not instance.is_active
         instance.save()
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
 
 
 class CityListView(generics.ListAPIView):

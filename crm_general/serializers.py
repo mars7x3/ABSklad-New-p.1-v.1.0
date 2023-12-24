@@ -1,6 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Sum, Q
 from rest_framework import serializers
+from transliterate import translit
 
 from account.models import MyUser, DealerStatus
 from general_service.models import Stock, City
@@ -176,6 +177,22 @@ class CollectionCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
         fields = '__all__'
+
+    def validate(self, attrs):
+        title = translit(attrs['title'], 'ru', reversed=True)
+        attrs['slug'] = title.replace(' ', '_').lower()
+        return attrs
+
+
+class CategoryCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+    def validate(self, attrs):
+        title = translit(attrs['title'], 'ru', reversed=True)
+        attrs['slug'] = title.replace(' ', '_').lower()
+        return attrs
 
 
 class CityListSerializer(serializers.ModelSerializer):
