@@ -98,16 +98,19 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
     serializer_class = DealerProfileListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
-    # search_fields = ("user__name", "user__id")
+    search_fields = ("user__name", "user__id")
     filter_by_fields = {
-        "start_date": {"by": "orders__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "orders__created_at__date__lte", "type": "date", "pipline": string_date_to_date}
+        "start_date": {"by": "user__joined_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "user__joined_at__date__lte", "type": "date", "pipline": string_date_to_date}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
 
     @decorators.action(['GET'], detail=False, url_path="amounts")
     def get_amounts(self, request):
+        """
+        Здесь нужно отправлять теже query что и в dealers
+        """
         queryset = self.filter_queryset(self.get_queryset())
         amounts = queryset.aggregate(
             incoming_funds=Sum(
@@ -123,25 +126,21 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         )
         return Response(amounts)
 
-    @decorators.action(["GET"], detail=True, url_path="saved_amount")
+    @decorators.action(["GET"], detail=True, url_path="saved-amount")
     def get_saved_amount(self, request, user_id):
-        dealer_profile = self.get_object()
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        saved_amount = dealer_profile.filter(
+        saved_amount = MyOrder.objects.filter(
+            author__user_id=user_id,
             is_active=True,
             status__in=("Оплачено", "Успешно", "Отправлено"),
             paid_at__date__gte=string_date_to_date(start_date),
             paid_at__date__lte=string_date_to_date(end_date)
-        ).aggregate(
-            saved_amount=Sum(
-                "order_products__discount"
-            )
-        )
+        ).aggregate(saved_amount=Sum("order_products__discount"))
         return Response(saved_amount)
 
 
@@ -170,6 +169,10 @@ class DealerRetrieveAPIView(BaseDealerViewMixin, generics.RetrieveAPIView):
     )
     serializer_class = DealerProfileDetailSerializer
     lookup_field = "user_id"
+
+
+class DealerCreateAPIView(BaseDealerViewMixin, generics.CreateAPIView):
+    serializer_class = DealerProfileDetailSerializer
 
 
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
@@ -212,8 +215,7 @@ class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView)
 # --------------------------------------------------------- PRODUCTS
 class CollectionListAPIView(BaseManagerMixin, generics.ListAPIView):
     queryset = (
-        Collection.objects.only("slug", "title", "created_at")
-                          .all()
+        Collection.objects.defer("id").all()
     )
     serializer_class = CollectionSerializer
     filter_backends = (filters.SearchFilter,)
@@ -255,21 +257,21 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 class ProductRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
     queryset = (
-        AsiaProduct.objects.select_related("collection__title")
+        AsiaProduct.objects.select_related("collection")
                            .prefetch_related("images", "sizes")
                            .only("id", "diagram", "title", "vendor_code", "description", "collection__title",
                                  "weight", "package_count", "made_in", "created_at", "updated_at")
                            .all()
     )
     serializer_class = ProductDetailSerializer
-    lookup_field = "id",
+    lookup_field = "id"
     lookup_url_kwarg = "product_id"
 
 
 # ----------------------------------------------- BALANCES
 class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
-        Wallet.objects.select_related("dealer", "dealer__dealer_status", "dealer__city", "dealer__balance_history")
+        Wallet.objects.select_related("dealer")
                       .only("id", "dealer", "amount_1c", "amount_crm")
                       .all()
     )
@@ -280,15 +282,18 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
     filter_by_fields = {
         "start_date": {"by": "dealer__balance_history__created_at__date__gte", "type": "date",
                        "pipline": string_date_to_date},
-        "end_date": {"by": "dealer__balance_history__created_at__date__gte", "type": "date",
+        "end_date": {"by": "dealer__balance_history__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
     }
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer__city=self.manager_profile.city)
+        return super().get_queryset().filter(dealer__city=self.manager_profile.city).distinct()
 
     @decorators.action(["GET"], detail=False, url_path="amounts")
     def get_amounts(self, request):
+        """
+        Необходимо отправлять те же параметры query что и у balances
+        """
         queryset = self.filter_queryset(self.get_queryset())
         amounts = queryset.aggregate(
             amount_1c=Sum("amount_1c"),
@@ -296,7 +301,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
             paid_amount=Sum(
                 "dealer__orders__price",
                 filter=Q(
-                    dealer__orders__is_actve=True,
+                    dealer__orders__is_active=True,
                     dealer__orders__paid_at__isnull=False
                 )
             )
@@ -311,9 +316,8 @@ class BalancePlusManagerView(BaseManagerMixin, generics.CreateAPIView):
 # ---------------------------------------- RETURNS
 class ReturnListAPIView(BaseManagerMixin, generics.ListAPIView):
     queryset = (
-        ReturnOrder.objects.select_related("order", "order__author__city", "order__stock", "order__stock__city")
-                           .only("id", "order__name", "order__phone", "order__gmail", "order__stock__city__title",
-                                 "order__author__city__title", "price", "status", "moder_comment")
+        ReturnOrder.objects.select_related("order")
+                           .only("id", "order", "status", "moder_comment")
                            .all()
     )
     serializer_class = ReturnOrderListSerializer
@@ -333,18 +337,35 @@ class ReturnListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 
 class ReturnRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
-    queryset = (
-        ReturnOrder.objects.prefetch_related("return_products")
-                           .select_related("order", "order__stock", "return_products__product")
-                           .only("order", "return_products", "created_at")
-                           .all()
-    )
+    queryset = ReturnOrder.objects.all()
     serializer_class = ReturnOrderDetailSerializer
     lookup_field = "id"
     lookup_url_kwarg = "return_id"
 
     def get_queryset(self):
         return super().get_queryset().filter(order__author__city=self.manager_profile.city)
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Perform the lookup filtering.
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+
+        assert lookup_url_kwarg in self.kwargs, (
+                'Expected view %s to be called with a URL keyword argument '
+                'named "%s". Fix your URL conf, or set the `.lookup_field` '
+                'attribute on the view correctly.' %
+                (self.__class__.__name__, lookup_url_kwarg)
+        )
+
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        print(filter_kwargs)
+        obj = generics.get_object_or_404(queryset, **filter_kwargs)
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+        return obj
+        # return super().get_object()
 
 
 class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
