@@ -188,12 +188,15 @@ class CRMNotification(models.Model):
     )
 
     users = models.ManyToManyField(MyUser, related_name='crm_notifications', blank=True)
+    cities = models.ManyToManyField(City, related_name='crm_notifications')
+    groups = models.ManyToManyField(DealerStatus, related_name='crm_notifications')
     image = models.FileField(upload_to='notification', blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     dispatch_date = models.DateTimeField()
     status = models.CharField(choices=STATUS, max_length=100, default='notif')
     link_id = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     @classmethod
     def get_status_choices(cls):

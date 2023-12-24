@@ -93,6 +93,13 @@ class MarketerCategoryModelViewSet(ListModelMixin,
             return {'request': self.request, 'retrieve': True}
         return {'request': self.request}
 
+    def get_queryset(self):
+        collection_slug = self.request.query_params.get('collection_slug')
+        if collection_slug:
+            return self.queryset.filter(products__collection__slug=collection_slug).distinct()
+        else:
+            return self.queryset
+
 
 class ProductSizeDestroyView(DestroyModelMixin, GenericViewSet):
     queryset = ProductSize.objects.all()
