@@ -15,8 +15,8 @@ from .director.views import *
 from .views import *
 
 from .marketer.views import (
-    MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeDestroyView,
-    MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView
+    MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeView,
+    MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView,
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet
@@ -113,10 +113,9 @@ marketer_router.register('category', MarketerCategoryModelViewSet)
 marketer_router.register('banner', MarketerBannerModelViewSet)
 marketer_router.register('story', MarketerStoryViewSet)
 marketer_router.register('crm-notification', CRMNotificationView)
-
+marketer_router.register('product-size', ProductSizeView)
 
 marketer_urlpatterns = [
-    path('marketer/product-sizes/<int:pk>/', ProductSizeDestroyView.as_view({'delete': 'destroy'})),
     path('marketer/dealer-status/list/', MarketerDealerStatusListView.as_view({'get': 'list'})),
     path('marketer/', include(marketer_router.urls)),
 ]

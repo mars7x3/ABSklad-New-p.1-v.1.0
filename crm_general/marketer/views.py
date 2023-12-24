@@ -101,7 +101,8 @@ class MarketerCategoryModelViewSet(ListModelMixin,
             return self.queryset
 
 
-class ProductSizeDestroyView(DestroyModelMixin, GenericViewSet):
+class ProductSizeView(DestroyModelMixin,
+                      GenericViewSet):
     queryset = ProductSize.objects.all()
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = ProductSizeSerializer
