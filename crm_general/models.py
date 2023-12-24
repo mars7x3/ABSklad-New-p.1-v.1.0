@@ -42,6 +42,17 @@ class CRMTaskResponseFile(models.Model):
     file = models.ImageField(upload_to='response')
 
 
-class KPI(models.Model):
-    user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='kpis')
-
+# class KPI(models.Model):
+#     STATUS = (
+#         ('product', 'product'),
+#         ('money', 'money'),
+#     )
+#     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='kpis')
+#
+#
+# class KPIProduct(models.Model):
+#     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='kpis')
+#
+#
+# class KPICategory(models.Model):
+#     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='kpis')

@@ -780,7 +780,7 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
         phones_list = []
         for p in phones:
             phones_list.append(StockPhone(stock=instance, phone=p['phone']))
-        instance.phones.delete()
+        instance.phones.all().delete()
         StockPhone.objects.bulk_create(phones_list)
         return instance
 
