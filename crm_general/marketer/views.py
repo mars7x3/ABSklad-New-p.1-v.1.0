@@ -14,7 +14,7 @@ from promotion.models import Banner, Story, Motivation, Discount
 from .serializers import MarketerProductSerializer, MarketerProductListSerializer, MarketerCollectionSerializer, \
     MarketerCategorySerializer, BannerSerializer, BannerListSerializer, DealerStatusSerializer, StoryListSerializer, \
     StoryDetailSerializer, ShortProductSerializer, CRMNotificationSerializer, MotivationSerializer, \
-    ParticipantsSerializer, DiscountSerializer
+    DiscountSerializer
 from ..paginations import ProductPagination, GeneralPurposePagination
 from product.models import AsiaProduct, Collection, Category, ProductSize
 from .permissions import IsMarketer
