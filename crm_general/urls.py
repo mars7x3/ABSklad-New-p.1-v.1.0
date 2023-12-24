@@ -33,9 +33,11 @@ from .rop.views import (
     DealerBasketListAPIView as RopDealerBasketListAPIView,
     DealerStatusListAPIView as RopDealerStatusListAPIView,
     DealerStatusCreateAPIView as RopDealerStatusCreateAPIView,
+    DealerStatusUpdateAPIView as RopDealerStatusUpdateAPIView,
     CollectionListAPIView as RopCollectionListAPIView,
     CategoryListAPIView as RopCategoryListAPIView,
     ProductPriceListAPIView as RopProductPriceListAPIView,
+    ProductRetrieveAPIView as RopProductRetrieveAPIView,
     BalanceViewSet as BalanceViewSet
 )
 
@@ -114,8 +116,7 @@ rop_router.register("balances", BalanceViewSet, basename="crm_general-rop-balanc
 rop_urlpatterns = [
     # Managers
     path("rop/managers/", RopManagerListAPIView.as_view(), name="crm_general-rop-managers-list"),
-    re_path(r"^rop/managers/(?P<user_id>.+)/create/$", RopManagerCreateAPIView.as_view(),
-            name="crm_general-rop-managers-create"),
+    path("rop/managers/create/", RopManagerCreateAPIView.as_view(), name="crm_general-rop-managers-create"),
     re_path(r"^rop/managers/(?P<user_id>.+)/detail/$", RopManagerRetrieveAPIView.as_view(),
             name="crm_general-rop-managers-detail"),
 
@@ -129,12 +130,14 @@ rop_urlpatterns = [
     path("rop/dealer-statuses/", RopDealerStatusListAPIView.as_view(), name="crm_general-rop-dealer-status-list"),
     path("rop/dealer-status/create/", RopDealerStatusCreateAPIView.as_view(),
          name="crm_general-rop-dealer-status-create"),
+    re_path("^rop/dealer-status/(?P<status_id>.+)/update/$", RopDealerStatusUpdateAPIView.as_view(),
+            name="crm_general-rop-dealer-status-update"),
 
     # Products
     path("rop/collections/", RopCollectionListAPIView.as_view(), name="crm_general-rop-collections-list"),
     path("rop/categories/", RopCategoryListAPIView.as_view(), name="crm_general-rop-categories-list"),
     path("rop/products/", RopProductPriceListAPIView.as_view(), name="crm_general-rop-products-list"),
-    re_path("^manager/products/(?P<product_id>.+)/detail/$", ManagerProductRetrieveAPIView.as_view(),
+    re_path("^rop/products/(?P<product_id>.+)/detail/$", RopProductRetrieveAPIView.as_view(),
             name="crm_general-rop-product-detail"),
 
     path("rop/", include(rop_router.urls)),

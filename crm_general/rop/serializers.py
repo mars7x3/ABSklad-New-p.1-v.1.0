@@ -9,16 +9,34 @@ from rest_framework import serializers
 
 from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
 from crm_general.serializers import BaseProfileSerializer
+from general_service.models import City
 from general_service.serializers import CitySerializer
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, AsiaProduct, ProductPrice, ProductImage, ProductSize
 
 
 class ManagerProfileSerializer(BaseProfileSerializer):
+    city = CitySerializer(many=False, read_only=True)
+    city_slug = serializers.SlugRelatedField(
+        slug_field="slug",
+        queryset=City.objects.all(),
+        write_only=True,
+        required=True
+    )
+
     class Meta:
         model = ManagerProfile
-        fields = ("user", "city")
+        fields = ("user", "city", "city_slug")
         user_status = "manager"
+
+    def validate(self, attrs):
+        city = attrs.pop("city_slug", None)
+        rop_profile = self.context["view"].rop_profile
+        if city and not rop_profile.cities.filter(id=city.id).exists():
+            raise serializers.ValidationError({"city_slug": "Данный город вам недоступен"})
+        if city:
+            attrs["city"] = city
+        return attrs
 
 
 class DealerStatusSerializer(serializers.ModelSerializer):
@@ -130,7 +148,7 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
     def get_amount(self, instance) -> float:
         product_price = instance.product.prices.filter(
             city=instance.cart.dealer.city,
-            d_status=instance.dealer.d_status
+            d_status=instance.cart.dealer.dealer_status
         ).first()
 
         if product_price:
@@ -140,7 +158,7 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
     def get_discount(self, instance) -> dict[str, float | str] | None:
         product_price = instance.product.prices.filter(
             city=instance.cart.dealer.city,
-            d_status=instance.dealer.d_status
+            d_status=instance.cart.dealer.dealer_status
         ).first()
 
         if product_price:
@@ -150,11 +168,11 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
             }
 
     def get_stock_city(self, instance) -> str:
-        if instance.stock.city:
-            return instance.stock.city.title
+        if instance.cart.stock.city:
+            return instance.cart.stock.city.title
 
     def get_stock_count(self, instance) -> int:
-        stock_count = instance.stock.counts.filter(product=instance.product).first()
+        stock_count = instance.cart.stock.counts.filter(product=instance.product).first()
         return stock_count.count_crm if stock_count else 0
 
 
