@@ -1,17 +1,18 @@
 from collections import OrderedDict
 
 from rest_framework.response import Response
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, mixins
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
-from account.models import MyUser
+from account.models import MyUser, DealerStatus
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
-    StockListSerializer
+    StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer
 from general_service.models import City, Stock
-from product.models import Collection, AsiaProduct, ProductImage
+from product.models import Collection, AsiaProduct, ProductImage, Category
 
 
 class CRMPaginationClass(PageNumberPagination):
@@ -49,6 +50,18 @@ class CollectionCRUDView(viewsets.ModelViewSet):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
+class CategoryCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = Category.objects.all()
+    serializer_class = CategoryCRUDSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
 class CityListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsStaff]
     queryset = City.objects.filter(is_active=True)
@@ -59,6 +72,19 @@ class StockListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsStaff]
     queryset = Stock.objects.filter(is_active=True)
     serializer_class = StockListSerializer
+
+
+class DealerStatusListView(mixins.ListModelMixin,
+                           GenericViewSet):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = DealerStatus.objects.all()
+    serializer_class = DealerStatusListSerializer
+
+
+class CategoryListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = Category.objects.filter(is_active=True)
+    serializer_class = CategoryListSerializer
 
 
 class ProductImagesCreate(APIView):
@@ -100,3 +126,4 @@ class UserImageCDView(APIView):
         user.save()
         image_url = request.build_absolute_uri(user.image.url)
         return Response({"url": image_url}, status=status.HTTP_200_OK)
+

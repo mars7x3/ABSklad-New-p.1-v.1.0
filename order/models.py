@@ -7,18 +7,18 @@ from product.models import AsiaProduct, Category
 
 class MyOrder(models.Model):
     STATUS = (
-        ('Новый', 'Новый'),
-        ('Оплачено', 'Оплачено'),
-        ('Отправлено', 'Отправлено'),
-        ('Ожидание', 'Ожидание'),
-        ('Отказано', 'Отказано'),
-        ('Успешно', 'Успешно')
+        ('created', 'created'),
+        ('paid', 'paid'),
+        ('sent', 'sent'),
+        ('wait', 'wait'),
+        ('rejected', 'rejected'),
+        ('success', 'success')
     )
     TYPE_STATUS = (
-        ('Наличка', 'Наличка'),
-        ('Карта', 'Карта'),
-        ('Баллы', 'Баллы'),
-        ('Каспи', 'Каспи')
+        ('cash', 'cash'),
+        ('visa', 'visa'),
+        ('wallet', 'wallet'),
+        ('kaspi', 'kaspi')
     )
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     name = models.CharField(max_length=100, blank=True, null=True)
@@ -28,7 +28,7 @@ class MyOrder(models.Model):
     stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='orders')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
-    status = models.CharField(choices=STATUS, max_length=15, default='Новый')
+    status = models.CharField(choices=STATUS, max_length=15, default='created')
     type_status = models.CharField(choices=TYPE_STATUS, max_length=15, blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -63,16 +63,17 @@ class OrderProduct(models.Model):
     total_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)  # сумма скидки
     image = models.FileField(upload_to='order-product', blank=True, null=True)
+    cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
 
 
 class ReturnOrder(models.Model):
     STATUS = (
-        ('Новый', 'Новый'),
-        ('Успешно', 'Успешно'),
-        ('Отказано', 'Отказано'),
+        ('created', 'created'),
+        ('success', 'success'),
+        ('rejected', 'rejected'),
     )
     order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='returns')
-    status = models.CharField(max_length=10, choices=STATUS, default='Новый')
+    status = models.CharField(max_length=10, choices=STATUS, default='rejected')
     created_at = models.DateTimeField(auto_now_add=True)
     moder_comment = models.TextField(blank=True, null=True)
 
@@ -89,11 +90,12 @@ class ReturnOrderProduct(models.Model):
 
 class Cart(models.Model):
     dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='carts')
-    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='carts')
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='cart')
 
 
 class CartProduct(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='cart_products')
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='cart_products')
     count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 

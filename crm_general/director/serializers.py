@@ -6,12 +6,14 @@ from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
-from crm_general.director.utils import get_motivation_done
+from crm_general.director.utils import get_motivation_done, get_motivation_margin
+from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
-from general_service.models import Stock, City
-from order.models import MyOrder
-from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage
-from promotion.models import Discount, Motivation, MotivationPresent
+from general_service.models import Stock, City, StockPhone
+from order.models import MyOrder, Cart, CartProduct
+from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
+from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
+    ConditionProduct
 
 
 class StaffCRUDSerializer(serializers.ModelSerializer):
@@ -30,33 +32,30 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             rep['profile'] = WarehouseProfileSerializer(instance.warehouse_profile, context=self.context).data
         return rep
 
-    def validate(self, attrs):
-        profile_data = self.context['request'].data.get("profile_data", None)
-        attrs['profile_data'] = profile_data
-        return attrs
-
     def create(self, validated_data):
         with transaction.atomic():
-            profile_data = validated_data.pop('profile_data')
+            request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
 
             if user.status == 'manager':
-                ManagerProfile.objects.create(user=user, city_id=profile_data.get('city'))
+                city_id = request.data.get('city')
+                ManagerProfile.objects.create(user=user, city_id=city_id)
 
             elif user.status == 'rop':
                 rop_profile = RopProfile.objects.create(user=user)
-                city_ids = profile_data.get("cities", [])
-                cities = City.objects.filter(id__in=city_ids)
+                cities = request.data.get('cities', [])
+                cities = City.objects.filter(id__in=cities)
                 rop_profile.cities.add(*cities)
 
             elif user.status == 'warehouse':
-                WarehouseProfile.objects.create(user=user, stock_id=profile_data.get('stock'))
+                stock_id = request.data.get('stock')
+                WarehouseProfile.objects.create(user=user, stock_id=stock_id)
 
             return user
 
     def update(self, instance, validated_data):
         with transaction.atomic():
-            profile_data = validated_data.pop('profile_data')
+            request = self.context['request']
             for key, value in validated_data.items():
                 setattr(instance, key, value)
             instance.pwd = validated_data.get('password')
@@ -65,11 +64,11 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
             if instance.status == 'manager':
                 manager_profile = instance.manager_profile
-                manager_profile.city_id = profile_data.get('city')
+                manager_profile.city_id = request.data.get('city')
                 manager_profile.save()
 
             elif instance.status == 'rop':
-                city_ids = profile_data.get("cities", [])
+                city_ids = request.data.get('cities', [])
                 cities = City.objects.filter(id__in=city_ids)
                 rop_profile = instance.rop_profile
                 rop_profile.cities.clear()
@@ -77,8 +76,8 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
                 rop_profile.save()
 
             elif instance.status == 'warehouse':
-                warehouse_profile = instance.manager_profile
-                warehouse_profile.stock_id = warehouse_profile.get('stock')
+                warehouse_profile = instance.warehouse_profile
+                warehouse_profile.stock_id = request.data.get('stock')
                 warehouse_profile.save()
 
             return instance
@@ -150,7 +149,7 @@ class BalanceDealerSerializer(serializers.ModelSerializer):
         rep['city_title'] = instance.city.title if instance.city else '---'
         rep['name'] = instance.user.name
         rep['user_id'] = instance.user.id
-        last_transaction = instance.balance_history.filter(is_active=True, amount__gte=0).last()
+        last_transaction = instance.balance_histories.filter(is_active=True, amount__gte=0).last()
         rep['last_repl'] = last_transaction.created_at if last_transaction else '---'
 
         return rep
@@ -159,7 +158,7 @@ class BalanceDealerSerializer(serializers.ModelSerializer):
 class DirectorProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'is_active', 'collection', 'category', 'is_discount')
+        fields = ('id', 'title', 'is_active', 'collection', 'category', 'is_discount', 'vendor_code')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -207,13 +206,13 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         last_15_days = timezone.now() - timezone.timedelta(days=15)
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
-                                                                  order__status__in=['Отправлено', 'Оплачено',
-                                                                                     'Успешно'])
-                                  .values_list('count'))) / 15, 2)
-        rep['avg_check'] = sum(instance.order_products.filter(order__is_active=True,
-                                                              order__status__in=['Отправлено', 'Успешно', 'Оплачено',
-                                                                                 'Ожидание']
-                                                              ).values_list('total_price', flat=True))
+                                                                  order__status__in=['sent', 'paid',
+                                                                                     'success'])
+                                   .values_list('count'))) / 15, 2)
+        avg_check = instance.order_products.filter(order__is_active=True,
+                                                   order__status__in=['sent', 'success', 'paid', 'wait']
+                                                   ).values_list('total_price', flat=True)
+        rep['avg_check'] = sum(avg_check) / len(avg_check)
 
         return rep
 
@@ -287,19 +286,19 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
         rep['id'] = instance.user.id
+        rep['is_active'] = instance.user.is_active
         rep['name'] = instance.user.name
-        rep['pds_amount'] = sum(instance.user.money_docs.filter(is_active=True, created_at__gte=start_date,
-                                                                created_at__lte=end_date
-                                                                ).values_list('amount', flat=True))
-        rep['shipment_amount'] = sum(instance.orders.filter(is_active=True, status__in=['Успешно', 'Отправлено'],
-                                                            released_at__gte=start_date, released_at__lte=end_date
-                                                            ).values_list('price', flat=True))
+        balance_histories = instance.balance_histories.filter(is_active=True, created_at__gte=start_date,
+                                                              created_at__lte=end_date)
+        rep['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
+        rep['shipment_amount'] = sum(balance_histories.filter(status='order').values_list('amount', flat=True))
+        rep['balance'] = balance_histories.last().balance if balance_histories else 0
+
         rep['city'] = instance.city.title if instance.city else '---'
         rep['status'] = True if instance.wallet.amount_crm > 50000 else False
-        last_order = instance.orders.filter(is_active=True, status__in=['Успешно', 'Отправлено', 'Оплачено',
-                                                                        'Ожидание']).last()
+        last_order = instance.orders.filter(is_active=True, status__in=['success', 'sent', 'paid',
+                                                                        'wait']).last()
         rep['last_date'] = str(last_order.paid_at) if last_order else '---'
-        rep['balance'] = instance.wallet.amount_crm
 
         return rep
 
@@ -307,7 +306,8 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
 class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password')
+        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
+                  'image')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -348,7 +348,7 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['city_title'] = instance.city.title if instance.city else '---'
         rep['price_city_title'] = instance.price_city.title if instance.price_city else '---'
-        rep['dealer_status'] = instance.dealer_status.title if instance.dealer_status else '---'
+        rep['dealer_status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
         rep['balance_crm'] = instance.wallet.amount_crm
         rep['balance_1c'] = instance.wallet.amount_1c
         rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores, many=True, context=self.context).data
@@ -368,22 +368,463 @@ class DirectorDealerStoreSerializer(serializers.ModelSerializer):
         return rep
 
 
+class DirectorMotivationDealerListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerProfile
+        fields = ('id',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.user.name
+        return rep
+
+
 class DirDealerMotivationPresentSerializer(serializers.ModelSerializer):
     class Meta:
         model = MotivationPresent
         exclude = ('id', 'motivation')
 
 
-# class StockCRUDSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Stock
-#         exclude = ('uid', 'is_show')
-#
-#     def to_representation(self, instance):
-#         rep = super().to_representation(instance)
-#         rep['city'] = instance.city.title if instance.city else 'Нет города'
-#         rep['warehouses'] = instance.warehouse_profiles.values_list("user__name", flat=True)
-#         rep['prod_amount_crm'] = instance.total_sum
-#         rep['prod_count_crm'] = instance.total_count
-#
-#         return rep
+class DirDealerOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyOrder
+        fields = '__all__'
+
+
+class DirBalanceHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalanceHistory
+        fields = '__all__'
+
+
+class DirDealerCartProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartProduct
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        price = instance.product.prices.filter(city=instance.cart.dealer.price_city,
+                                               d_status=instance.cart.dealer.dealer_status).first()
+        count = instance.product.counts.filter(stock=instance.cart.stock).first()
+        rep['prod_title'] = instance.product.title
+        rep['prod_category'] = instance.product.category.title
+        rep['price'] = price.price * instance.count
+        rep['discount_price'] = price.old_price - price.price * instance.count if price.discount > 0 else 0
+        rep['crm_count'] = count.count_crm
+        rep['stock_city'] = instance.cart.stock.city.title
+
+        return rep
+
+
+class DirectorMotivationListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Motivation
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['margin'] = get_motivation_margin(instance)
+
+        return rep
+
+
+class DirectorMotivationDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Motivation
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['margin'] = get_motivation_margin(instance)
+
+        return rep
+
+
+class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Motivation
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['dealers'] = MotivationDealerSerializer(instance.dealers, many=True, context=self.context).data
+        rep['conditions'] = MotivationConditionSerializer(instance.conditions, many=True, context=self.context).data
+
+        return rep
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            conditions = self.context['request'].data['conditions']
+            dealers = validated_data.pop('dealers')
+
+            motivation = Motivation.objects.create(**validated_data)
+            motivation.dealers.add(*dealers)
+            motivation.save()
+
+            condition_cats = []
+            condition_prods = []
+            presents = []
+
+            for c in conditions:
+                condition = MotivationCondition.objects.create(motivation=motivation, status=c['status'],
+                                                               money=c['money'], text=c['text'])
+                match c['status']:
+                    case 'category':
+                        for cat in c['condition_cats']:
+                            condition_cats.append(ConditionCategory(condition=condition, count=cat['count'],
+                                                                    category_id=cat['category']))
+
+                    case 'product':
+                        for prod in c['condition_prods']:
+                            condition_prods.append(ConditionCategory(condition=condition, count=prod['count'],
+                                                                     product_id=prod['product']))
+                for pres in c['presents']:
+                    presents.append(MotivationPresent(
+                        condition=condition, status=pres['status'], money=pres['money'], text=pres['text']
+                    ))
+            ConditionCategory.objects.bulk_create(condition_cats)
+            ConditionProduct.objects.bulk_create(condition_prods)
+            MotivationPresent.objects.bulk_create(presents)
+
+            return motivation
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            conditions = self.context['request'].data['conditions']
+            dealers = validated_data.pop('dealers')
+            motivation = instance
+            if motivation.is_active:
+                if timezone.now() > motivation.start_date:
+                    serializers.ValidationError('Активные мотивации нельзя изменять!')
+            for key, value in validated_data.items():
+                setattr(motivation, key, value)
+            motivation.dealers.clear()
+            motivation.dealers.add(*dealers)
+            motivation.save()
+            motivation.conditions.all().delete()
+
+            condition_cats = []
+            condition_prods = []
+            presents = []
+
+            for c in conditions:
+                condition = MotivationCondition.objects.create(motivation=motivation, status=c['status'],
+                                                               money=c['money'], text=c['text'])
+                match c['status']:
+                    case 'category':
+                        for cat in c['condition_cats']:
+                            condition_cats.append(ConditionCategory(condition=condition, count=cat['count'],
+                                                                    category_id=cat['category']))
+
+                    case 'product':
+                        for prod in c['condition_prods']:
+                            condition_prods.append(ConditionCategory(condition=condition, count=prod['count'],
+                                                                     product_id=prod['product']))
+                for pres in c['presents']:
+                    presents.append(MotivationPresent(
+                        condition=condition, status=pres['status'], money=pres['money'], text=pres['text']
+                    ))
+
+            ConditionCategory.objects.bulk_create(condition_cats)
+            ConditionProduct.objects.bulk_create(condition_prods)
+            MotivationPresent.objects.bulk_create(presents)
+
+            return motivation
+
+
+class MotivationDealerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerProfile
+        fields = ('id',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['user_name'] = instance.user.name
+        return rep
+
+
+class MotivationConditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotivationCondition
+        exclude = ('motivation',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['condition_cats'] = MotivationConditionCategorySerializer(instance.condition_cats,
+                                                                      many=True, context=self.context).data
+        rep['condition_prods'] = MotivationConditionProductSerializer(instance.condition_prods,
+                                                                      many=True, context=self.context).data
+        rep['presents'] = MotivationPresentSerializer(instance.presents, many=True, context=self.context).data
+
+        return rep
+
+
+class MotivationConditionCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionCategory
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['category_title'] = instance.category.title if instance.category else '---'
+        return rep
+
+
+class MotivationConditionProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionProduct
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['product_title'] = instance.product.title if instance.product else '---'
+        return rep
+
+
+class MotivationPresentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotivationPresent
+        fields = '__all__'
+
+
+class DirectorPriceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        cost_price = instance.cost_prices.filter(is_active=True).last()
+        rep['cost_price'] = cost_price.price if cost_price else '---'
+        rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0),
+                                                           many=True, context=self.context).data
+        return rep
+
+
+class DirectorProductPriceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductPrice
+        fields = ('price', 'city')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        return rep
+
+
+class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
+    creator = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = CRMTask
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['creator'] = DirectorTaskUserSerializer(instance.creator, context=self.context).data
+        rep['files'] = DirectorTaskFileSerializer(instance.files, many=True, context=self.context).data
+        rep['responses'] = DirectorTaskResponseSerializer(instance.task_responses, many=True, context=self.context).data
+
+        return rep
+
+    def validate(self, attrs):
+        attrs['creator'] = self.context['request'].user
+        return attrs
+
+    def create(self, validated_data):
+        executors = self.context['request'].data.getlist('executors')
+        files = self.context['request'].FILES.getlist('files')
+        task = CRMTask.objects.create(**validated_data)
+
+        files_list = []
+        for f in files:
+            files_list.append(CRMTaskFile(file=f, task=task))
+        CRMTaskFile.objects.bulk_create(files_list)
+
+        executors_list = []
+        for e in executors:
+            executors_list.append(CRMTaskResponse(executor_id=e, task=task))
+        CRMTaskResponse.objects.bulk_create(executors_list)
+        return task
+
+    def update(self, instance, validated_data):
+        executors = self.context['request'].data.getlist('executors')
+        files = self.context['request'].FILES.getlist('files')
+        delete_files = self.context['request'].data.getlist('delete_files')
+
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+
+        if delete_files:
+            instance.files.filter(id__in=delete_files).delete()
+
+        files_list = []
+        for f in files:
+            files_list.append(CRMTaskFile(file=f, task=instance))
+        CRMTaskFile.objects.bulk_create(files_list)
+
+        executors_list = []
+        for e in executors:
+            executors_list.append(CRMTaskResponse(executor_id=e, task=instance))
+        instance.task_responses.all().delete()
+        CRMTaskResponse.objects.bulk_create(executors_list)
+        return instance
+
+
+class DirectorTaskResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponse
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['executor'] = DirectorTaskUserSerializer(instance.executor, context=self.context).data
+        rep['files'] = DirectorTaskFileSerializer(instance.response_files.all(), many=True, context=self.context).data
+        rep['grade'] = instance.grade.title if instance.grade else '---'
+
+        return rep
+
+
+class DirectorTaskResponseFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponseFile
+        fields = '__all__'
+
+
+class DirectorTaskFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskFile
+        fields = '__all__'
+
+
+class DirectorTaskUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'status')
+
+
+class DirectorCRMTaskGradeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskGrade
+        fields = '__all__'
+
+
+class DirectorTaskListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTask
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['creator'] = DirectorTaskUserSerializer(instance.creator, context=self.context).data
+        rep['files'] = DirectorTaskFileSerializer(instance.files, many=True, context=self.context).data
+        executors = instance.task_responses.values_list('executor__name', 'executor__status')
+        executors = [{"name": i[0], "status": i[-1]} for i in executors]
+        rep['executors'] = executors
+
+        return rep
+
+
+class StockWarehouseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WarehouseProfile
+        fields = ('user',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.user.name
+        return rep
+
+
+class StockManagerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ManagerProfile
+        fields = ('user',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.user.name
+        return rep
+
+
+class DirectorStockCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        exclude = ('uid', 'is_show')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
+        rep['phones'] = StockPhoneSerializer(instance.phones, many=True, context=self.context).data
+        rep['managers'] = StockManagerSerializer(instance.city.manager_profiles, many=True, context=self.context).data
+
+        return rep
+
+    def create(self, validated_data):
+        phones = self.context['request'].data['phones']
+        stock = Stock.objects.create(**validated_data)
+        phones_list = []
+        for p in phones:
+            phones_list.append(StockPhone(stock=stock, phone=p['phone']))
+        StockPhone.objects.bulk_create(phones_list)
+        return stock
+
+    def update(self, instance, validated_data):
+        phones = self.context['request'].data['phones']
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+        phones_list = []
+        for p in phones:
+            phones_list.append(StockPhone(stock=instance, phone=p['phone']))
+        instance.phones.all().delete()
+        StockPhone.objects.bulk_create(phones_list)
+        return instance
+
+
+class StockPhoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StockPhone
+        fields = ('phone',)
+
+
+class StockListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        exclude = ('uid', 'is_show')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
+        rep['prod_amount_crm'] = instance.total_sum
+        rep['prod_count_crm'] = instance.total_count
+        rep['norm_count'] = instance.total_count - instance.norm_count
+        return rep
+
+
+class StockProductListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title', 'collection', 'category', 'vendor_code', 'is_active')
+
+    def to_representation(self, instance):
+        stock_id = self.context['request'].query_params.get('stock')
+        rep = super().to_representation(instance)
+        rep['category_title'] = instance.category.title if instance.category else '---'
+        rep['collection'] = instance.collection.title if instance.category else '---'
+        stock = Stock.objects.get(id=stock_id)
+        price = instance.prices.filter(city=stock.city).first()
+        rep['prod_amount_crm'] = instance.total_count * price.price
+        rep['prod_count_crm'] = instance.total_count
+        rep['norm_count'] = instance.total_count - instance.norm_count
+        return rep
+
+
+class DirectorDealerListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('status', 'name', 'id')

@@ -20,6 +20,7 @@ class City(models.Model):
 
 class Stock(models.Model):
     city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True, related_name='stocks')
+    title = models.CharField(max_length=300, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     schedule = models.TextField(blank=True, null=True)
     uid = models.CharField(max_length=40, blank=True, null=True)

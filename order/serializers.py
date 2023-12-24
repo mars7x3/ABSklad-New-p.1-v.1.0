@@ -13,6 +13,12 @@ class MyOrderListSerializer(serializers.ModelSerializer):
         model = MyOrder
         fields = ('id', 'price', 'created_at', 'status')
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['stock'] = StockSerializer(instance.stock, context=self.context).data
+
+        return rep
+
 
 class MyOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -85,13 +91,13 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
         product_list = get_product_list(products)
         data['price'] = order_total_price(product_list, products, dealer)
 
-        if data['type_status'] == 'Баллы':
-            data['status'] = 'Оплачено'
+        if data['type_status'] == 'wallet':
+            data['status'] = 'paid'
             if data['price'] > dealer.wallet.amount_crm:
                 raise serializers.ValidationError({'text': 'У вас недостаточно средств на балансе!'})
 
         data['author'] = dealer
-        data['name'] = dealer.user.name
+        data['name'] = user.name
         data['gmail'] = user.email
         data['cost_price'] = order_cost_price(product_list, products)
         data['products'] = generate_order_products(product_list, products, dealer)

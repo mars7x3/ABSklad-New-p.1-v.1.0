@@ -6,7 +6,7 @@ from general_service.models import City, Stock
 
 class Category(models.Model):
     title = models.CharField(max_length=100)
-    slug = models.CharField(max_length=100, unique=True)
+    slug = models.CharField(max_length=100, unique=True, blank=True, null=True)
     image = models.FileField(upload_to='category', blank=True, null=True)
     uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
     is_active = models.BooleanField(default=False)
@@ -23,7 +23,7 @@ class Category(models.Model):
 
 class Collection(models.Model):
     title = models.CharField(max_length=200)
-    slug = models.CharField(max_length=200, unique=True)
+    slug = models.CharField(max_length=200, unique=True, blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -96,6 +96,7 @@ class ProductCount(models.Model):
     count_crm = models.IntegerField(default=0)
     count_1c = models.IntegerField(default=0)
     count_order = models.IntegerField(default=0)
+    count_norm = models.IntegerField(default=0)
     arrival_time = models.DateTimeField(blank=True, null=True)
 
 

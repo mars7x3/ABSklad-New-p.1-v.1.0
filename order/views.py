@@ -63,7 +63,7 @@ class MyOrderCreateView(generics.CreateAPIView):
     "products": {
     "product_id": product count
   },
-    "type_status": "Наличка" ('Наличка', 'Карта', 'Баллы', 'Каспи'),
+    "type_status": "cash" ('cash', 'visa', 'wallet', 'kaspi'),
   "stock": stock id
 
     """
@@ -73,13 +73,17 @@ class MyOrderCreateView(generics.CreateAPIView):
 
 
 class OrderReceiptAddView(APIView):
+    """
+    {"receipts": [file, file],
+    "order_id: order_id}
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         receipts = request.FILES.getlist('receipts')
         order_id = request.data.get('order_id')
         if receipts and order_id:
-            order = MyOrder.objects.filter(id=order_id)
+            order = MyOrder.objects.filter(id=order_id).first()
             if order:
                 OrderReceipt.objects.bulk_create([OrderReceipt(order=order, file=i) for i in receipts])
                 response_data = MyOrderDetailSerializer(order, context=self.get_renderer_context()).data

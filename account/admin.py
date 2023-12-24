@@ -48,6 +48,7 @@ admin.site.register(DealerProfile)
 admin.site.register(RopProfile)
 admin.site.register(ManagerProfile)
 admin.site.register(WarehouseProfile)
+admin.site.register(DealerStore)
 
 admin.site.register(DealerStatus)
 admin.site.register(Notification)
@@ -55,4 +56,5 @@ admin.site.register(Wallet)
 
 admin.site.register(BalancePlus)
 admin.site.register(BalanceHistory)
+admin.site.register(CRMNotification)
 

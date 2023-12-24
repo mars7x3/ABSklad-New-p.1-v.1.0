@@ -1,8 +1,9 @@
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Sum, Q
 from rest_framework import serializers
+from transliterate import translit
 
-from account.models import MyUser
+from account.models import MyUser, DealerStatus
 from general_service.models import Stock, City
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
@@ -134,11 +135,11 @@ class CRMCategorySerializer(serializers.ModelSerializer):
                     'order_products__count',
                     filter=Q(
                         order_products__order__is_active=True,
-                        order_products__order__status="Оплачено",
+                        order_products__order__status="paid",
                         order_products__order__stock_id__in=stock_ids,
                     ) if stock_ids else Q(
                         order_products__order__is_active=True,
-                        order_products__order__status="Оплачено",
+                        order_products__order__status="paid",
                     )
                 )
             ).values_list("orders_count", flat=True)
@@ -181,6 +182,22 @@ class CollectionCRUDSerializer(serializers.ModelSerializer):
         model = Collection
         fields = '__all__'
 
+    def validate(self, attrs):
+        title = translit(attrs['title'], 'ru', reversed=True)
+        attrs['slug'] = title.replace(' ', '_').lower()
+        return attrs
+
+
+class CategoryCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+    def validate(self, attrs):
+        title = translit(attrs['title'], 'ru', reversed=True)
+        attrs['slug'] = title.replace(' ', '_').lower()
+        return attrs
+
 
 class CityListSerializer(serializers.ModelSerializer):
     class Meta:
@@ -192,4 +209,17 @@ class StockListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
         fields = '__all__'
+
+
+class DealerStatusListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerStatus
+        fields = '__all__'
+
+
+class CategoryListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
 

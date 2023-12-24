@@ -1,4 +1,4 @@
-Django==4.1
+Django==4.2
 djangorestframework~=3.14.0
 djangorestframework-simplejwt~=5.2.2
 psycopg2-binary==2.9.5
@@ -21,3 +21,5 @@ django_redis
 asgiref~=3.7.2
 transliterate
 gunicorn
+django-celery-beat==2.5.0
+transliterate
