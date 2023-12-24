@@ -63,6 +63,7 @@ class OrderProduct(models.Model):
     total_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)  # сумма скидки
     image = models.FileField(upload_to='order-product', blank=True, null=True)
+    cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
 
 
 class ReturnOrder(models.Model):
