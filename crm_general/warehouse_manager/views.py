@@ -11,7 +11,8 @@ from product.models import AsiaProduct, Collection, Category
 from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
-    WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, WareHouseCategoryDetailSerializer
+    WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, WareHouseCategoryDetailSerializer, \
+    WareHouseProductSerializer
 from .mixins import WareHouseManagerMixin
 
 
@@ -70,6 +71,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
 class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
     queryset = AsiaProduct.objects.all()
     serializer_class = WareHouseProductListSerializer
+    retrieve_serializer_class = WareHouseProductSerializer
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     pagination_class = ProductPagination
 
@@ -92,6 +94,11 @@ class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMix
 
     def get_queryset(self):
         return self.queryset.filter(counts__stock=self.request.user.warehouse_profile.stock)
+
+    def get_serializer_class(self):
+        if self.detail:
+            return self.retrieve_serializer_class
+        return self.serializer_class
 
 
 class WareHouseCollectionViewSet(ListModelMixin,
