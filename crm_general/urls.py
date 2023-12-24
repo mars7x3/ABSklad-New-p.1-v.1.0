@@ -39,6 +39,7 @@ director_router.register("director/task/crud", DirectorTaskCRUDView)
 director_router.register("director/task/list", DirectorTaskListView)
 director_router.register("director/grade/crud", DirectorGradeCRUDView)
 director_router.register("director/staff/list", DirectorStaffListView)
+director_router.register("director/stock/crud", DirectorStockCRUDView)
 director_router.register("director/stock/list", DirectorStockListView)
 director_router.register("director/stock/product/list", DStockProductListView)
 

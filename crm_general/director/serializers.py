@@ -738,6 +738,17 @@ class StockWarehouseSerializer(serializers.ModelSerializer):
         return rep
 
 
+class StockManagerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ManagerProfile
+        fields = ('user',)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.user.name
+        return rep
+
+
 class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
@@ -748,8 +759,30 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
         rep['city_title'] = instance.city.title if instance.city else '---'
         rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
         rep['phones'] = StockPhoneSerializer(instance.phones, many=True, context=self.context).data
+        rep['managers'] = StockManagerSerializer(instance.city.manager_profiles, many=True, context=self.context).data
 
         return rep
+
+    def create(self, validated_data):
+        phones = self.context['request'].data['phones']
+        stock = Stock.objects.create(**validated_data)
+        phones_list = []
+        for p in phones:
+            phones_list.append(StockPhone(stock=stock, phone=p['phone']))
+        StockPhone.objects.bulk_create(phones_list)
+        return stock
+
+    def update(self, instance, validated_data):
+        phones = self.context['request'].data['phones']
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+        phones_list = []
+        for p in phones:
+            phones_list.append(StockPhone(stock=instance, phone=p['phone']))
+        instance.phones.delete()
+        StockPhone.objects.bulk_create(phones_list)
+        return instance
 
 
 class StockPhoneSerializer(serializers.ModelSerializer):

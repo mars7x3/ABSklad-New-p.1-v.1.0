@@ -19,7 +19,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
-    DirectorDealerListSerializer, StockProductListSerializer
+    DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade
 
 from general_service.models import Stock, City
@@ -696,7 +696,7 @@ class DirectorGradeView(APIView):
 class DirectorStockCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Stock.objects.select_related('city').all()
-    serializer_class = StockListSerializer
+    serializer_class = DirectorStockCRUDSerializer
 
 
 class DirectorStockListView(mixins.ListModelMixin, GenericViewSet):
