@@ -445,7 +445,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.user.name
 
     def get_created_at(self, instance):
-        return instance.dealer.balance_history.last().created_at
+        return instance.dealer.balance_histories.last().created_at
 
     def get_paid_amount(self, instance) -> float:
         return instance.dealer.orders.filter(is_active=True, paid_at__isnull=False).aggregate(
@@ -459,7 +459,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.dealer_status.title
 
     def get_last_replenishment_date(self, instance) -> datetime:
-        last_replenishment = instance.dealer.balance_history.filter(status="wallet").last()
+        last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
         if last_replenishment:
             return last_replenishment.created_at
 
