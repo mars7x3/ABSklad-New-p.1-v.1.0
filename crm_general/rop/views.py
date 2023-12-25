@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet, DealerStatus
 from crm_general.filters import FilterByFields
 from crm_general.paginations import AppPaginationClass
+from crm_general.serializers import ActivitySerializer
 from crm_general.utils import convert_bool_string_to_bool, string_date_to_date
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, ProductPrice, AsiaProduct
@@ -13,8 +14,7 @@ from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, 
     DealerBalanceHistorySerializer, DealerBasketProductSerializer, ShortOrderSerializer, CollectionSerializer, \
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
     DealerStatusSerializer
-from .mixins import BaseRopMixin, BaseDealerRelationViewMixin
-from ..serializers import ActivitySerializer
+from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin
 
 
 # -------------------------------------------- MANAGERS
@@ -167,6 +167,26 @@ class OrderListAPIView(BaseRopMixin, generics.ListAPIView):
         return super().get_queryset().filter(author__city_id__in=self.rop_profile.cities.all())
 
 
+class DealerChangeActivityView(BaseDealerMixin, generics.GenericAPIView):
+    serializer_class = ActivitySerializer
+
+    def patch(self, request, *args, **kwargs):
+        dealer = self.get_object()
+        user = dealer.user
+        user.is_active = not user.is_active
+        user.save()
+        serializer = self.get_serializer({"is_active": user.is_active}, many=False)
+        return Response(serializer.data)
+
+
+class DealerCreateAPIView(BaseDealerMixin, generics.CreateAPIView):
+    serializer_class = DealerProfileDetailSerializer
+
+
+class DealerUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
+    serializer_class = DealerProfileDetailSerializer
+
+
 class DealerStatusListAPIView(BaseRopMixin, generics.ListAPIView):
     queryset = DealerStatus.objects.all()
     serializer_class = DealerStatusSerializer
@@ -181,21 +201,6 @@ class DealerStatusUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     serializer_class = DealerStatusSerializer
     lookup_field = "id"
     lookup_url_kwarg = "status_id"
-
-
-class DealerChangeActivityView(BaseRopMixin, generics.GenericAPIView):
-    queryset = DealerStatus.objects.all()
-    serializer_class = ActivitySerializer
-    lookup_field = "user_id"
-    lookup_url_kwarg = "user_id"
-
-    def patch(self, request, *args, **kwargs):
-        dealer = self.get_object()
-        user = dealer.user
-        user.is_active = not user.is_active
-        user.save()
-        serializer = self.get_serializer({"is_active": user.is_active}, many=False)
-        return Response(serializer.data)
 
 
 # ------------------------------------------------- PRODUCTS

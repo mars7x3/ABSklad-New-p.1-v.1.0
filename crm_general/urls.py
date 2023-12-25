@@ -34,6 +34,8 @@ from .rop.views import (
     DealerRetrieveAPIView as RopDealerRetrieveAPIView,
     DealerBalanceHistoryListAPIView as RopDealerBalanceHistoryListAPIView,
     DealerBasketListAPIView as RopDealerBasketListAPIView,
+    DealerCreateAPIView as RopDealerCreateAPIView,
+    DealerUpdateAPIView as RopDealerUpdateAPIView,
     DealerChangeActivityView as RopDealerChangeActivityView,
     DealerStatusListAPIView as RopDealerStatusListAPIView,
     DealerStatusCreateAPIView as RopDealerStatusCreateAPIView,
@@ -156,6 +158,9 @@ rop_urlpatterns = [
             name="crm_general-rop-managers-detail"),
 
     # Dealers
+    path("rop/dealers/create/", RopDealerCreateAPIView.as_view(), name="crm_general-rop-dealers-create"),
+    re_path("^rop/dealers/(?P<user_id>.+)/update/$", RopDealerUpdateAPIView.as_view(),
+            name="crm_general-rop-dealers-update"),
     re_path("^rop/dealers/(?P<user_id>.+)/detail/$", RopDealerRetrieveAPIView.as_view(),
             name="crm_general-rop-dealers-detail"),
     re_path("^rop/dealers/(?P<user_id>.+)/balance-history/$", RopDealerBalanceHistoryListAPIView.as_view(),
