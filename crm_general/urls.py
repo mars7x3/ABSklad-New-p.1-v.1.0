@@ -169,23 +169,6 @@ rop_urlpatterns = [
 ]
 # ---------------------------
 
-crm_router = SimpleRouter()
-crm_router.register("crm/collection/crud", CollectionCRUDView)
-crm_router.register("crm/category/crud", CategoryCRUDView)
-crm_router.register("crm/dealer-status/list", DealerStatusListView)
-
-crm_urlpatterns = [
-    path("crm/product/images/create/", ProductImagesCreate.as_view()),
-    path("crm/city/list/", CityListView.as_view()),
-    path("crm/stock/list/", StockListView.as_view()),
-    path("crm/category/list/", CategoryListView.as_view()),
-
-
-    path("crm/user/image/cd", UserImageCDView.as_view()),
-
-    path("", include(crm_router.urls)),
-]
-
 marketer_router = SimpleRouter()
 marketer_router.register('product', MarketerProductRUViewSet)
 marketer_router.register('collection', MarketerCollectionModelViewSet)
@@ -209,6 +192,23 @@ warehouse_manager_router.register('collection', WareHouseCollectionViewSet, base
 
 warehouse_manager_urlpatterns = [
     path('warehouse-manager/', include(warehouse_manager_router.urls)),
+]
+
+crm_router = SimpleRouter()
+crm_router.register("crm/collection/crud", CollectionCRUDView)
+crm_router.register("crm/category/crud", CategoryCRUDView)
+crm_router.register("crm/dealer-status/list", DealerStatusListView)
+
+crm_urlpatterns = [
+    path("crm/product/images/create/", ProductImagesCreate.as_view()),
+    path("crm/city/list/", CityListView.as_view()),
+    path("crm/stock/list/", StockListView.as_view()),
+    path("crm/category/list/", CategoryListView.as_view()),
+
+
+    path("crm/user/image/cd", UserImageCDView.as_view()),
+
+    path("", include(crm_router.urls)),
 ]
 
 # + some_urlpatterns

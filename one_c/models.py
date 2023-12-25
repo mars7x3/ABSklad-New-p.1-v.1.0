@@ -3,6 +3,7 @@ from django.db import models
 from account.models import MyUser
 from general_service.models import CashBox
 from order.models import MyOrder
+from product.models import AsiaProduct
 
 
 class MoneyDoc(models.Model):
@@ -20,4 +21,16 @@ class MoneyDoc(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class MovementProduct1C(models.Model):
+    is_active = models.BooleanField(default=True)
+    uid = models.CharField(max_length=50, blank=True, null=True)
+    warehouse_recipient_uid = models.CharField(max_length=50, blank=True, null=True)
+    warehouse_sender_uid = models.CharField(max_length=50, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+
+class MovementProducts(models.Model):
+    movement = models.ForeignKey(MovementProduct1C, on_delete=models.CASCADE, related_name='mv_products')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, null=True, related_name='mv_products')
+    count = models.IntegerField(default=0)
