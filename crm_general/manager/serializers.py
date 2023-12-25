@@ -359,7 +359,7 @@ class ShortProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AsiaProduct
-        fields = ("id", "title", "collection", "category", "is_discount", "is_active",
+        fields = ("id", "title", "vendor_code", "collection", "category", "is_discount", "is_active",
                   "last_fifteen_days_ratio", "avg_receipt_amount")
 
     def get_collection(self, instance):
