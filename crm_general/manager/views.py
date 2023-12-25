@@ -133,14 +133,17 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
+        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
         saved_amount = MyOrder.objects.filter(
-            author__user_id=user_id,
+            author=dealer_profile,
             is_active=True,
             status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
             paid_at__date__lte=string_date_to_date(end_date)
         ).aggregate(saved_amount=Sum("order_products__discount"))
-        return Response(saved_amount)
+        data = dict(saved_amount)
+        data["current_balance_amount"] = dealer_profile.wallet.amount_crm
+        return Response(data)
 
 
 class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
