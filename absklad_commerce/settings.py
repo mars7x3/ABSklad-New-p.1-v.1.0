@@ -129,6 +129,7 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'AsiaBrand Commerce Project API',
     'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 
