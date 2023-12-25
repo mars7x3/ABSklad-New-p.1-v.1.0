@@ -154,12 +154,6 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 # ---------------------------------------------- DEALER
-class UserImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MyUser
-        fields = ("image",)
-
-
 class DealerStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerStatus

@@ -30,12 +30,16 @@ from .rop.views import (
     ManagerListAPIView as RopManagerListAPIView,
     ManagerRetrieveAPIView as RopManagerRetrieveAPIView,
     ManagerCreateAPIView as RopManagerCreateAPIView,
+    ManagerUpdateAPIView as RopManagerUpdateAPIView,
+    ManagerChangeActivityView as RopManagerChangeActivityView,
+    ManagerImageUpdateAPIView as RopManagerImageUpdateAPIView,
     DealerListViewSet as RopDealerListViewSet,
     DealerRetrieveAPIView as RopDealerRetrieveAPIView,
     DealerBalanceHistoryListAPIView as RopDealerBalanceHistoryListAPIView,
     DealerBasketListAPIView as RopDealerBasketListAPIView,
     DealerCreateAPIView as RopDealerCreateAPIView,
     DealerUpdateAPIView as RopDealerUpdateAPIView,
+    DealerImageUpdateAPIView as RopDealerImageUpdateAPIView,
     DealerChangeActivityView as RopDealerChangeActivityView,
     DealerStatusListAPIView as RopDealerStatusListAPIView,
     DealerStatusCreateAPIView as RopDealerStatusCreateAPIView,
@@ -153,22 +157,36 @@ rop_router.register("balances", BalanceViewSet, basename="crm_general-rop-balanc
 rop_urlpatterns = [
     # Managers
     path("rop/managers/", RopManagerListAPIView.as_view(), name="crm_general-rop-managers-list"),
+
     path("rop/managers/create/", RopManagerCreateAPIView.as_view(), name="crm_general-rop-managers-create"),
+
+    re_path("^rop/managers/(?P<user_id>.+)/update/$", RopManagerUpdateAPIView.as_view(),
+            name="crm_general-rop-managers-update"),
+    re_path("^rop/managers/(?P<user_id>.+)/update-image/$", RopManagerImageUpdateAPIView.as_view(),
+            name="crm_general-rop-managers-update-image"),
+    re_path("^rop/managers/(?P<user_id>.+)/change-activity/$", RopManagerChangeActivityView.as_view(),
+            name="crm_general-manager-managers-update-activity"),
+
     re_path(r"^rop/managers/(?P<user_id>.+)/detail/$", RopManagerRetrieveAPIView.as_view(),
             name="crm_general-rop-managers-detail"),
 
     # Dealers
     path("rop/dealers/create/", RopDealerCreateAPIView.as_view(), name="crm_general-rop-dealers-create"),
+
     re_path("^rop/dealers/(?P<user_id>.+)/update/$", RopDealerUpdateAPIView.as_view(),
             name="crm_general-rop-dealers-update"),
+    re_path("^rop/dealers/(?P<user_id>.+)/update-image/$", RopDealerImageUpdateAPIView.as_view(),
+            name="crm_general-rop-dealers-update-image"),
+    re_path("^rop/dealers/(?P<user_id>.+)/change-activity/$", RopDealerChangeActivityView.as_view(),
+            name="crm_general-manager-dealers-update-activity"),
+
     re_path("^rop/dealers/(?P<user_id>.+)/detail/$", RopDealerRetrieveAPIView.as_view(),
             name="crm_general-rop-dealers-detail"),
     re_path("^rop/dealers/(?P<user_id>.+)/balance-history/$", RopDealerBalanceHistoryListAPIView.as_view(),
             name="crm_general-rop-dealers-balance-history-list"),
     re_path("^rop/dealers/(?P<user_id>.+)/basket-history/$", RopDealerBasketListAPIView.as_view(),
             name="crm_general-rop-dealers-basket-history-list"),
-    re_path("^rop/dealers/(?P<user_id>.+)/change-activity/$", RopDealerChangeActivityView.as_view(),
-            name="crm_general-manager-dealers-update-activity"),
+
     path("rop/dealer-statuses/", RopDealerStatusListAPIView.as_view(), name="crm_general-rop-dealer-status-list"),
     path("rop/dealer-status/create/", RopDealerStatusCreateAPIView.as_view(),
          name="crm_general-rop-dealer-status-create"),

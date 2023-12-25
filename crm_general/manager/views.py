@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
-from crm_general.serializers import ActivitySerializer
+from crm_general.serializers import ActivitySerializer, UserImageSerializer
 from crm_general.paginations import AppPaginationClass
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool
 from order.models import MyOrder, CartProduct, ReturnOrder
@@ -18,7 +18,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, UserImageSerializer,
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer
 )
 
 

@@ -223,3 +223,7 @@ class CategoryListSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class UserImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ("image",)

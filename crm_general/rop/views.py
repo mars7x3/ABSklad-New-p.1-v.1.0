@@ -2,10 +2,10 @@ from django.db.models import FloatField, Sum, Q
 from rest_framework import decorators, filters, mixins, generics, viewsets, status
 from rest_framework.response import Response
 
-from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet, DealerStatus
+from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet, DealerStatus, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.paginations import AppPaginationClass
-from crm_general.serializers import ActivitySerializer
+from crm_general.serializers import ActivitySerializer, UserImageSerializer
 from crm_general.utils import convert_bool_string_to_bool, string_date_to_date
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, ProductPrice, AsiaProduct
@@ -14,13 +14,12 @@ from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, 
     DealerBalanceHistorySerializer, DealerBasketProductSerializer, ShortOrderSerializer, CollectionSerializer, \
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
     DealerStatusSerializer
-from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin
+from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin, BaseManagerMixin
 
 
 # -------------------------------------------- MANAGERS
-class ManagerListAPIView(BaseRopMixin, generics.ListAPIView):
+class ManagerListAPIView(BaseManagerMixin, generics.ListAPIView):
     queryset = ManagerProfile.objects.select_related("user", "city").all()
-    serializer_class = ManagerProfileSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("user__name",)
@@ -31,19 +30,39 @@ class ManagerListAPIView(BaseRopMixin, generics.ListAPIView):
         "city_slug": {"by": "city__slug", "type": "string"}
     }
 
-    def get_queryset(self):
-        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
 
-
-class ManagerRetrieveAPIView(BaseRopMixin, generics.RetrieveAPIView):
+class ManagerRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
     queryset = ManagerProfile.objects.select_related("user", "city").all()
+
+
+class ManagerCreateAPIView(BaseManagerMixin, generics.CreateAPIView):
+    serializer_class = ManagerProfileSerializer
+
+
+class ManagerUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
+    queryset = ManagerProfile.objects.all()
     serializer_class = ManagerProfileSerializer
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
 
 
-class ManagerCreateAPIView(BaseRopMixin, generics.CreateAPIView):
-    serializer_class = ManagerProfileSerializer
+class ManagerChangeActivityView(BaseManagerMixin, generics.GenericAPIView):
+    serializer_class = ActivitySerializer
+
+    def patch(self, request, *args, **kwargs):
+        dealer = self.get_object()
+        user = dealer.user
+        user.is_active = not user.is_active
+        user.save()
+        serializer = self.get_serializer({"is_active": user.is_active}, many=False)
+        return Response(serializer.data)
+
+
+class ManagerImageUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
+    queryset = MyUser.objects.filter(status="manager")
+    serializer_class = UserImageSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "user_id"
 
 
 # -------------------------------------------- DEALERS
@@ -185,6 +204,13 @@ class DealerCreateAPIView(BaseDealerMixin, generics.CreateAPIView):
 
 class DealerUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
     serializer_class = DealerProfileDetailSerializer
+
+
+class DealerImageUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
+    queryset = MyUser.objects.filter(status="dealer")
+    serializer_class = UserImageSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "user_id"
 
 
 class DealerStatusListAPIView(BaseRopMixin, generics.ListAPIView):
