@@ -425,44 +425,12 @@ def get_motivation_dealers_stat(motivation: Motivation):
             pprint(list(product_data))
 
 
-# def get_motivation_total_stats(motivations):
-#
-#     money_data = (
-#         MyOrder.objects.filter(
-#             author__in=page_dealers,
-#             paid_at__date__gte=motivation.start_date,
-#             paid_at__date__lte=motivation.end_date
-#         ).values("author_id", "name")
-#         .annotate(
-#             city=F("author__city__title"),
-#             margin=Sum("price"),
-#             consumption=Sum("cost_price")
-#         )
-#         .annotate(
-#             process=Round(
-#                 ExpressionWrapper(F("margin") * Value(100) / Value(money_target), output_field=FloatField()),
-#                 precision=2
-#             ),
-#             probability=Round(
-#                 ExpressionWrapper(
-#                     ((F("margin") / Value(passed_days)) * Value(total_days)) / Value(money_target) * Value(100),
-#                     output_field=FloatField()
-#                 ),
-#                 precision=2
-#             )
-#         )
-#         .annotate(
-#             revenue=Case(
-#                 When(
-#                     process=100,
-#                     then=ExpressionWrapper(
-#                         F("margin") - F("consumption") - Value(gift_amount),
-#                         output_field=DecimalField()
-#                     )
-#                 ),
-#                 default=Value(Decimal("0.0"))
-#             )
-#         )
-#     )
+def get_motivation_total_stats(motivations):
+    for motivation in motivations:
+        start_time = motivation.start_date
+        end_time = motivation.end_date
+        prod_ids = motivation.conditions.values_list('condition_prods__product_id', flat=True)
+        cat_ids = motivation.conditions.values_list('condition_cats__product_id', flat=True)
+
 
 
