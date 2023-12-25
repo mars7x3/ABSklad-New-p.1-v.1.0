@@ -90,9 +90,8 @@ class OrderCreateAPIView(BaseOrderMixin, generics.CreateAPIView):
 class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
         DealerProfile.objects.select_related("user", "city", "dealer_status")
-                             .prefetch_related("balance_history", "orders")
-                             .only("user_id", "birthday", "city", "dealer_status", "balance_history",
-                                   "orders")
+                             .prefetch_related("balance_histories", "orders")
+                             .only("user_id", "birthday", "city", "dealer_status")
                              .all()
     )
     serializer_class = DealerProfileListSerializer
