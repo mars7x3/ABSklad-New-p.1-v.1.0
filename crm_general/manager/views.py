@@ -255,7 +255,7 @@ class CollectionListAPIView(BaseManagerMixin, generics.ListAPIView):
 class CategoryListAPIView(BaseManagerMixin, generics.ListAPIView):
     queryset = (
         Category.objects.only("slug", "title", "is_active")
-                        .all()
+                        .all().distinct()
     )
     serializer_class = ShortCategorySerializer
     pagination_class = AppPaginationClass
