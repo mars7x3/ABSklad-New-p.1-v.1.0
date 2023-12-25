@@ -55,6 +55,10 @@ class CRMUserSerializer(serializers.ModelSerializer):
         fields = ("id", "username", "email", "name", "image", "phone", "date_joined", "updated_at", "is_active",
                   "pwd", "password")
         read_only_fields = ("id", "pwd", "date_joined", "is_active")
+        extra_kwargs = {
+            "name": {"required": True},
+            "phone": {"required": True}
+        }
 
     def validate(self, attrs):
         # this place can be deleted since the manager._create_user and set_password methods do the same thing
@@ -97,7 +101,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
 
 class ActivitySerializer(serializers.Serializer):
-    active = serializers.BooleanField(read_only=True, default=False)
+    is_active = serializers.BooleanField(read_only=True, default=False)
 
 
 class CRMCategorySerializer(serializers.ModelSerializer):

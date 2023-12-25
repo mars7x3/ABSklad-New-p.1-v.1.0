@@ -1,47 +1,263 @@
-from rest_framework import viewsets, generics
-from rest_framework.filters import SearchFilter, OrderingFilter
+from django.db.models import FloatField, Sum, Q
+from rest_framework import decorators, filters, mixins, generics, viewsets, status
+from rest_framework.response import Response
 
-from account.models import ManagerProfile
-from general_service.models import Stock
+from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet, DealerStatus
+from crm_general.filters import FilterByFields
+from crm_general.paginations import AppPaginationClass
+from crm_general.utils import convert_bool_string_to_bool, string_date_to_date
+from order.models import CartProduct, MyOrder
+from product.models import Collection, Category, ProductPrice, AsiaProduct
 
-from product.models import Category
-
-from crm_general.filters import ActiveFilter
-from crm_general.paginations import ProfilePagination
-from crm_general.serializers import CRMCategorySerializer, CRMStockSerializer
-
-from .filters import ManagerFilter
-from .mixins import RopMixin
-from .serializers import RopManagerSerializer
-
-
-class ManagerStockView(RopMixin, generics.ListAPIView):
-    queryset = Stock.objects.all()
-    serializer_class = CRMStockSerializer
-    filter_backends = (ActiveFilter, SearchFilter)
-    search_fields = ("address",)
-
-    def get_queryset(self):
-        return self.queryset.filter(city=self.manager_profile.city)
+from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, DealerProfileDetailSerializer, \
+    DealerBalanceHistorySerializer, DealerBasketProductSerializer, ShortOrderSerializer, CollectionSerializer, \
+    ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
+    DealerStatusSerializer
+from .mixins import BaseRopMixin, BaseDealerRelationViewMixin
 
 
-class ManagerRopViewSet(RopMixin, viewsets.ModelViewSet):
+# -------------------------------------------- MANAGERS
+class ManagerListAPIView(BaseRopMixin, generics.ListAPIView):
     queryset = ManagerProfile.objects.select_related("user", "city").all()
-    serializer_class = RopManagerSerializer
-    pagination_class = ProfilePagination
-    filter_backends = (SearchFilter, OrderingFilter, ManagerFilter)
+    serializer_class = ManagerProfileSerializer
+    pagination_class = AppPaginationClass
+    filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("user__name",)
-    ordering_fields = ("user__name", "user__date_joined")
-    lookup_field = 'user_id'
-    lookup_url_kwarg = 'user_id'
+    filter_by_fields = {
+        "is_active": {"by": "user__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
+        "start_date": {"by": "user__joined_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "user__joined_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "city_slug": {"by": "city__slug", "type": "string"}
+    }
 
     def get_queryset(self):
-        return super().get_queryset().filter(city__in=self.rop_profile.cities)
+        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
 
 
-class CategoryRopView(RopMixin, generics.ListAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CRMCategorySerializer
-    filter_backends = (SearchFilter,)
-    search_fields = ("title", "slug")
+class ManagerRetrieveAPIView(BaseRopMixin, generics.RetrieveAPIView):
+    queryset = ManagerProfile.objects.select_related("user", "city").all()
+    serializer_class = ManagerProfileSerializer
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
 
+
+class ManagerCreateAPIView(BaseRopMixin, generics.CreateAPIView):
+    serializer_class = ManagerProfileSerializer
+
+
+# -------------------------------------------- DEALERS
+class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = DealerProfile.objects.all()
+    serializer_class = DealerProfileListSerializer
+    pagination_class = AppPaginationClass
+    filter_backends = (filters.SearchFilter, FilterByFields)
+    search_fields = ("user__name", "user__id")
+    filter_by_fields = {
+        "start_date": {"by": "user__joined_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "user__joined_at__date__lte", "type": "date", "pipline": string_date_to_date}
+    }
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
+
+    @decorators.action(['GET'], detail=False, url_path="amounts")
+    def get_amounts(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        amounts = queryset.aggregate(
+            incoming_funds=Sum(
+                "balance_history__amount",
+                filter=Q(balance_history__status="wallet"),
+                output_field=FloatField()
+            ),
+            shipment_amount=Sum(
+                "balance_history__amount",
+                filter=Q(balance_history__status="order"),
+                output_field=FloatField()
+            )
+        )
+        return Response(amounts)
+
+    @decorators.action(["GET"], detail=True, url_path="saved-amount")
+    def get_saved_amount(self, request, user_id):
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+
+        if not start_date or not end_date:
+            return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        saved_amount = MyOrder.objects.filter(
+            author__user_id=user_id,
+            is_active=True,
+            status__in=("Оплачено", "Успешно", "Отправлено"),
+            paid_at__date__gte=string_date_to_date(start_date),
+            paid_at__date__lte=string_date_to_date(end_date)
+        ).aggregate(saved_amount=Sum("order_products__discount"))
+        return Response(saved_amount)
+
+
+class DealerRetrieveAPIView(BaseRopMixin, generics.RetrieveAPIView):
+    queryset = DealerProfile.objects.all()
+    serializer_class = DealerProfileDetailSerializer
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
+
+
+class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
+    queryset = BalanceHistory.objects.all()
+    serializer_class = DealerBalanceHistorySerializer
+    filter_backends = (FilterByFields,)
+    filter_by_fields = {
+        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date}
+    }
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        dealer_profile = self.get_dealer_profile()
+        return super().get_queryset().filter(dealer=dealer_profile)
+
+
+class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
+    queryset = CartProduct.objects.select_related("product", "cart").all()
+    serializer_class = DealerBasketProductSerializer
+    filter_backends = (filters.SearchFilter, FilterByFields)
+    search_fields = ("product__title",)
+    filter_by_fields = {
+        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date}
+    }
+
+    def get_queryset(self):
+        dealer = self.get_dealer_profile()
+        return super().get_queryset().filter(cart__dealer=dealer)
+
+
+class OrderListAPIView(BaseRopMixin, generics.ListAPIView):
+    queryset = (
+        MyOrder.objects.select_related("author", "stock")
+                       .only("author", "stock", "id", "name", "price", "type_status",
+                             "created_at", "paid_at", "released_at", "is_active")
+                       .all()
+    )
+    serializer_class = ShortOrderSerializer
+    pagination_class = AppPaginationClass
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter,)
+    search_fields = ("name", "id")
+    ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
+    filter_by_fields = {
+        "is_active": {"by": "is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
+        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date},
+        "type_status": {"by": "type_status", "type": "string",
+                        "addition_schema_params": {"enum": [order_status for order_status, _ in MyOrder.TYPE_STATUS]}},
+        "status": {"by": "status", "type": "string",
+                   "addition_schema_params": {"enum": [order_status for order_status, _ in MyOrder.STATUS]}},
+        "user_id": {"by": "author__user__id", "type": "number"}
+    }
+
+    def get_queryset(self):
+        return super().get_queryset().filter(author__city_id__in=self.rop_profile.cities.all())
+
+
+class DealerStatusListAPIView(BaseRopMixin, generics.ListAPIView):
+    queryset = DealerStatus.objects.all()
+    serializer_class = DealerStatusSerializer
+
+
+class DealerStatusCreateAPIView(BaseRopMixin, generics.CreateAPIView):
+    serializer_class = DealerStatusSerializer
+
+
+class DealerStatusUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
+    queryset = DealerStatus.objects.all()
+    serializer_class = DealerStatusSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "status_id"
+
+
+# ------------------------------------------------- PRODUCTS
+class CollectionListAPIView(BaseRopMixin, generics.ListAPIView):
+    queryset = Collection.objects.only("slug", "title").all()
+    serializer_class = CollectionSerializer
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ("title",)
+
+
+class CategoryListAPIView(BaseRopMixin, generics.ListAPIView):
+    queryset = Category.objects.only("slug", "title", "is_active").all()
+    serializer_class = ShortCategorySerializer
+    pagination_class = AppPaginationClass
+    filter_backends = (filters.SearchFilter, FilterByFields)
+    search_fields = ("title",)
+    filter_by_fields = {
+        "collection_slug": {"by": "products__collection__slug", "type": "string"}
+    }
+
+
+class ProductPriceListAPIView(BaseRopMixin, generics.ListAPIView):
+    queryset = ProductPrice.objects.select_related("product").only("product", "price").all()
+    serializer_class = ProductPriceListSerializer
+    pagination_class = AppPaginationClass
+    filter_backends = (filters.SearchFilter, FilterByFields)
+    search_fields = ("product__name",)
+    filter_by_fields = {
+        "is_active": {"by": "product__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
+        "category_slug": {"by": "product__category__slug", "type": "string"}
+    }
+
+    def get_queryset(self):
+        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
+
+
+class ProductRetrieveAPIView(BaseRopMixin, generics.RetrieveAPIView):
+    queryset = (
+        AsiaProduct.objects.select_related("collection")
+                           .prefetch_related("images", "sizes")
+                           .only("id", "diagram", "title", "vendor_code", "description", "collection",
+                                 "weight", "package_count", "made_in", "created_at", "updated_at")
+                           .all()
+    )
+    serializer_class = ProductDetailSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "product_id"
+
+
+# ----------------------------------------------- BALANCES
+class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = (
+        Wallet.objects.select_related("dealer")
+                      .only("id", "dealer", "amount_1c", "amount_crm")
+                      .all()
+    )
+    serializer_class = WalletListSerializer
+    pagination_class = AppPaginationClass
+    filter_backends = (filters.SearchFilter, FilterByFields)
+    search_fields = ("dealer__user__name",)
+    filter_by_fields = {
+        "start_date": {"by": "dealer__balance_history__created_at__date__gte", "type": "date",
+                       "pipline": string_date_to_date},
+        "end_date": {"by": "dealer__balance_history__created_at__date__lte", "type": "date",
+                     "pipline": string_date_to_date},
+    }
+
+    def get_queryset(self):
+        return super().get_queryset().filter(dealer__city_id__in=self.rop_profile.cities.all())
+
+    @decorators.action(["GET"], detail=False, url_path="amounts")
+    def get_amounts(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        amounts = queryset.aggregate(
+            amount_1c=Sum("amount_1c"),
+            amount_crm=Sum("amount_crm"),
+            paid_amount=Sum(
+                "dealer__orders__price",
+                filter=Q(
+                    dealer__orders__is_active=True,
+                    dealer__orders__paid_at__isnull=False
+                )
+            )
+        )
+        return Response(amounts)
