@@ -186,8 +186,8 @@ class DealerStatusUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
 class DealerChangeActivityView(BaseRopMixin, generics.GenericAPIView):
     queryset = DealerStatus.objects.all()
     serializer_class = ActivitySerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "order_id"
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
 
     def patch(self, request, *args, **kwargs):
         dealer = self.get_object()
