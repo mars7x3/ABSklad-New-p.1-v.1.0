@@ -55,6 +55,8 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        rep['collection_name'] = instance.collection.title
+        rep['category_name'] = instance.category.title
         rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
         cost_price = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_price.price if cost_price else '---'
@@ -62,9 +64,8 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
         last_15_days = timezone.now() - timezone.timedelta(days=15)
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
-                                                                  order__status__in=['sent', 'paid',
-                                                                                     'success'])
-                                   .values_list('count'))) / 15, 2)
+                                                                  order__status__in=['sent', 'paid', 'success'])
+                                   .values_list('count', flat=True))), 2) / 15
         avg_check = instance.order_products.filter(order__is_active=True,
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
@@ -78,9 +79,6 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
 
 
 class WareHouseProductSerializer(serializers.ModelSerializer):
-    collection = serializers.SerializerMethodField(read_only=True)
-    category = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = AsiaProduct
         fields = '__all__'
@@ -90,14 +88,6 @@ class WareHouseProductSerializer(serializers.ModelSerializer):
         rep['images'] = MarketerProductImageSerializer(instance.images.all(), many=True, context=self.context).data
         rep['sizes'] = MarketerProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
         return rep
-
-    @staticmethod
-    def get_collection(obj):
-        return obj.collection.title
-
-    @staticmethod
-    def get_category(obj):
-        return obj.collection.title
 
 
 class WareHouseCategoryDetailSerializer(serializers.ModelSerializer):
@@ -118,4 +108,3 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
         fields = '__all__'
-
