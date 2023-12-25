@@ -29,11 +29,11 @@ class MarketerProductRUViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMi
 
     def list(self, request, *args, **kwargs):
         queryset = self.queryset
-        status = self.request.query_params.get('status')
+        active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
-        if status == 'active':
+        if active_status == 'active':
             queryset = queryset.filter(is_active=True)
-        elif status == 'inactive':
+        elif active_status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
         if search:
@@ -121,18 +121,18 @@ class MarketerBannerModelViewSet(ListModelMixin,
 
     def list(self, request, *args, **kwargs):
         queryset = self.queryset
-        status = self.request.query_params.get('status')
+        active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         start_date = self.request.query_params.get('start_time')
         end_date = self.request.query_params.get('end_time')
 
-        if status == 'active':
+        if active_status == 'active':
             queryset = queryset.filter(is_active=True)
-        elif status == 'inactive':
+        elif active_status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
         if start_date and end_date:
-            queryset = queryset.filter(start_time__gte=start_date, end_time__lte=end_date)
+            queryset = queryset.filter(created_at__gte=start_date, created_at__lte=end_date)
 
         if search:
             queryset = queryset.filter(title__icontains=search)
@@ -172,11 +172,11 @@ class MarketerStoryViewSet(ListModelMixin,
 
     def list(self, request, *args, **kwargs):
         queryset = self.queryset
-        status = self.request.query_params.get('status')
+        active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
-        if status == 'active':
+        if active_status == 'active':
             queryset = queryset.filter(is_active=True)
-        elif status == 'inactive':
+        elif active_status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
         if search:
