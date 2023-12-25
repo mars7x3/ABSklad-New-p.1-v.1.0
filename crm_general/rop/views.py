@@ -14,6 +14,7 @@ from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, 
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
     DealerStatusSerializer
 from .mixins import BaseRopMixin, BaseDealerRelationViewMixin
+from ..serializers import ActivitySerializer
 
 
 # -------------------------------------------- MANAGERS
@@ -180,6 +181,21 @@ class DealerStatusUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     serializer_class = DealerStatusSerializer
     lookup_field = "id"
     lookup_url_kwarg = "status_id"
+
+
+class DealerChangeActivityView(BaseRopMixin, generics.GenericAPIView):
+    queryset = DealerStatus.objects.all()
+    serializer_class = ActivitySerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "order_id"
+
+    def patch(self, request, *args, **kwargs):
+        dealer = self.get_object()
+        user = dealer.user
+        user.is_active = not user.is_active
+        user.save()
+        serializer = self.get_serializer({"is_active": user.is_active}, many=False)
+        return Response(serializer.data)
 
 
 # ------------------------------------------------- PRODUCTS

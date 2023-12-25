@@ -182,6 +182,20 @@ class DealerUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
     serializer_class = DealerProfileDetailSerializer
 
 
+class DealerChangeActivityView(BaseDealerViewMixin, generics.GenericAPIView):
+    serializer_class = ActivitySerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "order_id"
+
+    def patch(self, request, *args, **kwargs):
+        dealer = self.get_object()
+        user = dealer.user
+        user.is_active = not user.is_active
+        user.save()
+        serializer = self.get_serializer({"is_active": user.is_active}, many=False)
+        return Response(serializer.data)
+
+
 class DealerImageUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
     queryset = MyUser.objects.filter(status="dealer")
     serializer_class = UserImageSerializer
