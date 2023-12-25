@@ -20,6 +20,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer
+from crm_general.director.utils import get_motivation_dealers_stat
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade
 
 from general_service.models import Stock, City
@@ -501,14 +502,33 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class DirectorMotivationListView(mixins.ListModelMixin, mixins.RetrieveModelMixin, GenericViewSet):
+class MotivationTotalView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        kwargs = {}
+        title = request.query_params.get('title')
+        if title:
+            kwargs['title__icontains'] = title
+
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = bool(int(is_active))
+
+        queryset = Motivation.objects.filter(**kwargs)
+
+
+class MotivationTestView(APIView):
+    def get(self, request):
+        motivation = Motivation.objects.first()
+        data = get_motivation_dealers_stat(motivation)
+        return Response('success', status=status.HTTP_200_OK)
+
+
+class DirectorMotivationListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Motivation.objects.all()
-
-    def get_serializer_class(self):
-        if self.detail:
-            return DirectorMotivationListSerializer
-        return DirectorMotivationListSerializer
+    serializer_class = DirectorMotivationListSerializer
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
@@ -527,35 +547,36 @@ class DirectorMotivationListView(mixins.ListModelMixin, mixins.RetrieveModelMixi
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-# class DirectorMotivationTotalView(APIView):
-#     permission_classes = [IsAuthenticated, IsDirector]
-#
-#     def post(self, request):
-#         kwargs = {}
-#         name = request.data.get('name')
-#         if name:
-#             kwargs['user__name__icontains'] = name
-#
-#         city_slug = request.data.get('city_slug')
-#         if city_slug:
-#             kwargs['city__slug'] = city_slug
-#
-#         dealer_status = request.data.get('dealer_status')
-#         if dealer_status:
-#             kwargs['dealer_status_id'] = dealer_status
-#
-#         queryset = queryset.filter(**kwargs)
-
-
 class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = DealerProfile.objects.filter(user__is_active=True).select_related('user')
+    queryset = DealerProfile.objects.all()
     serializer_class = DirectorMotivationDealerListSerializer
+
+    def get_queryset(self):
+        from django.db.models import F, Sum, IntegerField
+        from django.db.models import OuterRef, Subquery
+
+        return super().get_queryset().annotate(
+            total_sum=Sum(
+                F('counts__count_crm') * Subquery(
+                    ProductPrice.objects.filter(
+                        city=OuterRef('city'),
+                        product_id=OuterRef('counts__product_id'),
+                        d_status__discount=0
+                    ).values('price')[:1]
+                ), output_field=IntegerField()
+            ),
+            total_count=Sum('counts__count_crm'),
+            norm_count=Sum('counts__count_norm'),
+        )
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
-        queryset = self.get_queryset()
         kwargs = {}
+        motivation_id = request.query_params.get('motivation')
+        motivation = Motivation.objects.filter(id=motivation_id).first()
+        queryset = motivation.dealers.all()
+
         name = request.query_params.get('name')
         if name:
             kwargs['user__name__icontains'] = name

@@ -89,6 +89,9 @@ director_urlpatterns = [
     path('director/price/create/', DirectorPriceCreateView.as_view()),
     path('director/task/grade/', DirectorGradeView.as_view()),
 
+    path('director/motivation/test/', MotivationTestView.as_view()),
+
+
     path('', include(director_router.urls)),
 ]
 

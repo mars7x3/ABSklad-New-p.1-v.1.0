@@ -376,6 +376,12 @@ class DirectorMotivationDealerListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['name'] = instance.user.name
+        rep['name'] = instance.user.name
+        rep['name'] = instance.user.name
+        rep['name'] = instance.user.name
+        rep['name'] = instance.user.name
+        rep['name'] = instance.user.name
+
         return rep
 
 

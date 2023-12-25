@@ -173,8 +173,6 @@ from order.models import MyOrder
 from promotion.models import Motivation
 
 
-# выручка = маржа - себе стоимость - подарки (расход)
-
 
 def test(motivation: Motivation, page: int = 1, page_size: int = 10):
     dealers_count = motivation.dealers.count()  # 100
@@ -241,11 +239,7 @@ def test(motivation: Motivation, page: int = 1, page_size: int = 10):
     pprint(list(data))
 
 
-def test(motivation: Motivation, page: int = 1, page_size: int = 10):
-    dealers_count = motivation.dealers.count()  # 100
-    pages_count = dealers_count // page_size or 1
-    limit = page_size
-    offset = limit * page if page > 1 else 0
+def get_motivation_dealers_stat(motivation: Motivation):
 
     total_days = (motivation.end_date - motivation.start_date).days
     today = now()
@@ -260,8 +254,7 @@ def test(motivation: Motivation, page: int = 1, page_size: int = 10):
           " Total Days: ", total_days)
     print("Today: ", str(today.date()), " Passed Days: ", passed_days)
 
-    page_dealers = motivation.dealers.all()[offset:offset + limit]
-    print("Pages count: ", pages_count, "Page: ", page,  "Items per page: ", page_dealers.count())
+    page_dealers = motivation.dealers.all()
 
     print('------------------------------------------------ Money ')
     money_condition = motivation.conditions.filter(status="money").first()
@@ -430,3 +423,46 @@ def test(motivation: Motivation, page: int = 1, page_size: int = 10):
             print("Gift amount: ", gift_amount)
             print("Product: data: ")
             pprint(list(product_data))
+
+
+# def get_motivation_total_stats(motivations):
+#
+#     money_data = (
+#         MyOrder.objects.filter(
+#             author__in=page_dealers,
+#             paid_at__date__gte=motivation.start_date,
+#             paid_at__date__lte=motivation.end_date
+#         ).values("author_id", "name")
+#         .annotate(
+#             city=F("author__city__title"),
+#             margin=Sum("price"),
+#             consumption=Sum("cost_price")
+#         )
+#         .annotate(
+#             process=Round(
+#                 ExpressionWrapper(F("margin") * Value(100) / Value(money_target), output_field=FloatField()),
+#                 precision=2
+#             ),
+#             probability=Round(
+#                 ExpressionWrapper(
+#                     ((F("margin") / Value(passed_days)) * Value(total_days)) / Value(money_target) * Value(100),
+#                     output_field=FloatField()
+#                 ),
+#                 precision=2
+#             )
+#         )
+#         .annotate(
+#             revenue=Case(
+#                 When(
+#                     process=100,
+#                     then=ExpressionWrapper(
+#                         F("margin") - F("consumption") - Value(gift_amount),
+#                         output_field=DecimalField()
+#                     )
+#                 ),
+#                 default=Value(Decimal("0.0"))
+#             )
+#         )
+#     )
+
+
