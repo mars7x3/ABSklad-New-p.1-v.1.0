@@ -180,6 +180,8 @@ class DealerCreateAPIView(BaseDealerViewMixin, generics.CreateAPIView):
 
 class DealerUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
     serializer_class = DealerProfileDetailSerializer
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
 
 
 class DealerChangeActivityView(BaseDealerViewMixin, generics.GenericAPIView):
