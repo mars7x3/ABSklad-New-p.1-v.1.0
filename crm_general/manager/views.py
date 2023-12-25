@@ -2,7 +2,7 @@ from django.db.models import Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
 from rest_framework.response import Response
 
-from account.models import DealerProfile, BalanceHistory, Wallet
+from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer
 from crm_general.paginations import AppPaginationClass
@@ -18,7 +18,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer,
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, UserImageSerializer,
 )
 
 
@@ -90,9 +90,8 @@ class OrderCreateAPIView(BaseOrderMixin, generics.CreateAPIView):
 class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
         DealerProfile.objects.select_related("user", "city", "dealer_status")
-                             .prefetch_related("balance_history", "orders")
-                             .only("user_id", "birthday", "city", "dealer_status", "balance_history",
-                                   "orders")
+                             .prefetch_related("balance_histories", "orders")
+                             .only("user_id", "birthday", "city", "dealer_status")
                              .all()
     )
     serializer_class = DealerProfileListSerializer
@@ -100,8 +99,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("user__name", "user__id")
     filter_by_fields = {
-        "start_date": {"by": "user__joined_at__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "user__joined_at__date__lte", "type": "date", "pipline": string_date_to_date}
+        "start_date": {"by": "user__date_joined__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
@@ -114,13 +113,13 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         queryset = self.filter_queryset(self.get_queryset())
         amounts = queryset.aggregate(
             incoming_funds=Sum(
-                "balance_history__amount",
-                filter=Q(balance_history__status="wallet"),
+                "balance_histories__amount",
+                filter=Q(balance_histories__status="wallet"),
                 output_field=FloatField()
             ),
             shipment_amount=Sum(
-                "balance_history__amount",
-                filter=Q(balance_history__status="order"),
+                "balance_histories__amount",
+                filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
             )
         )
@@ -137,7 +136,7 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         saved_amount = MyOrder.objects.filter(
             author__user_id=user_id,
             is_active=True,
-            status__in=("Оплачено", "Успешно", "Отправлено"),
+            status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
             paid_at__date__lte=string_date_to_date(end_date)
         ).aggregate(saved_amount=Sum("order_products__discount"))
@@ -173,6 +172,17 @@ class DealerRetrieveAPIView(BaseDealerViewMixin, generics.RetrieveAPIView):
 
 class DealerCreateAPIView(BaseDealerViewMixin, generics.CreateAPIView):
     serializer_class = DealerProfileDetailSerializer
+
+
+class DealerUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
+    serializer_class = DealerProfileDetailSerializer
+
+
+class DealerImageUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
+    queryset = MyUser.objects.filter(status="dealer")
+    serializer_class = UserImageSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "user_id"
 
 
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
@@ -280,9 +290,9 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("dealer__user__name",)
     filter_by_fields = {
-        "start_date": {"by": "dealer__balance_history__created_at__date__gte", "type": "date",
+        "start_date": {"by": "dealer__balance_histories__created_at__date__gte", "type": "date",
                        "pipline": string_date_to_date},
-        "end_date": {"by": "dealer__balance_history__created_at__date__lte", "type": "date",
+        "end_date": {"by": "dealer__balance_histories__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
     }
 

@@ -9,5 +9,5 @@ class IsManager(BasePermission):
 class ManagerOrderPermission(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method == 'PATCH':
-            return obj.status == 'Новый' or (obj.status == 'Оплачено')  # TODO:  and obj.type_status == 'Баллы'
+            return obj.status == 'created' or (obj.status == 'paid') and obj.type_status == 'cash'
         return False

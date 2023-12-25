@@ -67,13 +67,13 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
         queryset = self.filter_queryset(self.get_queryset())
         amounts = queryset.aggregate(
             incoming_funds=Sum(
-                "balance_history__amount",
-                filter=Q(balance_history__status="wallet"),
+                "balance_histories__amount",
+                filter=Q(balance_histories__status="wallet"),
                 output_field=FloatField()
             ),
             shipment_amount=Sum(
-                "balance_history__amount",
-                filter=Q(balance_history__status="order"),
+                "balance_histories__amount",
+                filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
             )
         )
@@ -90,7 +90,7 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
         saved_amount = MyOrder.objects.filter(
             author__user_id=user_id,
             is_active=True,
-            status__in=("Оплачено", "Успешно", "Отправлено"),
+            status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
             paid_at__date__lte=string_date_to_date(end_date)
         ).aggregate(saved_amount=Sum("order_products__discount"))
@@ -237,9 +237,9 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("dealer__user__name",)
     filter_by_fields = {
-        "start_date": {"by": "dealer__balance_history__created_at__date__gte", "type": "date",
+        "start_date": {"by": "dealer__balance_histories__created_at__date__gte", "type": "date",
                        "pipline": string_date_to_date},
-        "end_date": {"by": "dealer__balance_history__created_at__date__lte", "type": "date",
+        "end_date": {"by": "dealer__balance_histories__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
     }
 

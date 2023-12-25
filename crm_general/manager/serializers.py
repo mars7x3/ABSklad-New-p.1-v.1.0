@@ -131,8 +131,8 @@ class OrderSerializer(serializers.ModelSerializer):
             except ObjectDoesNotExist:
                 raise serializers.ValidationError({"detail": "Попробуйте позже!"})
 
-        if attrs.get("type_status", "") == "Баллы":
-            attrs["status"] = "Оплачено"
+        if attrs.get("type_status", "") == "cash":
+            attrs["status"] = "paid"
 
             price = attrs.get("price") or self.instance.price
 
@@ -154,6 +154,12 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 # ---------------------------------------------- DEALER
+class UserImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ("image",)
+
+
 class DealerStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerStatus
@@ -186,12 +192,12 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
             return 0.0
 
     def get_incoming_funds(self, instance) -> Decimal:
-        return instance.balance_history.only("amount").filter(status="wallet").aggregate(
+        return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
             incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
         )["incoming_funds"]
 
     def get_shipment_amount(self, instance) -> Decimal:
-        return instance.balance_history.only("amount").filter(status="order").aggregate(
+        return instance.balance_histories.only("amount").filter(status="order").aggregate(
             shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
         )["shipment_amount"]
 
@@ -359,8 +365,8 @@ class ShortProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AsiaProduct
-        fields = ("id", "title", "collection", "category", "is_discount", "is_active",
-                  "last_fifteen_days_ratio", "avg_receipt_amount")
+        fields = ("id", "title", "vendor_code", "collection", "category", "is_discount", "is_active",
+                  "last_fifteen_days_ratio", "avg_receipt_amount", "created_at")
 
     def get_collection(self, instance):
         return instance.collection.title
@@ -377,7 +383,7 @@ class ShortProductSerializer(serializers.ModelSerializer):
                     filter=Q(
                         order__is_active=True,
                         order__created_at__gte=fifteen_days_ago,
-                        order__status__in=('Отправлено', 'Оплачено', 'Успешно')
+                        order__status__in=("paid", "success", "sent")
                     ),
                     output_field=FloatField()
                 ) / Value(15),
@@ -445,7 +451,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.user.name
 
     def get_created_at(self, instance):
-        return instance.dealer.balance_history.last().created_at
+        return instance.dealer.balance_histories.last().created_at
 
     def get_paid_amount(self, instance) -> float:
         return instance.dealer.orders.filter(is_active=True, paid_at__isnull=False).aggregate(
@@ -459,7 +465,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.dealer_status.title
 
     def get_last_replenishment_date(self, instance) -> datetime:
-        last_replenishment = instance.dealer.balance_history.filter(status="wallet").last()
+        last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
         if last_replenishment:
             return last_replenishment.created_at
 

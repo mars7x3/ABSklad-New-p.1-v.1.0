@@ -70,12 +70,12 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
             return 0.0
 
     def get_incoming_funds(self, instance) -> Decimal:
-        return instance.balance_history.only("amount").filter(status="wallet").aggregate(
+        return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
             incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
         )["incoming_funds"]
 
     def get_shipment_amount(self, instance) -> Decimal:
-        return instance.balance_history.only("amount").filter(status="order").aggregate(
+        return instance.balance_histories.only("amount").filter(status="order").aggregate(
             shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
         )["shipment_amount"]
 
@@ -232,8 +232,8 @@ class ShortProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AsiaProduct
-        fields = ("id", "title", "collection", "category", "is_discount", "is_active",
-                  "last_fifteen_days_ratio", "avg_receipt_amount")
+        fields = ("id", "title", "vendor_code", "collection", "category", "is_discount", "is_active",
+                  "last_fifteen_days_ratio", "avg_receipt_amount", "created_at")
 
     def get_collection(self, instance):
         return instance.collection.title
@@ -250,7 +250,7 @@ class ShortProductSerializer(serializers.ModelSerializer):
                     filter=Q(
                         order__is_active=True,
                         order__created_at__gte=fifteen_days_ago,
-                        order__status__in=('Отправлено', 'Оплачено', 'Успешно')
+                        order__status__in=('sent', 'paid', 'success')
                     ),
                     output_field=FloatField()
                 ) / Value(15),
