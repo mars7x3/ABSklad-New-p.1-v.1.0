@@ -100,7 +100,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
     search_fields = ("user__name", "user__id")
     filter_by_fields = {
         "start_date": {"by": "user__date_joined__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date}
+        "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date},
+        "status": {"by": "dealer_status_id", "type": "number"}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
