@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
-from crm_general.serializers import ActivitySerializer
+from crm_general.serializers import ActivitySerializer, UserImageSerializer
 from crm_general.paginations import AppPaginationClass
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool
 from order.models import MyOrder, CartProduct, ReturnOrder
@@ -18,7 +18,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, UserImageSerializer,
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer
 )
 
 
@@ -100,7 +100,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
     search_fields = ("user__name", "user__id")
     filter_by_fields = {
         "start_date": {"by": "user__date_joined__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date}
+        "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date},
+        "status": {"by": "dealer_status_id", "type": "number"}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
@@ -133,14 +134,17 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
+        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
         saved_amount = MyOrder.objects.filter(
-            author__user_id=user_id,
+            author=dealer_profile,
             is_active=True,
             status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
             paid_at__date__lte=string_date_to_date(end_date)
         ).aggregate(saved_amount=Sum("order_products__discount"))
-        return Response(saved_amount)
+        data = dict(saved_amount)
+        data["current_balance_amount"] = dealer_profile.wallet.amount_crm
+        return Response(data)
 
 
 class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
@@ -176,6 +180,22 @@ class DealerCreateAPIView(BaseDealerViewMixin, generics.CreateAPIView):
 
 class DealerUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
     serializer_class = DealerProfileDetailSerializer
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
+
+
+class DealerChangeActivityView(BaseDealerViewMixin, generics.GenericAPIView):
+    serializer_class = ActivitySerializer
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
+
+    def patch(self, request, *args, **kwargs):
+        dealer = self.get_object()
+        user = dealer.user
+        user.is_active = not user.is_active
+        user.save()
+        serializer = self.get_serializer({"is_active": user.is_active}, many=False)
+        return Response(serializer.data)
 
 
 class DealerImageUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
@@ -235,7 +255,7 @@ class CollectionListAPIView(BaseManagerMixin, generics.ListAPIView):
 class CategoryListAPIView(BaseManagerMixin, generics.ListAPIView):
     queryset = (
         Category.objects.only("slug", "title", "is_active")
-                        .all()
+                        .all().distinct()
     )
     serializer_class = ShortCategorySerializer
     pagination_class = AppPaginationClass

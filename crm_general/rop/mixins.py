@@ -1,8 +1,9 @@
 from rest_framework import permissions
 from rest_framework.generics import get_object_or_404
 
-from account.models import DealerProfile
+from account.models import DealerProfile, ManagerProfile
 from .permissions import IsRop
+from .serializers import DealerProfileDetailSerializer, ManagerProfileSerializer
 
 
 class BaseRopMixin:
@@ -11,6 +12,34 @@ class BaseRopMixin:
     @property
     def rop_profile(self):
         return self.request.user.rop_profile
+
+
+class BaseManagerMixin:
+    queryset = ManagerProfile.objects.all()
+    serializer_class = ManagerProfileSerializer
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
+
+    @property
+    def rop_profile(self):
+        return self.request.user.rop_profile
+
+    def get_queryset(self):
+        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
+
+
+class BaseDealerMixin:
+    queryset = DealerProfile.objects.all()
+    serializer_class = DealerProfileDetailSerializer
+    lookup_field = "user_id"
+    lookup_url_kwarg = "user_id"
+
+    @property
+    def rop_profile(self):
+        return self.request.user.rop_profile
+
+    def get_queryset(self):
+        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
 
 
 class BaseDealerRelationViewMixin:

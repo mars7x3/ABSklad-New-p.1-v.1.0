@@ -108,11 +108,41 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
     stores = DealerStoreSerializer(many=True, source="dealer_stores", read_only=True)
     city_slug = serializers.SlugField(write_only=True, required=True)
+    price_city_slug = serializers.SlugField(write_only=True, required=True)
+    dealer_status_id = serializers.PrimaryKeyRelatedField(
+        queryset=DealerStatus.objects.all(),
+        write_only=True,
+        required=True
+    )
 
     class Meta:
         model = DealerProfile
-        fields = ("user", "birthday", "city", "dealer_status", "wallet", "stores", "city_slug")
+        fields = ("user", "birthday", "city", "dealer_status", "wallet", "stores",
+                  "city_slug", "price_city_slug", "dealer_status_id")
         user_status = "dealer"
+
+    def validate(self, attrs):
+        rop_profile = self.context['view'].rop_profile
+
+        city_slug = attrs.pop("city_slug", None)
+        if city_slug and not rop_profile.cities.filter(slug=city_slug).exists():
+            raise serializers.ValidationError({"city_slug": "Данный город не поддерживается или вам не доступен"})
+
+        if city_slug:
+            attrs["city"] = rop_profile.cities.get(slug=city_slug)
+
+        price_city_slug = attrs.pop("city_slug", None)
+        if price_city_slug and not rop_profile.cities.filter(slug=price_city_slug).exists():
+            raise serializers.ValidationError({"city_slug": "Данный город не поддерживается или вам не доступен"})
+
+        if price_city_slug:
+            attrs["price_city"] = rop_profile.cities.get(slug=price_city_slug)
+
+        dealer_status = attrs.pop("dealer_status_id", None)
+        if dealer_status:
+            attrs["dealer_status"] = dealer_status
+
+        return attrs
 
 
 class DealerBalanceHistorySerializer(serializers.ModelSerializer):
