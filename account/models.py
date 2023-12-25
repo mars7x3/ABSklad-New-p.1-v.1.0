@@ -188,8 +188,8 @@ class CRMNotification(models.Model):
     )
 
     users = models.ManyToManyField(MyUser, related_name='crm_notifications', blank=True)
-    cities = models.ManyToManyField(City, related_name='crm_notifications')
-    groups = models.ManyToManyField(DealerStatus, related_name='crm_notifications')
+    cities = models.ManyToManyField(City, related_name='crm_notifications', blank=True)
+    groups = models.ManyToManyField(DealerStatus, related_name='crm_notifications', blank=True)
     image = models.FileField(upload_to='notification', blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
