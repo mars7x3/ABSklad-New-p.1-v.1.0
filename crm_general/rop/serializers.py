@@ -250,7 +250,7 @@ class ShortProductSerializer(serializers.ModelSerializer):
                     filter=Q(
                         order__is_active=True,
                         order__created_at__gte=fifteen_days_ago,
-                        order__status__in=('Отправлено', 'Оплачено', 'Успешно')
+                        order__status__in=('sent', 'paid', 'success')
                     ),
                     output_field=FloatField()
                 ) / Value(15),

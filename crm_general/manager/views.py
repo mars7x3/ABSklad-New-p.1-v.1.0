@@ -136,7 +136,7 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         saved_amount = MyOrder.objects.filter(
             author__user_id=user_id,
             is_active=True,
-            status__in=("Оплачено", "Успешно", "Отправлено"),
+            status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
             paid_at__date__lte=string_date_to_date(end_date)
         ).aggregate(saved_amount=Sum("order_products__discount"))

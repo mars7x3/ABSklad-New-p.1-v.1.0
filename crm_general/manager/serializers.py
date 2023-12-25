@@ -131,8 +131,8 @@ class OrderSerializer(serializers.ModelSerializer):
             except ObjectDoesNotExist:
                 raise serializers.ValidationError({"detail": "Попробуйте позже!"})
 
-        if attrs.get("type_status", "") == "Баллы":
-            attrs["status"] = "Оплачено"
+        if attrs.get("type_status", "") == "cash":
+            attrs["status"] = "paid"
 
             price = attrs.get("price") or self.instance.price
 
@@ -377,7 +377,7 @@ class ShortProductSerializer(serializers.ModelSerializer):
                     filter=Q(
                         order__is_active=True,
                         order__created_at__gte=fifteen_days_ago,
-                        order__status__in=('Отправлено', 'Оплачено', 'Успешно')
+                        order__status__in=("paid", "success", "sent")
                     ),
                     output_field=FloatField()
                 ) / Value(15),
