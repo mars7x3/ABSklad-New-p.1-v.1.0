@@ -2,7 +2,7 @@ from django.db.models import Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
 from rest_framework.response import Response
 
-from account.models import DealerProfile, BalanceHistory, Wallet
+from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer
 from crm_general.paginations import AppPaginationClass
@@ -18,7 +18,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer,
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, UserImageSerializer,
 )
 
 
@@ -176,6 +176,13 @@ class DealerCreateAPIView(BaseDealerViewMixin, generics.CreateAPIView):
 
 class DealerUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
     serializer_class = DealerProfileDetailSerializer
+
+
+class DealerImageUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
+    queryset = MyUser.objects.filter(status="dealer")
+    serializer_class = UserImageSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "user_id"
 
 
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
