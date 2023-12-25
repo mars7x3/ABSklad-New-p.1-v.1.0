@@ -174,6 +174,10 @@ class DealerCreateAPIView(BaseDealerViewMixin, generics.CreateAPIView):
     serializer_class = DealerProfileDetailSerializer
 
 
+class DealerUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
+    serializer_class = DealerProfileDetailSerializer
+
+
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
     queryset = (
         BalanceHistory.objects.only("id", "created_at", "status", "amount", "balance")
