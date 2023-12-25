@@ -5,6 +5,12 @@ from .models import *
 from .tasks import create_avg_rating
 
 
+class ReviewImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReviewImage
+        fields = ('image',)
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
@@ -12,10 +18,12 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        dealer = instance.author
-        if dealer.image:
-            representation['author_image'] = self.context['request'].build_absolute_uri(dealer.image.url)
-        representation['author_name'] = dealer.name
+        if instance.image:
+            representation['author_image'] = self.context['request'].build_absolute_uri(instance.image.url)
+        else:
+            representation['author_image'] = "Нет фото"
+        representation['author_name'] = instance.name
+        representation['images'] = ReviewImageSerializer(instance.images, many=True, context=self.context).data
 
         return representation
 
