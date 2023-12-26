@@ -17,8 +17,7 @@ from product.models import Collection, Category, AsiaProduct, ProductPrice, Prod
 
 class ManagerProfileSerializer(BaseProfileSerializer):
     city = CitySerializer(many=False, read_only=True)
-    city_slug = serializers.SlugRelatedField(
-        slug_field="slug",
+    city_id = serializers.PrimaryKeyRelatedField(
         queryset=City.objects.all(),
         write_only=True,
         required=True
@@ -26,14 +25,14 @@ class ManagerProfileSerializer(BaseProfileSerializer):
 
     class Meta:
         model = ManagerProfile
-        fields = ("user", "city", "city_slug")
+        fields = ("user", "city", "city_id")
         user_status = "manager"
 
     def validate(self, attrs):
-        city = attrs.pop("city_slug", None)
+        city = attrs.pop("city_id", None)
         rop_profile = self.context["view"].rop_profile
         if city and not rop_profile.cities.filter(id=city.id).exists():
-            raise serializers.ValidationError({"city_slug": "Данный город вам недоступен"})
+            raise serializers.ValidationError({"city_id": "Данный город вам недоступен"})
         if city:
             attrs["city"] = city
         return attrs
