@@ -1,4 +1,7 @@
+from copy import deepcopy
+
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db.models import Sum, Q
 from rest_framework import serializers
 from transliterate import translit
@@ -48,6 +51,8 @@ class StoryProductImageSerializer(serializers.ModelSerializer):
 
 
 class CRMUserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(validators=(UnicodeUsernameValidator(),), required=True, write_only=True)
+    email = serializers.EmailField(required=True, write_only=True)
     password = serializers.CharField(validators=(validate_password,), required=True, write_only=True)
 
     class Meta:
@@ -65,9 +70,22 @@ class CRMUserSerializer(serializers.ModelSerializer):
         password = attrs.get("password")
         if password:
             attrs['pwd'] = password
+
         return attrs
 
+    def create(self, validated_data):
+        if MyUser.objects.filter(username=validated_data["username"]).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+
+        if MyUser.objects.filter(username=validated_data["email"]).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+        return super().create(validated_data)
+
     def update(self, instance, validated_data):
+        for attr, value in deepcopy(validated_data).items():
+            if getattr(instance, attr) == value:
+                validated_data.pop(attr)
+
         password = validated_data.pop("password", None)
         if password:
             instance.set_password(password)
@@ -94,7 +112,12 @@ class BaseProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", None)
         if user_data:
-            serializer = CRMUserSerializer(instance=instance.user, data=user_data, partial=True, context=self.context)
+            serializer = CRMUserSerializer(
+                instance=instance.user,
+                data=user_data,
+                partial=self.partial,
+                context=self.context
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
         return super().update(instance, validated_data)
