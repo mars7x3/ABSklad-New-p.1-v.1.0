@@ -127,7 +127,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
 
     class Meta:
         model = DealerProfile
-        fields = ("user", "liability", "birthday", "city", "dealer_status", "wallet", "stores",
+        fields = ("user", "liability", "address", "birthday", "city", "dealer_status", "wallet", "stores",
                   "price_city", "dealer_status_id", "city_id", "price_city_id")
         user_status = "dealer"
 
