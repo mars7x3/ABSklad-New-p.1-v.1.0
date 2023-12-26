@@ -369,6 +369,6 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.dealer_status.title
 
     def get_last_replenishment_date(self, instance) -> datetime:
-        last_replenishment = instance.dealer.balance_history.filter(status="wallet").last()
+        last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
         if last_replenishment:
             return last_replenishment.created_at
