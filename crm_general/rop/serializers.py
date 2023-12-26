@@ -124,6 +124,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         write_only=True,
         required=True
     )
+    liability = serializers.IntegerField(required=True)
 
     class Meta:
         model = DealerProfile
