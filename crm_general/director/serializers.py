@@ -7,7 +7,7 @@ from rest_framework import serializers
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
 from crm_general.director.utils import get_motivation_done, get_motivation_margin
-from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade
+from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade, KPI, KPIItem
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone
 from order.models import MyOrder, Cart, CartProduct
@@ -834,3 +834,116 @@ class DirectorDealerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('status', 'name', 'id')
+
+
+class DirectorKPICRUDSerializer(serializers.ModelSerializer):
+    author = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = KPI
+        fields = "__all__"
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['kpi_items'] = DirectorKKPIItemSerializer(instance.kpi_items, many=True, context=self.context).data
+        return rep
+
+    def create(self, validated_data):
+        items = self.context['request'].data['items']
+        validated_data['author'] = self.context['request'].user
+        kpi = KPI.objects.create(**validated_data)
+        for item in items:
+            product_ids = item.pop('products')
+            category_ids = item.pop('categories')
+            kpi_item = KPIItem.objects.create(kpi=kpi, **item)
+
+            if product_ids:
+                products = AsiaProduct.objects.filter(id__in=product_ids)
+                kpi_item.products.clear()
+                kpi_item.products.add(*products)
+
+            if category_ids:
+                categories = Category.objects.filter(id__in=category_ids)
+                kpi_item.categories.clear()
+                kpi_item.categories.add(*categories)
+
+        return kpi
+
+    def update(self, instance, validated_data):
+        items = self.context['request'].data['items']
+        validated_data['author'] = self.context['request'].user
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+        kpi = instance
+        for item in items:
+            product_ids = item.pop('products')
+            category_ids = item.pop('categories')
+            kpi_item = KPIItem.objects.create(kpi=kpi, **item)
+
+            if product_ids:
+                products = AsiaProduct.objects.filter(id__in=product_ids)
+                kpi_item.products.clear()
+                kpi_item.products.add(*products)
+
+            if category_ids:
+                categories = Category.objects.filter(id__in=category_ids)
+                kpi_item.categories.clear()
+                kpi_item.categories.add(*categories)
+
+        return kpi
+
+
+class DirectorKKPIItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KPIItem
+        fields = "__all__"
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['products'] = KPIAsiaProductSerializer(instance.products, many=True, context=self.context).data
+        rep['categories'] = KPICategorySerializer(instance.categories, many=True, context=self.context).data
+        return rep
+
+
+class KPIAsiaProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title')
+
+
+class KPICategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ('id', 'slug', 'title')
+
+
+class DirectorKPIListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KPI
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['executor'] = KPIExecutorSerializer(instance.executor, context=self.context).data
+        rep['index'] = KPIExecutorSerializer(instance.executor, context=self.context).data
+        rep['plan'] = KPIExecutorSerializer(instance.executor, context=self.context).data
+        rep['fact'] = KPIExecutorSerializer(instance.executor, context=self.context).data
+        rep['performance'] = KPIExecutorSerializer(instance.executor, context=self.context).data
+
+        return rep
+
+
+class KPIExecutorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if instance.status == 'manager':
+            rep['city'] = instance.manager_profile.city.title if instance.manager_profile.city else '---'
+        else:
+            rep['city'] = '---'
+        return rep
+
