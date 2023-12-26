@@ -45,7 +45,6 @@ class WareHouseCategoryListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         if self.context.get('retrieve'):
-            print('retrieve')
             products = instance.products.all()
             rep['products'] = WareHouseProductListSerializer(products, many=True).data
         else:
@@ -95,14 +94,6 @@ class WareHouseProductSerializer(serializers.ModelSerializer):
         return rep
 
 
-class WareHouseCategoryDetailSerializer(serializers.ModelSerializer):
-    products = WareHouseProductListSerializer(read_only=True, many=True)
-
-    class Meta:
-        model = Category
-        fields = '__all__'
-
-
 class MarketerProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
@@ -113,3 +104,4 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
         fields = '__all__'
+
