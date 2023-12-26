@@ -29,6 +29,7 @@ class BaseManagerMixin:
 
 
 class BaseDealerMixin:
+    permission_classes = (permissions.IsAuthenticated, IsRop)
     queryset = DealerProfile.objects.all()
     serializer_class = DealerProfileDetailSerializer
     lookup_field = "user_id"
