@@ -7,6 +7,7 @@ admin.site.register(Collection)
 
 admin.site.register(Review)
 admin.site.register(ReviewImage)
+admin.site.register(ReviewResponse)
 
 admin.site.register(FilterMaxMin)
 admin.site.register(ProductCostPrice)
