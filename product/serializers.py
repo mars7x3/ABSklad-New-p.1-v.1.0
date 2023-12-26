@@ -11,6 +11,12 @@ class ReviewImageSerializer(serializers.ModelSerializer):
         fields = ('image',)
 
 
+class ReviewResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReviewResponse
+        fields = ('text', 'created_atz')
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
@@ -25,6 +31,8 @@ class ReviewSerializer(serializers.ModelSerializer):
             representation['author_image'] = "Нет фото"
         representation['author_name'] = user.name
         representation['images'] = ReviewImageSerializer(instance.images, many=True, context=self.context).data
+        representation['review_response'] = ReviewResponseSerializer(
+            instance.review_response, many=True, context=self.context).data
 
         return representation
 
