@@ -198,11 +198,14 @@ class DealerChangeActivityView(BaseDealerViewMixin, generics.GenericAPIView):
         return Response(serializer.data)
 
 
-class DealerImageUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
+class DealerImageUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     queryset = MyUser.objects.filter(status="dealer")
     serializer_class = UserImageSerializer
     lookup_field = "id"
     lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(dealer_profile__city=self.manager_profile.city)
 
 
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
