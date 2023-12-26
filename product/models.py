@@ -138,7 +138,16 @@ class ReviewImage(models.Model):
     image = models.ImageField(upload_to='product-images')
 
 
+class ReviewResponse(models.Model):
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='review_response')
+    author = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='review_response')
+    is_active = models.BooleanField(default=True)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now=True)
+
+
 class FilterMaxMin(models.Model):
     max_price = models.PositiveIntegerField(default=0)
     min_price = models.PositiveIntegerField(default=0)
+
 
