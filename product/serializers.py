@@ -14,7 +14,7 @@ class ReviewImageSerializer(serializers.ModelSerializer):
 class ReviewResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReviewResponse
-        fields = ('text', 'created_atz')
+        fields = ('text', 'created_at')
 
 
 class ReviewSerializer(serializers.ModelSerializer):
