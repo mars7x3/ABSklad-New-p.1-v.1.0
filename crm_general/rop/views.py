@@ -58,11 +58,14 @@ class ManagerChangeActivityView(BaseManagerMixin, generics.GenericAPIView):
         return Response(serializer.data)
 
 
-class ManagerImageUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
+class ManagerImageUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     queryset = MyUser.objects.filter(status="manager")
     serializer_class = UserImageSerializer
     lookup_field = "id"
     lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(manager_profile__city__in=self.rop_profile.cities)
 
 
 # -------------------------------------------- DEALERS
@@ -206,11 +209,14 @@ class DealerUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
     serializer_class = DealerProfileDetailSerializer
 
 
-class DealerImageUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
+class DealerImageUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     queryset = MyUser.objects.filter(status="dealer")
     serializer_class = UserImageSerializer
     lookup_field = "id"
     lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(dealer_profile__city__in=self.rop_profile.cities)
 
 
 class DealerStatusListAPIView(BaseRopMixin, generics.ListAPIView):
