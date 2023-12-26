@@ -21,7 +21,7 @@ urlpatterns = [
     # path('dealer/pwd/forgot/', ForgotPwdView.as_view()),  # forgot pwd
     # path('dealer/pwd/verify-code/', VerifyCodeView.as_view()),  # verify code
     # path('dealer/pwd/change/', ChangePwdView.as_view()),  # change pwd
-
+    #
     # path('dealer/profile/change/', ChangeProfileView.as_view()),  # change dealer profile
     # path('dealer/send-code/', SendCodeView.as_view()),  # send code to email or phone
 

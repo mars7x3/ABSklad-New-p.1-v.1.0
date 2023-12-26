@@ -19,9 +19,9 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
-    DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer
-from crm_general.director.utils import get_motivation_dealers_stat
-from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade
+    DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
+    DirectorKPIListSerializer
+from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
 from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
@@ -521,7 +521,7 @@ class MotivationTotalView(APIView):
 class MotivationTestView(APIView):
     def get(self, request):
         motivation = Motivation.objects.first()
-        data = get_motivation_dealers_stat(motivation)
+        # data = get_motivation_dealers_stat(motivation)
         return Response('success', status=status.HTTP_200_OK)
 
 
@@ -795,3 +795,19 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
     queryset = MyUser.objects.filter(status__in=['director', 'rop', 'manager', 'marketer', 'accountant', 'dealer',
                                                  'warehouse', 'dealer_1c', ])
     serializer_class = DirectorDealerListSerializer
+
+
+class DirectorKPICRUDView(mixins.CreateModelMixin,
+                          mixins.RetrieveModelMixin,
+                          mixins.UpdateModelMixin,
+                          mixins.DestroyModelMixin,
+                          GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = KPI.objects.all()
+    serializer_class = DirectorKPICRUDSerializer
+
+
+class DirectorKPIListView(mixins.ListModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = KPI.objects.all()
+    serializer_class = DirectorKPIListSerializer

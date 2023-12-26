@@ -23,7 +23,7 @@ class MoneyDoc(models.Model):
 
 class MovementProduct1C(models.Model):
     is_active = models.BooleanField(default=True)
-    uid = models.CharField(max_length=50, blank=True, null=True)
+    uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
     warehouse_recipient_uid = models.CharField(max_length=50, blank=True, null=True)
     warehouse_sender_uid = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -34,3 +34,5 @@ class MovementProducts(models.Model):
     movement = models.ForeignKey(MovementProduct1C, on_delete=models.CASCADE, related_name='mv_products')
     product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, null=True, related_name='mv_products')
     count = models.IntegerField(default=0)
+
+

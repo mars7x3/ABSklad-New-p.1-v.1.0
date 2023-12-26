@@ -82,6 +82,9 @@ director_router.register("director/staff/list", DirectorStaffListView)
 director_router.register("director/stock/crud", DirectorStockCRUDView)
 director_router.register("director/stock/list", DirectorStockListView)
 director_router.register("director/stock/product/list", DStockProductListView)
+director_router.register("director/kpi/crud", DirectorKPICRUDView)
+director_router.register("director/kpi/list", DirectorKPIListView)
+
 
 director_urlpatterns = [
     path("director/collection/list/", DirectorCollectionListView.as_view()),
