@@ -338,6 +338,26 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
         )
         return Response(amounts)
 
+    @decorators.action(["GET"], detail=False, url_path=r"(?P<user_id>.+)/saved-amount")
+    def get_saved_amount(self, request, user_id):
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+
+        if not start_date or not end_date:
+            return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
+        saved_amount = MyOrder.objects.filter(
+            author=dealer_profile,
+            is_active=True,
+            status__in=("paid", "success", "sent"),
+            paid_at__date__gte=string_date_to_date(start_date),
+            paid_at__date__lte=string_date_to_date(end_date)
+        ).aggregate(saved_amount=Sum("order_products__discount"))
+        data = dict(saved_amount)
+        data["current_balance_amount"] = dealer_profile.wallet.amount_crm
+        return Response(data)
+
 
 class BalancePlusManagerView(BaseManagerMixin, generics.CreateAPIView):
     serializer_class = BalancePlusSerializer
