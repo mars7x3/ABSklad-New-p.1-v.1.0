@@ -86,6 +86,14 @@ class CRMUserSerializer(serializers.ModelSerializer):
             if getattr(instance, attr) == value:
                 validated_data.pop(attr)
 
+        username = validated_data.get('username')
+        if username and MyUser.objects.exclude(id=instance.id).filter(username=username).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+
+        email = validated_data.get('email')
+        if email and MyUser.objects.exclude(id=instance.id).filter(email=email).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+
         password = validated_data.pop("password", None)
         if password:
             instance.set_password(password)
