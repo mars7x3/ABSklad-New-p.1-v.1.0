@@ -243,11 +243,13 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     )
     stores = DealerStoreSerializer(many=True, source="dealer_stores", read_only=True)
     liability = serializers.IntegerField(required=True)
+    price_city = CitySerializer(read_only=True, many=False)
+    city = CitySerializer(read_only=True, many=False)
 
     class Meta:
         model = DealerProfile
-        fields = ("user", "birthday", "city", "dealer_status", "wallet", "stores", "liability", "dealer_status_id")
-        read_only_fields = ("city",)
+        fields = ("user", "address", "birthday", "city", "dealer_status", "wallet", "stores",
+                  "liability", "dealer_status_id", "price_city")
         user_status = "dealer"
 
     def validate(self, attrs):
