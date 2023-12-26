@@ -20,7 +20,7 @@ class BaseOrderMixin:
 
 
 class BaseDealerViewMixin:
-    queryset = DealerProfile.objects.all()
+    queryset = DealerProfile.objects.filter(user__status="dealer")
     permission_classes = (IsAuthenticated, IsManager)
 
     @property
@@ -41,7 +41,7 @@ class BaseDealerRelationViewMixin:
         return self.request.user.manager_profile
 
     def get_dealers_queryset(self):
-        return DealerProfile.objects.filter(city=self.manager_profile.city)
+        return DealerProfile.objects.filter(user__status='dealer', city=self.manager_profile.city)
 
     def get_dealer_profile(self) -> DealerProfile:
         queryset = self.get_dealers_queryset()
