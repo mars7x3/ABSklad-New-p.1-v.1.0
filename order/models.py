@@ -21,10 +21,10 @@ class MyOrder(models.Model):
         ('kaspi', 'kaspi')
     )
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
-    name = models.CharField(max_length=100, blank=True, null=True)
-    gmail = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(max_length=100, blank=True, null=True)
-    address = models.CharField(max_length=300, blank=True, null=True)
+    name = models.CharField(max_length=100, blank=True, null=True)  # TODO: delete this
+    gmail = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this
+    phone = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this
+    address = models.CharField(max_length=300, blank=True, null=True)   # TODO: delete this
     stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='orders')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
@@ -56,7 +56,7 @@ class OrderProduct(models.Model):
     ab_product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, related_name='order_products',
                                    blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, blank=True, null=True,
-                                 related_name='order_products')
+                                 related_name='order_products')  # TODO: delete this field after demo version
     title = models.CharField(max_length=500)
     count = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
