@@ -811,3 +811,5 @@ class DirectorKPIListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = KPI.objects.all()
     serializer_class = DirectorKPIListSerializer
+
+
