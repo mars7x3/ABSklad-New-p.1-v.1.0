@@ -351,7 +351,7 @@ class WalletListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Wallet
-        fields = ("id", "name", "amount_1c", "paid_amount", "amount_crm", "city", "status",
+        fields = ("id", "user_id", "name", "amount_1c", "paid_amount", "amount_crm", "city", "status",
                   "last_replenishment_date")
 
     def get_name(self, instance):
