@@ -422,7 +422,7 @@ class RopTaskDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CRMTaskResponse
-        fields = ("id", "title", "task_text", "text", "files", "response_files", "end_date", "grade", "is_done")
+        fields = ("id", "title", "task_text", "text", "task_files", "response_files", "end_date", "grade", "is_done")
         read_only_fields = ("grade", "is_done")
 
     def get_title(self, obj):
