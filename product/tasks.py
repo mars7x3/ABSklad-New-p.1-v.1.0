@@ -4,7 +4,7 @@ from absklad_commerce.celery import app
 
 @app.task()
 def create_avg_rating(review_id):
-    review = Review.objects.get(id=review_id).select_related('product__reviews')
+    review = Review.objects.get(id=review_id)
     product = review.product
     reviews = product.reviews.filter(is_active=True)
     avg_rating = sum(reviews.values_list('rating', flat=True)) / reviews.count()

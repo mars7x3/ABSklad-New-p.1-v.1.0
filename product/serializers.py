@@ -47,7 +47,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         images = validated_data.pop('images')
         review = Review.objects.create(**validated_data)
         ReviewImage.objects.bulk_create([ReviewImage(review=review,  image=i) for i in images])
-        create_avg_rating.delay(review.id)
+        create_avg_rating(review.id)
         return review
 
 

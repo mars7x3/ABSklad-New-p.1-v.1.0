@@ -1,3 +1,4 @@
+from django.db.models import Sum, Case, When, Value, IntegerField, F
 
 from order.models import MyOrder
 
@@ -121,6 +122,8 @@ def get_motivation_margin(motivation):
     return amount
 
 
+def kpi_info(kpi):
+    pass
 
 
 
