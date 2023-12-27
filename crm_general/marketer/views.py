@@ -14,7 +14,8 @@ from promotion.models import Banner, Story, Motivation, Discount
 from .serializers import MarketerProductSerializer, MarketerProductListSerializer, MarketerCollectionSerializer, \
     MarketerCategorySerializer, BannerSerializer, BannerListSerializer, DealerStatusSerializer, StoryListSerializer, \
     StoryDetailSerializer, ShortProductSerializer, CRMNotificationSerializer, MotivationSerializer, \
-    DiscountSerializer
+    DiscountSerializer, MarketerCRMTaskResponseSerializer
+from ..models import CRMTaskResponse
 from ..paginations import ProductPagination, GeneralPurposePagination
 from product.models import AsiaProduct, Collection, Category, ProductSize
 from .permissions import IsMarketer
@@ -239,3 +240,33 @@ class CRMNotificationView(ListModelMixin,
         users = DealerStatus.objects.all()
         serializer = DealerStatusSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MarketerTaskView(ListModelMixin,
+                       RetrieveModelMixin,
+                       UpdateModelMixin,
+                       GenericViewSet):
+    queryset = CRMTaskResponse.objects.all()
+    permission_classes = [IsAuthenticated, IsMarketer]
+    serializer_class = MarketerCRMTaskResponseSerializer
+    pagination_class = GeneralPurposePagination
+
+    def get_queryset(self):
+        return self.queryset.filter(executor=self.request.user.id)
+
+    def get_serializer_context(self):
+        if self.detail:
+            return {'request': self.request, 'retrieve': True}
+        return {'request': self.request}
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        is_done = self.request.query_params.get('is_done')
+        if is_done == 'true':
+            queryset = queryset.filter(is_done=True)
+        if is_done == 'false':
+            queryset = queryset.filter(is_done=False)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)

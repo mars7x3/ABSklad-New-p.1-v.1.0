@@ -16,7 +16,7 @@ from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
-    WareHouseProductSerializer
+    WareHouseProductSerializer, WareHouseCRMTaskResponseSerializer
 from .mixins import WareHouseManagerMixin
 from ..models import CRMTaskResponse
 
@@ -219,3 +219,27 @@ class WareHouseTaskView(ListModelMixin,
                         UpdateModelMixin,
                         GenericViewSet):
     queryset = CRMTaskResponse.objects.all()
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = WareHouseCRMTaskResponseSerializer
+    pagination_class = GeneralPurposePagination
+
+    def get_queryset(self):
+        return self.queryset.filter(executor=self.request.user.id)
+
+    def get_serializer_context(self):
+        if self.detail:
+            return {'request': self.request, 'retrieve': True}
+        return {'request': self.request}
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        is_done = self.request.query_params.get('is_done')
+        if is_done == 'true':
+            queryset = queryset.filter(is_done=True)
+        if is_done == 'false':
+            queryset = queryset.filter(is_done=False)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
