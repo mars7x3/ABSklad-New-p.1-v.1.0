@@ -6,7 +6,7 @@ from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
 from crm_general.paginations import AppPaginationClass
-from crm_general.utils import string_date_to_date, convert_bool_string_to_bool
+from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
 from order.models import MyOrder, CartProduct, ReturnOrder
 from product.models import ProductPrice, Collection, Category, AsiaProduct
 
@@ -18,7 +18,8 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ManagerTaskListSerializer,
+    ManagerTaskDetailSerializer
 )
 
 
@@ -410,3 +411,53 @@ class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     def get_queryset(self):
         return super().get_queryset().filter(order__author__city=self.manager_profile.city)
 
+
+# ---------------------------------------- TASKS
+class ManagerTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
+    serializer_class = ManagerTaskListSerializer
+    filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
+    search_fields = ("title",)
+    filter_by_fields = {
+        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date},
+        "overdue": {"by": "end_date__lte", "type": "boolean", "pipline": today_on_true},
+        "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
+    }
+    ordering_fields = ("title", "updated_at", "created_at", "end_date")
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
+
+
+class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
+    serializer_class = ManagerTaskDetailSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
+
+
+class ManagerTaskUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
+    serializer_class = ManagerTaskDetailSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .prefetch_related("response_files")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
