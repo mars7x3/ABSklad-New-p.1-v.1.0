@@ -1,4 +1,4 @@
-from django.db.models import Sum, Q, FloatField
+from django.db.models import F, Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
 from rest_framework.response import Response
 
@@ -33,7 +33,7 @@ class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
     )
     serializer_class = ShortOrderSerializer
     pagination_class = AppPaginationClass
-    filter_backends = (filters.SearchFilter, filters.OrderingFilter,)
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter, FilterByFields)
     search_fields = ("name", "id")
     ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
     filter_by_fields = {
@@ -123,7 +123,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
                 "balance_histories__amount",
                 filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
-            )
+            ),
+            balance=F("wallet__amount_crm")
         )
         return Response(amounts)
 

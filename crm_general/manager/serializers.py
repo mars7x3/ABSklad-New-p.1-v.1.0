@@ -34,7 +34,7 @@ class ShortOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
         fields = ("id", "name", "dealer_city", "stock_city", "price", "type_status",
-                  "created_at", "paid_at", "released_at", "is_active")
+                  "created_at", "paid_at", "released_at", "is_active", "status")
 
     def get_dealer_city(self, instance):
         if instance.author:
@@ -171,11 +171,12 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
     balance_amount = serializers.SerializerMethodField(read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
     status = serializers.SerializerMethodField(read_only=True)
+    is_active = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
         fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount", "status")
+                  "balance_amount", "status", "is_active")
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance):
@@ -204,6 +205,9 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 
     def get_status(self, instance) -> bool:
         return instance.wallet.amount_crm > 50000
+
+    def get_is_active(self, instance) -> bool:
+        return instance.user.is_active
 
 
 class DealerBirthdaySerializer(serializers.ModelSerializer):
