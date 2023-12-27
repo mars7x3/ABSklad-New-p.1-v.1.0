@@ -417,11 +417,17 @@ class RopTaskDetailSerializer(serializers.ModelSerializer):
     task_text = serializers.SerializerMethodField(read_only=True)
     end_date = serializers.SerializerMethodField(read_only=True)
     task_files = serializers.SerializerMethodField(read_only=True)
-    response_files = TaskResponseSerializer(many=True, required=False)
+    response_files = TaskResponseSerializer(many=True, read_only=True)
+    files = serializers.ListField(
+        child=serializers.FileField(allow_empty_file=False, use_url=True),
+        required=False,
+        write_only=True
+    )
 
     class Meta:
         model = CRMTaskResponse
-        fields = ("id", "title", "task_text", "text", "task_files", "response_files", "end_date", "grade", "is_done")
+        fields = ("id", "title", "task_text", "text", "task_files", "response_files", "end_date", "grade", "is_done",
+                  "files")
         read_only_fields = ("grade", "is_done")
 
     def get_title(self, obj):
