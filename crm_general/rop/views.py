@@ -113,7 +113,7 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
 
         dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
         saved_amount = MyOrder.objects.filter(
-            author=dealer_profile,
+            author__user_id=dealer_profile,
             is_active=True,
             status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
@@ -139,12 +139,14 @@ class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.List
         "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date}
     }
-    lookup_field = "user_id"
+    lookup_field = "dealer__user_id"
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        dealer_profile = self.get_dealer_profile()
-        return super().get_queryset().filter(dealer=dealer_profile)
+        return super().get_queryset().filter(
+            dealer__city__in=self.rop_profile.cities.all(),
+            **{self.lookup_field: self.kwargs[self.lookup_url_kwarg]}
+        )
 
 
 class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
@@ -289,6 +291,7 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
                       .only("id", "dealer", "amount_1c", "amount_crm")
                       .all()
     )
+    dealers_queryset = DealerProfile.objects.all()
     serializer_class = WalletListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -327,7 +330,8 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
+        dealers_queryset = self.dealers_queryset.filter(city__in=self.rop_profile.cities.all())
+        dealer_profile = generics.get_object_or_404(dealers_queryset, user_id=user_id)
         saved_amount = MyOrder.objects.filter(
             author=dealer_profile,
             is_active=True,

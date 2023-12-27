@@ -308,6 +308,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
                       .only("id", "dealer", "amount_1c", "amount_crm")
                       .all()
     )
+    dealers_queryset = DealerProfile.objects.all()
     serializer_class = WalletListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -349,7 +350,8 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
+        dealers_queryset = self.dealers_queryset.filter(city=self.manager_profile.city)
+        dealer_profile = generics.get_object_or_404(dealers_queryset, user_id=user_id)
         saved_amount = MyOrder.objects.filter(
             author=dealer_profile,
             is_active=True,
@@ -397,28 +399,6 @@ class ReturnRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
 
     def get_queryset(self):
         return super().get_queryset().filter(order__author__city=self.manager_profile.city)
-
-    def get_object(self):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        # Perform the lookup filtering.
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-
-        assert lookup_url_kwarg in self.kwargs, (
-                'Expected view %s to be called with a URL keyword argument '
-                'named "%s". Fix your URL conf, or set the `.lookup_field` '
-                'attribute on the view correctly.' %
-                (self.__class__.__name__, lookup_url_kwarg)
-        )
-
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        print(filter_kwargs)
-        obj = generics.get_object_or_404(queryset, **filter_kwargs)
-
-        # May raise a permission denied
-        self.check_object_permissions(self.request, obj)
-        return obj
-        # return super().get_object()
 
 
 class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
