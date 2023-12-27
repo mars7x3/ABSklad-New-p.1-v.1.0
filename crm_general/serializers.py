@@ -51,8 +51,8 @@ class StoryProductImageSerializer(serializers.ModelSerializer):
 
 
 class CRMUserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(validators=(UnicodeUsernameValidator(),), required=True, write_only=True)
-    email = serializers.EmailField(required=True, write_only=True)
+    username = serializers.CharField(validators=(UnicodeUsernameValidator(),), required=True)
+    email = serializers.EmailField(required=True)
     password = serializers.CharField(validators=(validate_password,), required=True, write_only=True)
 
     class Meta:
