@@ -670,8 +670,8 @@ class ManagerTaskDetailSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         files = [
-            CRMTaskResponseFile(task=instance, file=file_data['file'])
-            for file_data in validated_data.pop("files", [])
+            CRMTaskResponseFile(task=instance, file=file)
+            for file in validated_data.pop("files", [])
         ]
         with transaction.atomic():
             validated_data['is_done'] = True
