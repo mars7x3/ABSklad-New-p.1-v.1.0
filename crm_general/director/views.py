@@ -20,7 +20,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
-    DirectorKPIListSerializer
+    DirectorKPIListSerializer, DirectorStaffListSerializer
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
 from general_service.models import Stock, City
@@ -792,9 +792,30 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
                             mixins.ListModelMixin,
                             GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = MyUser.objects.filter(status__in=['director', 'rop', 'manager', 'marketer', 'accountant', 'dealer',
-                                                 'warehouse', 'dealer_1c', ])
-    serializer_class = DirectorDealerListSerializer
+    queryset = MyUser.objects.filter(status__in=['director', 'rop', 'manager', 'marketer', 'accountant', 'warehouse'])
+    serializer_class = DirectorStaffListSerializer
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        name = request.query_params.get('name')
+        if name:
+            kwargs['name__icontains'] = name
+
+        u_status = request.query_params.get('status')
+        if u_status:
+            kwargs['status'] = u_status
+
+        city = request.query_params.get('city')
+        if city:
+            kwargs['manager_profile__city__slug'] = city
+
+        queryset = queryset.filter(**kwargs)
+        page = self.paginate_queryset(queryset)
+        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return self.get_paginated_response(response_data)
 
 
 class DirectorKPICRUDView(mixins.CreateModelMixin,
