@@ -813,9 +813,8 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
             kwargs['manager_profile__city__slug'] = city
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class DirectorKPICRUDView(mixins.CreateModelMixin,
