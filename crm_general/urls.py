@@ -25,7 +25,7 @@ from .manager.views import (
     ReturnRetrieveAPIView as ManagerReturnRetrieveAPIView,
     ReturnUpdateAPIView as ManagerReturnUpdateAPIView,
     BalancePlusManagerView as ManagerBalancePlusManagerView,
-    ManagerTaskListAPIView, ManagerTaskRetrieveAPIView, ManagerTaskUpdateAPIView
+    ManagerTaskListAPIView, ManagerTaskRetrieveAPIView
 )
 
 from .rop.views import (
@@ -51,7 +51,7 @@ from .rop.views import (
     ProductPriceListAPIView as RopProductPriceListAPIView,
     ProductRetrieveAPIView as RopProductRetrieveAPIView,
     BalanceViewSet as BalanceViewSet,
-    RopTaskListAPIView, RopTaskRetrieveAPIView, RopTaskUpdateAPIView
+    RopTaskListAPIView, RopTaskRetrieveAPIView
 )
 
 from .director.views import *
@@ -168,8 +168,6 @@ manager_urlpatterns = [
     path("manager/task-responses/", ManagerTaskListAPIView.as_view(), name="crm_general-manager-task-responses-list"),
     re_path(r"^manager/task-responses/(?P<response_task_id>.+)/detail/$", ManagerTaskRetrieveAPIView.as_view(),
             name="crm_general-manager-task-responses-detail"),
-    re_path(r"^manager/task-responses/(?P<response_task_id>.+)/complete/$", ManagerTaskUpdateAPIView.as_view(),
-            name="crm_general-manager-task-responses-complete"),
 
     # Balances and Other
     path("manager/balance/plus/", ManagerBalancePlusManagerView.as_view(),
@@ -232,9 +230,6 @@ rop_urlpatterns = [
     path("rop/task-responses/", RopTaskListAPIView.as_view(), name="crm_general-rop-task-responses-list"),
     re_path(r"^rop/task-responses/(?P<response_task_id>.+)/detail/$", RopTaskRetrieveAPIView.as_view(),
             name="crm_general-rop-task-responses-detail"),
-    re_path(r"^rop/task-responses/(?P<response_task_id>.+)/complete/$", RopTaskUpdateAPIView.as_view(),
-            name="crm_general-rop-task-responses-complete"),
-
     path("rop/", include(rop_router.urls)),
 ]
 # ---------------------------
@@ -278,8 +273,10 @@ crm_urlpatterns = [
     path("crm/stock/list/", StockListView.as_view()),
     path("crm/category/list/", CategoryListView.as_view()),
 
-
     path("crm/user/image/cd", UserImageCDView.as_view()),
+
+    re_path(r"^crm/task-response/(?P<response_task_id>.+)/complete/$", CRMTaskUpdateAPIView.as_view(),
+            name="crm_general-task-responses-complete"),
 
     path("", include(crm_router.urls)),
 ]

@@ -446,18 +446,3 @@ class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
             .only("id", "task", "grade", "is_done")
             .filter(task__is_active=True)
         )
-
-
-class ManagerTaskUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
-    serializer_class = CRMTaskResponseSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "response_task_id"
-
-    def get_queryset(self):
-        return (
-            self.request.user.task_responses
-            .select_related("task")
-            .prefetch_related("response_files")
-            .only("id", "task", "grade", "is_done")
-            .filter(task__is_active=True)
-        )
