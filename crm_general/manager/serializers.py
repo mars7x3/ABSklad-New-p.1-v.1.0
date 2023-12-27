@@ -619,12 +619,11 @@ class ShortTaskSerializer(serializers.ModelSerializer):
 
 
 class ManagerTaskListSerializer(serializers.ModelSerializer):
+    task = ShortTaskSerializer(many=False, read_only=True)
+
     class Meta:
         model = CRMTaskResponse
         fields = ("id", "task", "grade", "is_done")
-
-    def get_status(self, obj):
-        return obj.task.status
 
 
 class TaskFileSerializer(serializers.ModelSerializer):
