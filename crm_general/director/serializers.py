@@ -882,6 +882,7 @@ class DirectorKPICRUDSerializer(serializers.ModelSerializer):
             setattr(instance, key, value)
         instance.save()
         kpi = instance
+        kpi.kpi_items.delete()
         for item in items:
             product_ids = item.pop('products', None)
             category_ids = item.pop('categories', None)
