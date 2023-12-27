@@ -139,12 +139,14 @@ class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.List
         "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date}
     }
-    lookup_field = "user_id"
+    lookup_field = "dealer__user_id"
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        dealer_profile = self.get_dealer_profile()
-        return super().get_queryset().filter(dealer=dealer_profile)
+        return super().get_queryset().filter(
+            dealer__city__in=self.rop_profile.cities.all(),
+            **{self.lookup_field: self.kwargs[self.lookup_url_kwarg]}
+        )
 
 
 class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
