@@ -262,10 +262,14 @@ class MarketerTaskView(ListModelMixin,
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         is_done = self.request.query_params.get('is_done')
+        search = self.request.query_params.get('search')
         if is_done == 'true':
             queryset = queryset.filter(is_done=True)
         if is_done == 'false':
             queryset = queryset.filter(is_done=False)
+
+        if search:
+            queryset = queryset.filter(task__title__icontains=search)
         paginator = GeneralPurposePagination()
         page = paginator.paginate_queryset(queryset, request)
         serializer = self.get_serializer(page, many=True)
