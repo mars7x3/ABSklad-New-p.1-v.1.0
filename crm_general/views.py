@@ -10,7 +10,8 @@ from rest_framework.viewsets import GenericViewSet
 from account.models import MyUser, DealerStatus
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
-    StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer
+    StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
+    CRMTaskResponseSerializer
 from general_service.models import City, Stock
 from product.models import Collection, AsiaProduct, ProductImage, Category
 
@@ -127,3 +128,18 @@ class UserImageCDView(APIView):
         image_url = request.build_absolute_uri(user.image.url)
         return Response({"url": image_url}, status=status.HTTP_200_OK)
 
+
+class CRMTaskUpdateAPIView(generics.UpdateAPIView):
+    permission_classes = (IsAuthenticated, IsStaff)
+    serializer_class = CRMTaskResponseSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .prefetch_related("response_files")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )

@@ -1,6 +1,8 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from crm_general.models import CRMTaskResponse, CRMTaskResponseFile, CRMTask, CRMTaskFile
+from crm_general.serializers import VerboseChoiceField
 from order.models import MyOrder, OrderProduct
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
@@ -12,6 +14,8 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
 
 
 class OrderListSerializer(serializers.ModelSerializer):
+    type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
+
     class Meta:
         model = MyOrder
         fields = '__all__'
@@ -19,6 +23,7 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     order_products = WareHouseOrderProductSerializer(read_only=True, many=True)
+    type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
 
     class Meta:
         model = MyOrder
@@ -45,7 +50,6 @@ class WareHouseCategoryListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         if self.context.get('retrieve'):
-            print('retrieve')
             products = instance.products.all()
             rep['products'] = WareHouseProductListSerializer(products, many=True).data
         else:
@@ -95,14 +99,6 @@ class WareHouseProductSerializer(serializers.ModelSerializer):
         return rep
 
 
-class WareHouseCategoryDetailSerializer(serializers.ModelSerializer):
-    products = WareHouseProductListSerializer(read_only=True, many=True)
-
-    class Meta:
-        model = Category
-        fields = '__all__'
-
-
 class MarketerProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
@@ -112,4 +108,54 @@ class MarketerProductImageSerializer(serializers.ModelSerializer):
 class MarketerProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
+        fields = '__all__'
+
+
+class WareHouseTaskFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskFile
+        fields = '__all__'
+
+
+class WareHouseTaskSerializer(serializers.ModelSerializer):
+    files = WareHouseTaskFileSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = CRMTask
+        fields = '__all__'
+
+
+class WareHouseCRMTaskResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponse
+        fields = '__all__'
+
+    def update(self, instance, validated_data):
+        files = self.context['request'].FILES.getlist('files')
+        files_to_delete = self.context['request'].data.getlist('files_to_delete')
+        if files:
+            files_to_create = []
+            for file in files:
+                file_to_create = CRMTaskResponseFile(task=instance, file=file)
+                files_to_create.append(file_to_create)
+            CRMTaskResponseFile.objects.bulk_create(files_to_create)
+        if files_to_delete:
+            files = CRMTaskResponseFile.objects.filter(id__in=files_to_delete)
+            files.delete()
+
+        return super().update(instance, validated_data)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if self.context.get('retrieve'):
+            files_serializer = WareHouseCRMTaskResponseFileSerializer(instance.response_files.all(), many=True)
+            rep['files'] = files_serializer.data
+        task = WareHouseTaskSerializer(instance.task)
+        rep['task'] = task.data
+        return rep
+
+
+class WareHouseCRMTaskResponseFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponseFile
         fields = '__all__'

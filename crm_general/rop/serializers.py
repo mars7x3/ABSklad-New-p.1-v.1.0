@@ -2,12 +2,14 @@ from decimal import Decimal
 from datetime import date, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.db.models import DecimalField, FloatField, Sum, Count, Q, Value
 from django.db.models.functions import Round
 from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
+from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskFile, CRMTaskResponseFile
 from crm_general.serializers import BaseProfileSerializer
 from general_service.models import City
 from general_service.serializers import CitySerializer
@@ -52,11 +54,12 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
     last_order_date = serializers.SerializerMethodField(read_only=True)
     balance_amount = serializers.SerializerMethodField(read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
+    status = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
         fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount")
+                  "balance_amount", "status")
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance):
@@ -82,6 +85,9 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
         last_order = instance.orders.only("created_at").order_by("-created_at").first()
         if last_order:
             return last_order.created_at.date()
+
+    def get_status(self, instance) -> bool:
+        return instance.wallet.amount_crm > 50000
 
 
 class ShortWalletSerializer(serializers.ModelSerializer):
@@ -351,7 +357,7 @@ class WalletListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Wallet
-        fields = ("id", "name", "amount_1c", "paid_amount", "amount_crm", "city", "status",
+        fields = ("id", "user_id", "name", "amount_1c", "paid_amount", "amount_crm", "city", "status",
                   "last_replenishment_date")
 
     def get_name(self, instance):
@@ -369,6 +375,26 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.dealer_status.title
 
     def get_last_replenishment_date(self, instance) -> datetime:
-        last_replenishment = instance.dealer.balance_history.filter(status="wallet").last()
+        last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
         if last_replenishment:
             return last_replenishment.created_at
+
+
+# --------------------------------------- TASKS
+class ShortTaskSerializer(serializers.ModelSerializer):
+    provider = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = CRMTask
+        fields = ("id", "created_at", "title", "end_date", "provider", "status")
+
+    def get_provider(self, obj):
+        return obj.creator.name
+
+
+class RopTaskListSerializer(serializers.ModelSerializer):
+    task = ShortTaskSerializer(many=False, read_only=True)
+
+    class Meta:
+        model = CRMTaskResponse
+        fields = ("id", "task", "grade", "is_done")

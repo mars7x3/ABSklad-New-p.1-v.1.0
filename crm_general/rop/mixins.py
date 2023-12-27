@@ -15,7 +15,7 @@ class BaseRopMixin:
 
 
 class BaseManagerMixin:
-    queryset = ManagerProfile.objects.all()
+    queryset = ManagerProfile.objects.filter(user__status="manager")
     serializer_class = ManagerProfileSerializer
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
@@ -29,7 +29,8 @@ class BaseManagerMixin:
 
 
 class BaseDealerMixin:
-    queryset = DealerProfile.objects.all()
+    permission_classes = (permissions.IsAuthenticated, IsRop)
+    queryset = DealerProfile.objects.filter(user__status="dealer")
     serializer_class = DealerProfileDetailSerializer
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
@@ -52,7 +53,7 @@ class BaseDealerRelationViewMixin:
         return self.request.user.rop_profile
 
     def get_dealers_queryset(self):
-        return DealerProfile.objects.filter(city__in=self.rop_profile.cities.all())
+        return DealerProfile.objects.filter(user__status="dealer", city__in=self.rop_profile.cities.all())
 
     def get_dealer_profile(self) -> DealerProfile:
         queryset = self.get_dealers_queryset()

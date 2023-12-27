@@ -1,9 +1,15 @@
+from copy import deepcopy
+from datetime import datetime
+
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.db import transaction
 from django.db.models import Sum, Q
 from rest_framework import serializers
 from transliterate import translit
 
 from account.models import MyUser, DealerStatus
+from crm_general.models import CRMTaskResponseFile, CRMTaskResponse, CRMTaskFile
 from general_service.models import Stock, City
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
@@ -48,6 +54,8 @@ class StoryProductImageSerializer(serializers.ModelSerializer):
 
 
 class CRMUserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(validators=(UnicodeUsernameValidator(),), required=True)
+    email = serializers.EmailField(required=True)
     password = serializers.CharField(validators=(validate_password,), required=True, write_only=True)
 
     class Meta:
@@ -65,9 +73,30 @@ class CRMUserSerializer(serializers.ModelSerializer):
         password = attrs.get("password")
         if password:
             attrs['pwd'] = password
+
         return attrs
 
+    def create(self, validated_data):
+        if MyUser.objects.filter(username=validated_data["username"]).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+
+        if MyUser.objects.filter(username=validated_data["email"]).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+        return super().create(validated_data)
+
     def update(self, instance, validated_data):
+        for attr, value in deepcopy(validated_data).items():
+            if getattr(instance, attr) == value:
+                validated_data.pop(attr)
+
+        username = validated_data.get('username')
+        if username and MyUser.objects.exclude(id=instance.id).filter(username=username).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+
+        email = validated_data.get('email')
+        if email and MyUser.objects.exclude(id=instance.id).filter(email=email).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+
         password = validated_data.pop("password", None)
         if password:
             instance.set_password(password)
@@ -94,7 +123,12 @@ class BaseProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", None)
         if user_data:
-            serializer = CRMUserSerializer(instance=instance.user, data=user_data, partial=True, context=self.context)
+            serializer = CRMUserSerializer(
+                instance=instance.user,
+                data=user_data,
+                partial=self.partial,
+                context=self.context
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
         return super().update(instance, validated_data)
@@ -227,3 +261,68 @@ class UserImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ("image",)
+
+
+class VerboseChoiceField(serializers.ChoiceField):
+    def to_representation(self, value):
+        return dict(self.choices).get(value, value)
+
+
+class TaskFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskFile
+        fields = ("file",)
+
+
+class TaskResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponseFile
+        fields = ("file",)
+
+
+class CRMTaskResponseSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField(read_only=True)
+    task_text = serializers.SerializerMethodField(read_only=True)
+    end_date = serializers.SerializerMethodField(read_only=True)
+    task_files = serializers.SerializerMethodField(read_only=True)
+    response_files = TaskResponseSerializer(many=True, read_only=True)
+    files = serializers.ListField(
+        child=serializers.FileField(allow_empty_file=False, use_url=True),
+        required=False,
+        write_only=True
+    )
+
+    class Meta:
+        model = CRMTaskResponse
+        fields = ("id", "title", "task_text", "text", "task_files", "response_files", "end_date", "grade", "is_done",
+                  "files")
+        read_only_fields = ("grade", "is_done")
+
+    def get_title(self, obj):
+        return obj.task.title
+
+    def get_task_text(self, obj):
+        return obj.task.text
+
+    def get_end_date(self, obj) -> datetime:
+        return obj.task.end_date
+
+    def get_task_files(self, obj) -> TaskFileSerializer:
+        return TaskFileSerializer(instance=obj.task.files.all(), many=True).data
+
+    def update(self, instance, validated_data):
+        files = [
+            CRMTaskResponseFile(task=instance, file=file)
+            for file in validated_data.pop("files", [])
+        ]
+        with transaction.atomic():
+            validated_data['is_done'] = True
+            instance = super().update(instance, validated_data)
+
+            if files:
+                CRMTaskResponseFile.objects.bulk_create(files)
+
+            task = instance.task
+            task.status = "wait"
+            task.save()
+        return instance

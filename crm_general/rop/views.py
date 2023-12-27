@@ -5,15 +5,15 @@ from rest_framework.response import Response
 from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet, DealerStatus, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.paginations import AppPaginationClass
-from crm_general.serializers import ActivitySerializer, UserImageSerializer
-from crm_general.utils import convert_bool_string_to_bool, string_date_to_date
+from crm_general.serializers import ActivitySerializer, UserImageSerializer, CRMTaskResponseSerializer
+from crm_general.utils import convert_bool_string_to_bool, string_date_to_date, today_on_true
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, ProductPrice, AsiaProduct
 
 from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, DealerProfileDetailSerializer, \
     DealerBalanceHistorySerializer, DealerBasketProductSerializer, ShortOrderSerializer, CollectionSerializer, \
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
-    DealerStatusSerializer
+    DealerStatusSerializer, RopTaskListSerializer
 from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin, BaseManagerMixin
 
 
@@ -58,11 +58,14 @@ class ManagerChangeActivityView(BaseManagerMixin, generics.GenericAPIView):
         return Response(serializer.data)
 
 
-class ManagerImageUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
+class ManagerImageUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     queryset = MyUser.objects.filter(status="manager")
     serializer_class = UserImageSerializer
     lookup_field = "id"
     lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(manager_profile__city__in=self.rop_profile.cities.all())
 
 
 # -------------------------------------------- DEALERS
@@ -110,7 +113,7 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
 
         dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
         saved_amount = MyOrder.objects.filter(
-            author=dealer_profile,
+            author__user_id=dealer_profile,
             is_active=True,
             status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
@@ -136,12 +139,14 @@ class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.List
         "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date}
     }
-    lookup_field = "user_id"
+    lookup_field = "dealer__user_id"
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        dealer_profile = self.get_dealer_profile()
-        return super().get_queryset().filter(dealer=dealer_profile)
+        return super().get_queryset().filter(
+            dealer__city__in=self.rop_profile.cities.all(),
+            **{self.lookup_field: self.kwargs[self.lookup_url_kwarg]}
+        )
 
 
 class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
@@ -206,11 +211,14 @@ class DealerUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
     serializer_class = DealerProfileDetailSerializer
 
 
-class DealerImageUpdateAPIView(BaseDealerMixin, generics.UpdateAPIView):
+class DealerImageUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     queryset = MyUser.objects.filter(status="dealer")
     serializer_class = UserImageSerializer
     lookup_field = "id"
     lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(dealer_profile__city__in=self.rop_profile.cities.all())
 
 
 class DealerStatusListAPIView(BaseRopMixin, generics.ListAPIView):
@@ -283,6 +291,7 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
                       .only("id", "dealer", "amount_1c", "amount_crm")
                       .all()
     )
+    dealers_queryset = DealerProfile.objects.all()
     serializer_class = WalletListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -321,7 +330,8 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
+        dealers_queryset = self.dealers_queryset.filter(city__in=self.rop_profile.cities.all())
+        dealer_profile = generics.get_object_or_404(dealers_queryset, user_id=user_id)
         saved_amount = MyOrder.objects.filter(
             author=dealer_profile,
             is_active=True,
@@ -332,3 +342,39 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
         data = dict(saved_amount)
         data["current_balance_amount"] = dealer_profile.wallet.amount_crm
         return Response(data)
+
+
+# ---------------------------------------- TASKS
+class RopTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
+    serializer_class = RopTaskListSerializer
+    filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
+    search_fields = ("title",)
+    filter_by_fields = {
+        "start_date": {"by": "task__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "task__created_at__date__lte", "type": "date", "pipline": string_date_to_date},
+        "overdue": {"by": "task__end_date__lte", "type": "boolean", "pipline": today_on_true},
+        "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
+    }
+    ordering_fields = ("title", "updated_at", "created_at", "end_date")
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
+
+
+class RopTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
+    serializer_class = CRMTaskResponseSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )

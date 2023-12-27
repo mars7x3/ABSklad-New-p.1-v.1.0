@@ -1,12 +1,12 @@
-from django.db.models import Sum, Q, FloatField
+from django.db.models import F, Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
 from rest_framework.response import Response
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
-from crm_general.serializers import ActivitySerializer, UserImageSerializer
+from crm_general.serializers import ActivitySerializer, UserImageSerializer, CRMTaskResponseSerializer
 from crm_general.paginations import AppPaginationClass
-from crm_general.utils import string_date_to_date, convert_bool_string_to_bool
+from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
 from order.models import MyOrder, CartProduct, ReturnOrder
 from product.models import ProductPrice, Collection, Category, AsiaProduct
 
@@ -18,7 +18,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ManagerTaskListSerializer
 )
 
 
@@ -32,7 +32,7 @@ class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
     )
     serializer_class = ShortOrderSerializer
     pagination_class = AppPaginationClass
-    filter_backends = (filters.SearchFilter, filters.OrderingFilter,)
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter, FilterByFields)
     search_fields = ("name", "id")
     ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
     filter_by_fields = {
@@ -122,7 +122,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
                 "balance_histories__amount",
                 filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
-            )
+            ),
+            balance=F("wallet__amount_crm")
         )
         return Response(amounts)
 
@@ -198,11 +199,14 @@ class DealerChangeActivityView(BaseDealerViewMixin, generics.GenericAPIView):
         return Response(serializer.data)
 
 
-class DealerImageUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
+class DealerImageUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     queryset = MyUser.objects.filter(status="dealer")
     serializer_class = UserImageSerializer
     lookup_field = "id"
     lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(dealer_profile__city=self.manager_profile.city)
 
 
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
@@ -305,6 +309,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
                       .only("id", "dealer", "amount_1c", "amount_crm")
                       .all()
     )
+    dealers_queryset = DealerProfile.objects.all()
     serializer_class = WalletListSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -346,7 +351,8 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
+        dealers_queryset = self.dealers_queryset.filter(city=self.manager_profile.city)
+        dealer_profile = generics.get_object_or_404(dealers_queryset, user_id=user_id)
         saved_amount = MyOrder.objects.filter(
             author=dealer_profile,
             is_active=True,
@@ -395,28 +401,6 @@ class ReturnRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
     def get_queryset(self):
         return super().get_queryset().filter(order__author__city=self.manager_profile.city)
 
-    def get_object(self):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        # Perform the lookup filtering.
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-
-        assert lookup_url_kwarg in self.kwargs, (
-                'Expected view %s to be called with a URL keyword argument '
-                'named "%s". Fix your URL conf, or set the `.lookup_field` '
-                'attribute on the view correctly.' %
-                (self.__class__.__name__, lookup_url_kwarg)
-        )
-
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        print(filter_kwargs)
-        obj = generics.get_object_or_404(queryset, **filter_kwargs)
-
-        # May raise a permission denied
-        self.check_object_permissions(self.request, obj)
-        return obj
-        # return super().get_object()
-
 
 class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     queryset = ReturnOrder.objects.all()
@@ -427,3 +411,38 @@ class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     def get_queryset(self):
         return super().get_queryset().filter(order__author__city=self.manager_profile.city)
 
+
+# ---------------------------------------- TASKS
+class ManagerTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
+    serializer_class = ManagerTaskListSerializer
+    filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
+    search_fields = ("title",)
+    filter_by_fields = {
+        "start_date": {"by": "task__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "task__created_at__date__lte", "type": "date", "pipline": string_date_to_date},
+        "overdue": {"by": "task__end_date__lte", "type": "boolean", "pipline": today_on_true},
+        "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
+    }
+    ordering_fields = ("title", "updated_at", "created_at", "end_date")
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
+
+
+class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
+    serializer_class = CRMTaskResponseSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )

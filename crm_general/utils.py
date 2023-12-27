@@ -4,7 +4,12 @@ from pprint import pprint
 from django.utils import timezone
 from django.db.models import F, Q, Sum, Value, FloatField
 from django.db.models.functions import Round
+from django.utils.timezone import now
 from rest_framework.exceptions import ValidationError
+
+
+def today_on_true(field_value):
+    return now().date() if field_value and field_value == 'true' else None
 
 
 def string_date_to_date(date_string: str):
