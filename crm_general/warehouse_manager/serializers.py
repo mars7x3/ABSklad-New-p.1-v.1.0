@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from crm_general.models import CRMTaskResponse, CRMTaskResponseFile, CRMTask, CRMTaskFile
+from crm_general.serializers import VerboseChoiceField
 from order.models import MyOrder, OrderProduct
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
@@ -12,13 +13,8 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class RussianChoiceField(serializers.ChoiceField):
-    def to_representation(self, value):
-        return dict(self.choices).get(value, value)
-
-
 class OrderListSerializer(serializers.ModelSerializer):
-    type_status = RussianChoiceField(choices=MyOrder.TYPE_STATUS)
+    type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
 
     class Meta:
         model = MyOrder
@@ -27,7 +23,7 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     order_products = WareHouseOrderProductSerializer(read_only=True, many=True)
-    type_status = RussianChoiceField(choices=MyOrder.TYPE_STATUS)
+    type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
 
     class Meta:
         model = MyOrder

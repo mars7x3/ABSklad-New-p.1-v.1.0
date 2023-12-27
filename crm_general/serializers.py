@@ -258,3 +258,8 @@ class UserImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ("image",)
+
+
+class VerboseChoiceField(serializers.ChoiceField):
+    def to_representation(self, value):
+        return dict(self.choices).get(value, value)
