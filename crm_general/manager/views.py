@@ -418,9 +418,9 @@ class ManagerTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
     filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
     search_fields = ("title",)
     filter_by_fields = {
-        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date},
-        "overdue": {"by": "end_date__lte", "type": "boolean", "pipline": today_on_true},
+        "start_date": {"by": "task__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "task__created_at__date__lte", "type": "date", "pipline": string_date_to_date},
+        "overdue": {"by": "task__end_date__lte", "type": "boolean", "pipline": today_on_true},
         "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
     }
     ordering_fields = ("title", "updated_at", "created_at", "end_date")
