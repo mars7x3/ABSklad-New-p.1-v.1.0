@@ -134,3 +134,4 @@ class ReviewsImagesSerializer(serializers.ModelSerializer):
         model = ReviewImage
         fields = ('image',)
 
+

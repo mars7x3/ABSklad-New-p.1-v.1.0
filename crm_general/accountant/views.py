@@ -10,10 +10,24 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from crm_general.accountant.permissions import IsAccountant
+from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDetailSerializer
+from crm_general.views import CRMPaginationClass
 from order.models import MyOrder
 
 
 class AccountantOrderListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
     queryset = MyOrder.objects.all()
-    serializer_class = DirectorTaskListSerializer
+    serializer_class = MyOrderListSerializer
+    pagination_class = CRMPaginationClass
+
+    def get_serializer_class(self):
+        if self.detail:
+            return MyOrderDetailSerializer
+        return self.serializer_class
+
+
+
+
+
+
