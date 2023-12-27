@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet, DealerStatus, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.paginations import AppPaginationClass
-from crm_general.serializers import ActivitySerializer, UserImageSerializer
+from crm_general.serializers import ActivitySerializer, UserImageSerializer, CRMTaskResponseSerializer
 from crm_general.utils import convert_bool_string_to_bool, string_date_to_date, today_on_true
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, ProductPrice, AsiaProduct
@@ -13,7 +13,7 @@ from product.models import Collection, Category, ProductPrice, AsiaProduct
 from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, DealerProfileDetailSerializer, \
     DealerBalanceHistorySerializer, DealerBasketProductSerializer, ShortOrderSerializer, CollectionSerializer, \
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
-    DealerStatusSerializer, RopTaskListSerializer, RopTaskDetailSerializer
+    DealerStatusSerializer, RopTaskListSerializer
 from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin, BaseManagerMixin
 
 
@@ -367,7 +367,7 @@ class RopTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 
 class RopTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
-    serializer_class = RopTaskDetailSerializer
+    serializer_class = CRMTaskResponseSerializer
     lookup_field = "id"
     lookup_url_kwarg = "response_task_id"
 
@@ -375,21 +375,6 @@ class RopTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
         return (
             self.request.user.task_responses
             .select_related("task")
-            .only("id", "task", "grade", "is_done")
-            .filter(task__is_active=True)
-        )
-
-
-class RopTaskUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
-    serializer_class = RopTaskDetailSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "response_task_id"
-
-    def get_queryset(self):
-        return (
-            self.request.user.task_responses
-            .select_related("task")
-            .prefetch_related("response_files")
             .only("id", "task", "grade", "is_done")
             .filter(task__is_active=True)
         )

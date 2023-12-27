@@ -1,10 +1,10 @@
-from django.db.models import Sum, Q, FloatField
+from django.db.models import F, Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
 from rest_framework.response import Response
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
-from crm_general.serializers import ActivitySerializer, UserImageSerializer
+from crm_general.serializers import ActivitySerializer, UserImageSerializer, CRMTaskResponseSerializer
 from crm_general.paginations import AppPaginationClass
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
 from order.models import MyOrder, CartProduct, ReturnOrder
@@ -18,8 +18,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ManagerTaskListSerializer,
-    ManagerTaskDetailSerializer
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ManagerTaskListSerializer
 )
 
 
@@ -33,7 +32,7 @@ class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
     )
     serializer_class = ShortOrderSerializer
     pagination_class = AppPaginationClass
-    filter_backends = (filters.SearchFilter, filters.OrderingFilter,)
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter, FilterByFields)
     search_fields = ("name", "id")
     ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
     filter_by_fields = {
@@ -123,7 +122,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
                 "balance_histories__amount",
                 filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
-            )
+            ),
+            balance=F("wallet__amount_crm")
         )
         return Response(amounts)
 
@@ -435,7 +435,7 @@ class ManagerTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 
 class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
-    serializer_class = ManagerTaskDetailSerializer
+    serializer_class = CRMTaskResponseSerializer
     lookup_field = "id"
     lookup_url_kwarg = "response_task_id"
 
@@ -443,21 +443,6 @@ class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
         return (
             self.request.user.task_responses
             .select_related("task")
-            .only("id", "task", "grade", "is_done")
-            .filter(task__is_active=True)
-        )
-
-
-class ManagerTaskUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
-    serializer_class = ManagerTaskDetailSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "response_task_id"
-
-    def get_queryset(self):
-        return (
-            self.request.user.task_responses
-            .select_related("task")
-            .prefetch_related("response_files")
             .only("id", "task", "grade", "is_done")
             .filter(task__is_active=True)
         )

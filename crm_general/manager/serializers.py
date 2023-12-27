@@ -34,7 +34,7 @@ class ShortOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
         fields = ("id", "name", "dealer_city", "stock_city", "price", "type_status",
-                  "created_at", "paid_at", "released_at", "is_active")
+                  "created_at", "paid_at", "released_at", "is_active", "status")
 
     def get_dealer_city(self, instance):
         if instance.author:
@@ -171,11 +171,12 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
     balance_amount = serializers.SerializerMethodField(read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
     status = serializers.SerializerMethodField(read_only=True)
+    is_active = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
         fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount", "status")
+                  "balance_amount", "status", "is_active")
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance):
@@ -204,6 +205,9 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 
     def get_status(self, instance) -> bool:
         return instance.wallet.amount_crm > 50000
+
+    def get_is_active(self, instance) -> bool:
+        return instance.user.is_active
 
 
 class DealerBirthdaySerializer(serializers.ModelSerializer):
@@ -625,62 +629,3 @@ class ManagerTaskListSerializer(serializers.ModelSerializer):
         model = CRMTaskResponse
         fields = ("id", "task", "grade", "is_done")
 
-
-class TaskFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CRMTaskFile
-        fields = ("file",)
-
-
-class TaskResponseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CRMTaskResponseFile
-        fields = ("file",)
-
-
-class ManagerTaskDetailSerializer(serializers.ModelSerializer):
-    title = serializers.SerializerMethodField(read_only=True)
-    task_text = serializers.SerializerMethodField(read_only=True)
-    end_date = serializers.SerializerMethodField(read_only=True)
-    task_files = serializers.SerializerMethodField(read_only=True)
-    response_files = TaskResponseSerializer(many=True, read_only=True)
-    files = serializers.ListField(
-        child=serializers.FileField(allow_empty_file=False, use_url=True),
-        required=False,
-        write_only=True
-    )
-
-    class Meta:
-        model = CRMTaskResponse
-        fields = ("id", "title", "task_text", "text", "task_files", "response_files", "end_date", "grade", "is_done",
-                  "files")
-        read_only_fields = ("grade", "is_done")
-
-    def get_title(self, obj):
-        return obj.task.title
-
-    def get_task_text(self, obj):
-        return obj.task.text
-
-    def get_end_date(self, obj) -> datetime:
-        return obj.task.end_date
-
-    def get_task_files(self, obj) -> TaskFileSerializer:
-        return TaskFileSerializer(instance=obj.task.files.all(), many=True).data
-
-    def update(self, instance, validated_data):
-        files = [
-            CRMTaskResponseFile(task=instance, file=file)
-            for file in validated_data.pop("files", [])
-        ]
-        with transaction.atomic():
-            validated_data['is_done'] = True
-            instance = super().update(instance, validated_data)
-
-            if files:
-                CRMTaskResponseFile.objects.bulk_create(files)
-
-            task = instance.task
-            task.status = "wait"
-            task.save()
-        return instance
