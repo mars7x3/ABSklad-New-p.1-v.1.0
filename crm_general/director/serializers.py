@@ -842,6 +842,18 @@ class DirectorStaffListSerializer(serializers.ModelSerializer):
         fields = ('status', 'name', 'id')
 
 
+class DirectorKPIStaffListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('status', 'name')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if instance.status == 'manager':
+            rep['city_title'] = instance.manager_profile.city
+        return rep
+
+
 class DirectorKPICRUDSerializer(serializers.ModelSerializer):
     author = serializers.CharField(read_only=True)
 
@@ -852,6 +864,8 @@ class DirectorKPICRUDSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['kpi_items'] = DirectorKKPIItemSerializer(instance.kpi_items, many=True, context=self.context).data
+        rep['executor_info'] = DirectorKPIStaffListSerializer(instance.executor, context=self.context).data
+
         return rep
 
     def create(self, validated_data):
@@ -882,7 +896,7 @@ class DirectorKPICRUDSerializer(serializers.ModelSerializer):
             setattr(instance, key, value)
         instance.save()
         kpi = instance
-        kpi.kpi_items.delete()
+        kpi.kpi_items.all().delete()
         for item in items:
             product_ids = item.pop('products', None)
             category_ids = item.pop('categories', None)

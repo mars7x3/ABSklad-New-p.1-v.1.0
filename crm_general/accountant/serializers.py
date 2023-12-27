@@ -12,7 +12,7 @@ from product.models import AsiaProduct
 class MyOrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        fields = ('author', 'id')
+        fields = ('author', 'id', 'status', 'type_status', 'price')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
