@@ -23,7 +23,7 @@ class CRMTask(models.Model):
 
 class CRMTaskFile(models.Model):
     task = models.ForeignKey(CRMTask, on_delete=models.CASCADE, related_name='files')
-    file = models.ImageField(upload_to='tasks')
+    file = models.FileField(upload_to='tasks')
 
 
 class CRMTaskGrade(models.Model):
@@ -41,7 +41,7 @@ class CRMTaskResponse(models.Model):
 
 class CRMTaskResponseFile(models.Model):
     task = models.ForeignKey(CRMTaskResponse, on_delete=models.CASCADE, related_name='response_files')
-    file = models.ImageField(upload_to='response')
+    file = models.FileField(upload_to='response')
 
 
 class KPI(models.Model):
