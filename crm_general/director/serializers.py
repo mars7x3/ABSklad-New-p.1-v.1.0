@@ -859,8 +859,8 @@ class DirectorKPICRUDSerializer(serializers.ModelSerializer):
         validated_data['author'] = self.context['request'].user
         kpi = KPI.objects.create(**validated_data)
         for item in items:
-            product_ids = item.pop('products')
-            category_ids = item.pop('categories')
+            product_ids = item.pop('products', None)
+            category_ids = item.pop('categories', None)
             kpi_item = KPIItem.objects.create(kpi=kpi, **item)
 
             if product_ids:
@@ -883,8 +883,8 @@ class DirectorKPICRUDSerializer(serializers.ModelSerializer):
         instance.save()
         kpi = instance
         for item in items:
-            product_ids = item.pop('products')
-            category_ids = item.pop('categories')
+            product_ids = item.pop('products', None)
+            category_ids = item.pop('categories', None)
             kpi_item = KPIItem.objects.create(kpi=kpi, **item)
 
             if product_ids:

@@ -4,7 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from account.models import MyUser
+from account.models import MyUser, DealerProfile
 from order.models import MyOrder, OrderReceipt, OrderProduct
 from product.models import AsiaProduct
 
@@ -23,12 +23,14 @@ class MyOrderListSerializer(serializers.ModelSerializer):
 
 class MyOrderDealerSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MyUser
-        fields = ('id', 'name')
+        model = DealerProfile
+        fields = ('city', )
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['city_title'] = instance.dealer_profile.city.title if instance.dealer_profile.city else None
+        rep['name'] = instance.user.name
+        rep['city_title'] = instance.city.title if instance.city else None
+
         return rep
 
 
