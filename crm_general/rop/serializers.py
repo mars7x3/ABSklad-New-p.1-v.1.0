@@ -52,11 +52,12 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
     last_order_date = serializers.SerializerMethodField(read_only=True)
     balance_amount = serializers.SerializerMethodField(read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
+    status = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
         fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount")
+                  "balance_amount", "status")
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance):
@@ -82,6 +83,9 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
         last_order = instance.orders.only("created_at").order_by("-created_at").first()
         if last_order:
             return last_order.created_at.date()
+
+    def get_status(self, instance) -> bool:
+        return instance.wallet.amount_crm > 50000
 
 
 class ShortWalletSerializer(serializers.ModelSerializer):
