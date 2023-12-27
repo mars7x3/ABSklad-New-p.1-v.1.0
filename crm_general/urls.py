@@ -49,7 +49,8 @@ from .rop.views import (
     CategoryListAPIView as RopCategoryListAPIView,
     ProductPriceListAPIView as RopProductPriceListAPIView,
     ProductRetrieveAPIView as RopProductRetrieveAPIView,
-    BalanceViewSet as BalanceViewSet
+    BalanceViewSet as BalanceViewSet,
+    RopTaskListAPIView, RopTaskRetrieveAPIView, RopTaskUpdateAPIView
 )
 
 from .director.views import *
@@ -207,6 +208,13 @@ rop_urlpatterns = [
     path("rop/products/", RopProductPriceListAPIView.as_view(), name="crm_general-rop-products-list"),
     re_path("^rop/products/(?P<product_id>.+)/detail/$", RopProductRetrieveAPIView.as_view(),
             name="crm_general-rop-product-detail"),
+
+    # Tasks
+    path("rop/task-responses/", RopTaskListAPIView.as_view(), name="crm_general-rop-task-responses-list"),
+    re_path(r"^rop/task-responses/(?P<response_task_id>.+)/detail/$", RopTaskRetrieveAPIView.as_view(),
+            name="crm_general-rop-task-responses-detail"),
+    re_path(r"^rop/task-responses/(?P<response_task_id>.+)/complete/$", RopTaskUpdateAPIView.as_view(),
+            name="crm_general-rop-task-responses-complete"),
 
     path("rop/", include(rop_router.urls)),
 ]

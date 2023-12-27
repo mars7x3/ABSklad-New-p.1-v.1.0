@@ -6,14 +6,14 @@ from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet
 from crm_general.filters import FilterByFields
 from crm_general.paginations import AppPaginationClass
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
-from crm_general.utils import convert_bool_string_to_bool, string_date_to_date
+from crm_general.utils import convert_bool_string_to_bool, string_date_to_date, today_on_true
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, ProductPrice, AsiaProduct
 
 from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, DealerProfileDetailSerializer, \
     DealerBalanceHistorySerializer, DealerBasketProductSerializer, ShortOrderSerializer, CollectionSerializer, \
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
-    DealerStatusSerializer
+    DealerStatusSerializer, RopTaskListSerializer, RopTaskDetailSerializer
 from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin, BaseManagerMixin
 
 
@@ -342,3 +342,54 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
         data = dict(saved_amount)
         data["current_balance_amount"] = dealer_profile.wallet.amount_crm
         return Response(data)
+
+
+# ---------------------------------------- TASKS
+class RopTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
+    serializer_class = RopTaskListSerializer
+    filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
+    search_fields = ("title",)
+    filter_by_fields = {
+        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date},
+        "overdue": {"by": "end_date__lte", "type": "boolean", "pipline": today_on_true},
+        "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
+    }
+    ordering_fields = ("title", "updated_at", "created_at", "end_date")
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
+
+
+class RopTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
+    serializer_class = RopTaskDetailSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
+
+
+class RopTaskUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
+    serializer_class = RopTaskDetailSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .prefetch_related("response_files")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )

@@ -2,12 +2,14 @@ from decimal import Decimal
 from datetime import date, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.db.models import DecimalField, FloatField, Sum, Count, Q, Value
 from django.db.models.functions import Round
 from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
+from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskFile, CRMTaskResponseFile
 from crm_general.serializers import BaseProfileSerializer
 from general_service.models import City
 from general_service.serializers import CitySerializer
@@ -376,3 +378,78 @@ class WalletListSerializer(serializers.ModelSerializer):
         last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
         if last_replenishment:
             return last_replenishment.created_at
+
+
+# --------------------------------------- TASKS
+class ShortTaskSerializer(serializers.ModelSerializer):
+    provider = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = CRMTask
+        fields = ("id", "created_at", "title", "end_date", "provider", "status")
+
+    def get_provider(self, obj):
+        return obj.creator.name
+
+
+class RopTaskListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponse
+        fields = ("id", "task", "grade", "is_done")
+
+    def get_status(self, obj):
+        return obj.task.status
+
+
+class TaskFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskFile
+        fields = ("file",)
+
+
+class TaskResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskResponseFile
+        fields = ("file",)
+
+
+class RopTaskDetailSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField(read_only=True)
+    task_text = serializers.SerializerMethodField(read_only=True)
+    end_date = serializers.SerializerMethodField(read_only=True)
+    task_files = serializers.SerializerMethodField(read_only=True)
+    response_files = TaskResponseSerializer(many=True, required=False)
+
+    class Meta:
+        model = CRMTaskResponse
+        fields = ("id", "title", "task_text", "text", "files", "response_files", "end_date", "grade", "is_done")
+        read_only_fields = ("grade", "is_done")
+
+    def get_title(self, obj):
+        return obj.task.title
+
+    def get_task_text(self, obj):
+        return obj.task.text
+
+    def get_end_date(self, obj) -> datetime:
+        return obj.task.end_date
+
+    def get_task_files(self, obj) -> TaskFileSerializer:
+        return TaskFileSerializer(instance=obj.task.files.all(), many=True).data
+
+    def update(self, instance, validated_data):
+        files = [
+            CRMTaskResponseFile(task=instance, file=file_data['file'])
+            for file_data in validated_data.pop("files", [])
+        ]
+        with transaction.atomic():
+            validated_data['is_done'] = True
+            instance = super().update(instance, validated_data)
+
+            if files:
+                CRMTaskResponseFile.objects.bulk_create(files)
+
+            task = instance.task
+            task.status = "wait"
+            task.save()
+        return instance
