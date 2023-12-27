@@ -836,6 +836,12 @@ class DirectorDealerListSerializer(serializers.ModelSerializer):
         fields = ('status', 'name', 'id')
 
 
+class DirectorStaffListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('status', 'name', 'id')
+
+
 class DirectorKPICRUDSerializer(serializers.ModelSerializer):
     author = serializers.CharField(read_only=True)
 

@@ -1,8 +1,8 @@
 from rest_framework.permissions import BasePermission
 
 
-class IsDirector(BasePermission):
+class IsAccountant(BasePermission):
     def has_permission(self, request, view):
-        if request.user.status == 'director':
+        if request.user.status == 'accountant':
             return True
         return False
