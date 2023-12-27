@@ -25,6 +25,9 @@ class FilterByFields(BaseFilterBackend):
                     assert callable(pipline)
                     value = pipline(value)
 
+                if not value:
+                    continue
+
                 filters[params["by"]] = value
 
         if filters:
