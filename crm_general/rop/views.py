@@ -65,7 +65,7 @@ class ManagerImageUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(manager_profile__city__in=self.rop_profile.cities)
+        return super().get_queryset().filter(manager_profile__city__in=self.rop_profile.cities.all())
 
 
 # -------------------------------------------- DEALERS
@@ -216,7 +216,7 @@ class DealerImageUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer_profile__city__in=self.rop_profile.cities)
+        return super().get_queryset().filter(dealer_profile__city__in=self.rop_profile.cities.all())
 
 
 class DealerStatusListAPIView(BaseRopMixin, generics.ListAPIView):
