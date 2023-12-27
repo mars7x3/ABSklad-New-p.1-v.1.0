@@ -42,6 +42,20 @@ class StockPhone(models.Model):
     phone = models.CharField(max_length=30)
 
 
+class RequisiteCategory(models.Model):
+    title = models.CharField(max_length=100)
+    logo = models.FileField(upload_to='requisite_images', blank=True, null=True)
+    is_active = models.BooleanField(default=True)
 
+
+class Requisite(models.Model):
+    category = models.ForeignKey(RequisiteCategory, on_delete=models.CASCADE, related_name='requisites')
+    text = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+
+class RequisiteCity(models.Model):
+    requisite = models.ForeignKey(Requisite, on_delete=models.CASCADE, related_name='requisite_cities')
+    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='requisite_cities')
 
 

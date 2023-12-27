@@ -29,3 +29,17 @@ class StockAdmin(admin.ModelAdmin):
     list_display_links = ('id', 'address', 'city')
 
 
+class RequisiteCityAdmin(admin.TabularInline):
+    model = RequisiteCity
+    max_num = 100
+    extra = 0
+
+
+@admin.register(Requisite)
+class RequisiteAdmin(admin.ModelAdmin):
+    inlines = [RequisiteCityAdmin]
+    list_display = ('category', 'text', 'is_active')
+    list_display_links = ('category', 'text', 'is_active')
+
+
+admin.site.register(RequisiteCategory)

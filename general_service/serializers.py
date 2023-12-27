@@ -27,3 +27,22 @@ class CitySerializer(serializers.ModelSerializer):
         model = City
         fields = ('id', 'title', 'slug')
 
+
+class RequisiteListSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Requisite
+        exclude = ('id', 'category', 'is_active')
+
+    def get_image(self, instance):
+        if instance.category.logo:
+            logo = self.context.get('request').build_absolute_uri(instance.category.logo.url)
+            return logo
+
+
+class RequisiteCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RequisiteCategory
+        exclude = ('is_active',)
+
