@@ -42,6 +42,9 @@ class MyOrderDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['order_receipts'] = OrderReceiptSerializer(instance.order_receipts, many=True, context=self.context).data
+        rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
+        rep['order_products'] = OrderProductSerializer(instance.order_products, many=True, context=self.context).data
+
         return rep
 
 
@@ -54,7 +57,7 @@ class OrderReceiptSerializer(serializers.ModelSerializer):
 class OrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderProduct
-        exclude = ('order', 'cost_price', 'discount')
+        exclude = ('order', 'cost_price', 'discount', 'category')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
