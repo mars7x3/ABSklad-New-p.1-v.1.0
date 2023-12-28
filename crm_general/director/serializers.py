@@ -846,6 +846,8 @@ class DirectorKPIStaffListSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         if instance.status == 'manager':
             rep['city_title'] = instance.manager_profile.city.title
+            rep['city'] = instance.manager_profile.city.slug
+
         return rep
 
 

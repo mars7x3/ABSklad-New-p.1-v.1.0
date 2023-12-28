@@ -534,9 +534,12 @@ class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
         kwargs = {}
+        queryset = self.get_queryset()
+
         motivation_id = request.query_params.get('motivation')
-        motivation = Motivation.objects.filter(id=motivation_id).first()
-        queryset = motivation.dealers.all()
+        if motivation_id:
+            motivation = Motivation.objects.filter(id=motivation_id).first()
+            queryset = motivation.dealers.all()
 
         name = request.query_params.get('name')
         if name:
