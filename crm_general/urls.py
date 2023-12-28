@@ -111,8 +111,6 @@ director_urlpatterns = [
     path('director/price/create/', DirectorPriceCreateView.as_view()),
     path('director/task/grade/', DirectorGradeView.as_view()),
 
-    path('director/motivation/test/', MotivationTestView.as_view()),
-
 
     path('', include(director_router.urls)),
 ]
@@ -134,7 +132,10 @@ accountant_urlpatterns = [
     path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
     path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
     path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
-
+    path("accountant/task-responses/", AccountantTaskListAPIView.as_view(),
+         name="crm_general-accountant-task-responses-list"),
+    re_path(r"^accountant/task-responses/(?P<response_task_id>.+)/detail/$", AccountantTaskRetrieveAPIView.as_view(),
+            name="crm_general-accountant-task-responses-detail"),
 
 
 

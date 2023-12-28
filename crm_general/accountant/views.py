@@ -4,7 +4,7 @@ from django.db import transaction
 from django.db.models import Case, When
 from django.utils import timezone
 from rest_framework.filters import SearchFilter
-from rest_framework import viewsets, status, mixins, generics
+from rest_framework import viewsets, status, mixins, generics, filters
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +18,11 @@ from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDet
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
     AccountantStockListSerializer, AccountantStockDetailSerializer, \
     DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer
+from crm_general.filters import FilterByFields
+from crm_general.manager.serializers import ManagerTaskListSerializer
+from crm_general.models import CRMTaskResponse
+from crm_general.serializers import CRMTaskResponseSerializer
+from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
 from general_service.models import Stock    
 from crm_general.views import CRMPaginationClass
 from one_c.models import MoneyDoc
@@ -368,3 +373,39 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
             return self.retrieve_serializer_class
         return self.serializer_class
 
+
+class AccountantTaskListAPIView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = ManagerTaskListSerializer
+    filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
+    search_fields = ("task__title",)
+    filter_by_fields = {
+        "start_date": {"by": "task__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
+        "end_date": {"by": "task__created_at__date__lte", "type": "date", "pipline": string_date_to_date},
+        "overdue": {"by": "task__end_date__lte", "type": "boolean", "pipline": today_on_true},
+        "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
+    }
+    ordering_fields = ("title", "updated_at", "created_at", "end_date")
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
+
+
+class AccountantTaskRetrieveAPIView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = CRMTaskResponseSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "response_task_id"
+
+    def get_queryset(self):
+        return (
+            self.request.user.task_responses
+            .select_related("task")
+            .only("id", "task", "grade", "is_done")
+            .filter(task__is_active=True)
+        )
