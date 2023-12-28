@@ -504,29 +504,6 @@ class DirectorMotivationCRUDView(mixins.CreateModelMixin,
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class MotivationTotalView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
-
-    def post(self, request):
-        kwargs = {}
-        title = request.query_params.get('title')
-        if title:
-            kwargs['title__icontains'] = title
-
-        is_active = request.query_params.get('is_active')
-        if is_active:
-            kwargs['is_active'] = bool(int(is_active))
-
-        queryset = Motivation.objects.filter(**kwargs)
-
-
-class MotivationTestView(APIView):
-    def get(self, request):
-        motivation = Motivation.objects.first()
-        # data = get_motivation_dealers_stat(motivation)
-        return Response('success', status=status.HTTP_200_OK)
-
-
 class DirectorMotivationListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Motivation.objects.all()
