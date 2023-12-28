@@ -531,24 +531,6 @@ class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
     queryset = DealerProfile.objects.all()
     serializer_class = DirectorMotivationDealerListSerializer
 
-    def get_queryset(self):
-        from django.db.models import F, Sum, IntegerField
-        from django.db.models import OuterRef, Subquery
-
-        return super().get_queryset().annotate(
-            total_sum=Sum(
-                F('counts__count_crm') * Subquery(
-                    ProductPrice.objects.filter(
-                        city=OuterRef('city'),
-                        product_id=OuterRef('counts__product_id'),
-                        d_status__discount=0
-                    ).values('price')[:1]
-                ), output_field=IntegerField()
-            ),
-            total_count=Sum('counts__count_crm'),
-            norm_count=Sum('counts__count_norm'),
-        )
-
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
         kwargs = {}
