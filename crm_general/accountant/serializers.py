@@ -142,7 +142,7 @@ class BalancePlusDealerSerializer(serializers.ModelSerializer):
 class AccountantProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'vendor_code', 'title', 'is_active')
+        fields = ('id', 'vendor_code', 'title', 'is_active', 'is_discount')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
