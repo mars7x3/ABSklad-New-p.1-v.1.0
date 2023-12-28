@@ -215,8 +215,6 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
 
 
 class WareHouseTaskView(ListModelMixin,
-                        RetrieveModelMixin,
-                        UpdateModelMixin,
                         GenericViewSet):
     queryset = CRMTaskResponse.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
@@ -224,12 +222,7 @@ class WareHouseTaskView(ListModelMixin,
     pagination_class = GeneralPurposePagination
 
     def get_queryset(self):
-        return self.queryset.filter(executor=self.request.user.id)
-
-    def get_serializer_context(self):
-        if self.detail:
-            return {'request': self.request, 'retrieve': True}
-        return {'request': self.request}
+        return self.queryset.filter(task__is_active=True, executor=self.request.user.id)
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
