@@ -416,7 +416,7 @@ class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
 class ManagerTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
     serializer_class = ManagerTaskListSerializer
     filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
-    search_fields = ("title",)
+    search_fields = ("task__title",)
     filter_by_fields = {
         "start_date": {"by": "task__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "task__created_at__date__lte", "type": "date", "pipline": string_date_to_date},
