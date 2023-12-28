@@ -591,7 +591,7 @@ class BalancePlusSerializer(serializers.ModelSerializer):
         required=True
     )
     files = serializers.ListField(
-        child=serializers.FileField(allow_empty_file=False, use_url=True, allow_null=False),
+        child=serializers.FileField(allow_empty_file=False, use_url=True),
         required=True,
         source='files__file'
     )
