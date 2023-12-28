@@ -55,6 +55,8 @@ from .rop.views import (
 )
 
 from .director.views import *
+from .accountant.views import *
+
 from .views import *
 
 from .marketer.views import (
@@ -116,8 +118,14 @@ director_urlpatterns = [
 # --------------------------- ACCOUNTANT
 accountant_router = SimpleRouter()
 accountant_router.register("accountant/order/list", AccountantOrderListView)
+accountant_router.register("accountant/balance/list", AccountantBalanceListView)
+
 
 accountant_urlpatterns = [
+    path('accountant/order/total-info/', AccountantOrderTotalInfoView.as_view()),
+    path('accountant/balance/history/list/', AccountantBalanceHistoryListView.as_view()),
+    path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
+
 
     path('', include(accountant_router.urls)),
 ]
