@@ -24,7 +24,7 @@ class MyOrderListSerializer(serializers.ModelSerializer):
 class MyOrderDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('city', )
+        fields = ('city', 'user')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -78,7 +78,7 @@ class OrderAsiaProductSerializer(serializers.ModelSerializer):
 class DealerProfileListSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('city',)
+        fields = ('city', 'user')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -112,7 +112,6 @@ class BalancePlusListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['city'] = instance.city.title if instance.city else None
         rep['user_info'] = BalancePlusDealerSerializer(instance.dealer, context=self.context).data
         return rep
 
@@ -120,7 +119,7 @@ class BalancePlusListSerializer(serializers.ModelSerializer):
 class BalancePlusDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('city', )
+        fields = ('city', 'user')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
