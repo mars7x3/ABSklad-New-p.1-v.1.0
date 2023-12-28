@@ -120,7 +120,7 @@ class BalancePlusListSerializer(serializers.ModelSerializer):
 class BalancePlusFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = BalancePlusFile
-        fields = ('city', 'user')
+        fields = ('file',)
 
 
 class BalancePlusDealerSerializer(serializers.ModelSerializer):
