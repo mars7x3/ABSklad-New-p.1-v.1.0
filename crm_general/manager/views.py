@@ -123,7 +123,7 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
                 filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
             ),
-            balance=F("wallet__amount_crm")
+            balance=Sum("wallet__amount_crm", output_field=FloatField())
         )
         return Response(amounts)
 
