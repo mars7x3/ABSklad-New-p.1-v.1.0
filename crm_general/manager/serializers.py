@@ -592,8 +592,8 @@ class BalancePlusSerializer(serializers.ModelSerializer):
     )
     files = serializers.ListField(
         child=serializers.FileField(allow_empty_file=False, use_url=True),
-        required=True,
-        source='files__file'
+        required=False,
+        source="files__file"
     )
 
     class Meta:
@@ -609,10 +609,7 @@ class BalancePlusSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # TODO: добавить синхронизацию с 1С
-        files = validated_data.pop("files", None)
-        if not files:
-            raise serializers.ValidationError({"files": "Это обязательно к заполнению"})
-
+        files = validated_data.pop("files__file", None)
         balance = super().create(validated_data)
         BalancePlusFile.objects.bulk_create([BalancePlusFile(balance=balance, file=file) for file in files])
         return balance
