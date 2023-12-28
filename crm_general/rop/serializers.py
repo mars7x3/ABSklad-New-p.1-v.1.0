@@ -359,11 +359,15 @@ class WalletListSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField(read_only=True)
     status = serializers.SerializerMethodField(read_only=True)
     last_replenishment_date = serializers.SerializerMethodField(read_only=True)
+    user_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Wallet
         fields = ("id", "user_id", "name", "amount_1c", "paid_amount", "amount_crm", "city", "status",
                   "last_replenishment_date")
+
+    def get_user_id(self, instance):
+        return instance.dealer.user.id
 
     def get_name(self, instance):
         return instance.dealer.user.name
