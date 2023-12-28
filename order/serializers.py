@@ -43,7 +43,7 @@ class OrderReceiptSerializer(serializers.ModelSerializer):
 class OrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderProduct
-        exclude = ('id', 'order', 'category', 'ab_product', 'discount')
+        exclude = ('id', 'order', 'category', 'ab_product', 'discount', 'cost_price')
 
 
 class StockSerializer(serializers.ModelSerializer):

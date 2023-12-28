@@ -95,3 +95,11 @@ class BalancePlusFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = BalancePlusFile
         fields = ('file', )
+
+
+class BalanceHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalanceHistory
+        exclude = ('is_active', 'dealer')
+
+

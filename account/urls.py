@@ -5,7 +5,8 @@ from .views import *
 
 router = DefaultRouter()
 router.register('dealer-store-crud', DealerStoreCRUDView, basename="dealer-store-crud")
-router.register('dealer/balance/plus/list', BalanceHistoryListView)  # balance list
+router.register('dealer/balance/plus/list', BalancePlusListView)  # balance list
+router.register('dealer/transaction/history/list', BalanceHistoryListView)
 
 urlpatterns = [
     path('user/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
