@@ -95,6 +95,9 @@ class DealerProfile(models.Model):
     def __str__(self):
         return f'{self.id} - {self.user.name}'
 
+    class Meta:
+        ordering = ('-id',)
+
 
 class DealerStore(models.Model):
     dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='dealer_stores')
@@ -122,6 +125,9 @@ class BalancePlus(models.Model):
     is_moderation = models.BooleanField(default=False)
     is_success = models.BooleanField(default=False)
     comment = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ('-id',)
 
 
 class BalancePlusFile(models.Model):
@@ -174,6 +180,9 @@ class BalanceHistory(models.Model):
     action_id = models.IntegerField()
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-id',)
 
 
 class CRMNotification(models.Model):
