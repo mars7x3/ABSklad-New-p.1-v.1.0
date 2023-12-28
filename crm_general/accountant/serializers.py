@@ -204,7 +204,8 @@ class AccountantCategorySerializer(serializers.ModelSerializer):
 class AccountantStockListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
-    
+        fields = '__all__'
+
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         warehouse_profiles = instance.warehouse_profiles.values_list('user__name')
