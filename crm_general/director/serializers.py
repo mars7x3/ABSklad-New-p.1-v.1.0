@@ -947,6 +947,7 @@ class DirectorKPIListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['kpi_info'] = kpi_info(instance)
+        rep['executor_info'] = KPIExecutorSerializer(instance.executor, context=self.context).data
 
         return rep
 
@@ -954,7 +955,7 @@ class DirectorKPIListSerializer(serializers.ModelSerializer):
 class KPIExecutorSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'status')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
