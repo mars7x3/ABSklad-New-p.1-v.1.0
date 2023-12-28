@@ -13,7 +13,7 @@ from account.models import (
     MyUser, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory,
     BalancePlus, BalancePlusFile
 )
-from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskFile, CRMTaskResponseFile
+from crm_general.models import CRMTask, CRMTaskResponse
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
 from general_service.models import Stock
 from general_service.serializers import CitySerializer
@@ -258,7 +258,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     class Meta:
         model = DealerProfile
         fields = ("user", "address", "birthday", "city", "dealer_status", "wallet", "stores",
-                  "liability", "dealer_status_id", "price_city")
+                  "liability", "dealer_status_id", "price_city", "motivations")
         user_status = "dealer"
 
     def validate(self, attrs):
@@ -587,7 +587,7 @@ class BalancePlusSerializer(serializers.ModelSerializer):
         required=True
     )
     files = serializers.ListField(
-        child=serializers.FileField(allow_empty_file=False, use_url=True),
+        child=serializers.FileField(allow_empty_file=False, use_url=True, allow_null=False),
         required=True,
         source='files__file'
     )
@@ -605,7 +605,10 @@ class BalancePlusSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # TODO: добавить синхронизацию с 1С
-        files = validated_data.pop("files")
+        files = validated_data.pop("files", None)
+        if not files:
+            raise serializers.ValidationError({"files": "Это обязательно к заполнению"})
+
         balance = super().create(validated_data)
         BalancePlusFile.objects.bulk_create([BalancePlusFile(balance=balance, file=file) for file in files])
         return balance
