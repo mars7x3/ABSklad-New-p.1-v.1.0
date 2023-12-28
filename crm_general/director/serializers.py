@@ -372,7 +372,7 @@ class DirectorDealerStoreSerializer(serializers.ModelSerializer):
 class DirectorMotivationDealerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('user',)
+        fields = ('id', 'user',)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
