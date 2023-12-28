@@ -850,7 +850,7 @@ class DirectorKPIStaffListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         if instance.status == 'manager':
-            rep['city_title'] = instance.manager_profile.city
+            rep['city_title'] = instance.manager_profile.city.title
         return rep
 
 

@@ -56,6 +56,8 @@ from .rop.views import (
 )
 
 from .director.views import *
+from .accountant.views import *
+
 from .views import *
 
 from .marketer.views import (
@@ -121,9 +123,14 @@ accountant_router.register("accountant/product/list", AccountantProductListView)
 accountant_router.register("accountant/collection/list", AccountantCollectionListView)
 accountant_router.register("accountant/category/list", AccountantCategoryView)
 accountant_router.register("accountant/stock/list", AccountantStockViewSet)
+accountant_router.register("accountant/balance/list", AccountantBalanceListView)
 
 
 accountant_urlpatterns = [
+    path('accountant/order/total-info/', AccountantOrderTotalInfoView.as_view()),
+    path('accountant/balance/history/list/', AccountantBalanceHistoryListView.as_view()),
+    path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
+
 
     path('', include(accountant_router.urls)),
 ]
