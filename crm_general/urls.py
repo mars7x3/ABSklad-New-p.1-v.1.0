@@ -124,12 +124,17 @@ accountant_router.register("accountant/collection/list", AccountantCollectionLis
 accountant_router.register("accountant/category/list", AccountantCategoryView)
 accountant_router.register("accountant/stock/list", AccountantStockViewSet)
 accountant_router.register("accountant/balance/list", AccountantBalanceListView)
+accountant_router.register("accountant/balance/plus/list", BalancePlusListView)
 
 
 accountant_urlpatterns = [
     path('accountant/order/total-info/', AccountantOrderTotalInfoView.as_view()),
     path('accountant/balance/history/list/', AccountantBalanceHistoryListView.as_view()),
     path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
+    path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
+    path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
+
+
 
 
     path('', include(accountant_router.urls)),

@@ -4,9 +4,10 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus
+from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus, BalancePlusFile
 
 from general_service.models import Stock
+
 from order.models import MyOrder, OrderReceipt, OrderProduct
 from product.models import AsiaProduct, Collection, Category
 
@@ -115,9 +116,16 @@ class BalancePlusListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['user_info'] = BalancePlusDealerSerializer(instance.dealer, context=self.context).data
+        rep['files'] = BalancePlusFileSerializer(instance.files, many=True, context=self.context).data
         return rep
-      
-        
+
+
+class BalancePlusFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalancePlusFile
+        fields = ('file',)
+
+
 class BalancePlusDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
