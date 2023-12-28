@@ -38,8 +38,9 @@ def get_motivation_data(dealer):
                         for order in orders
                         for order_products in order.order_products.filter(category=condition_cat.category)
                     )
-                    category_data['done'] = total_count
                     category_data['per'] = round(total_count * 100 / condition_cat.count)
+                    category_data['done'] = round(total_count)
+
                     condition_data["condition_cats"].append(category_data)
 
             elif condition.status == 'product':
@@ -57,15 +58,16 @@ def get_motivation_data(dealer):
                         for order in orders
                         for order_products in order.order_products.filter(ab_product=condition_prod.product)
                     )
-                    product_data['done'] = total_count
                     product_data['per'] = round(total_count * 100 / condition_prod.count)
+                    product_data['done'] = round(total_count)
+
                     condition_data["condition_prods"].append(product_data)
 
             elif condition.status == 'money':
                 condition_data["money"] = condition.money
                 total_count = sum(orders.values_list('price', flat=True))
-                condition_data['done'] = total_count
                 condition_data['per'] = round(total_count * 100 / condition.money)
+                condition_data['done'] = round(total_count)
 
             presents = condition.presents.all()
             for p in presents:
