@@ -1,7 +1,8 @@
 from django.urls import path, re_path, include
 from rest_framework.routers import SimpleRouter
 
-from .accountant.views import AccountantOrderListView
+from .accountant.views import AccountantOrderListView, AccountantProductListView, AccountantCollectionListView, \
+    AccountantCategoryView, AccountantStockViewSet
 from .manager.views import (
     OrderListAPIView as ManagerOrderListView,
     OrderRetrieveAPIView as ManagerOrderRetrieveView,
@@ -116,6 +117,11 @@ director_urlpatterns = [
 # --------------------------- ACCOUNTANT
 accountant_router = SimpleRouter()
 accountant_router.register("accountant/order/list", AccountantOrderListView)
+accountant_router.register("accountant/product/list", AccountantProductListView)
+accountant_router.register("accountant/collection/list", AccountantCollectionListView)
+accountant_router.register("accountant/category/list", AccountantCategoryView)
+accountant_router.register("accountant/stock/list", AccountantStockViewSet)
+
 
 accountant_urlpatterns = [
 

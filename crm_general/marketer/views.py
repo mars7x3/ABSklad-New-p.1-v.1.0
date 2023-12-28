@@ -242,22 +242,14 @@ class CRMNotificationView(ListModelMixin,
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class MarketerTaskView(ListModelMixin,
-                       RetrieveModelMixin,
-                       UpdateModelMixin,
-                       GenericViewSet):
+class MarketerTaskView(ListModelMixin, GenericViewSet):
     queryset = CRMTaskResponse.objects.all()
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = MarketerCRMTaskResponseSerializer
     pagination_class = GeneralPurposePagination
 
     def get_queryset(self):
-        return self.queryset.filter(executor=self.request.user.id)
-
-    def get_serializer_context(self):
-        if self.detail:
-            return {'request': self.request, 'retrieve': True}
-        return {'request': self.request}
+        return self.queryset.filter(task__is_active=True, executor=self.request.user.id)
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

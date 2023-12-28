@@ -5,8 +5,9 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import MyUser, DealerProfile
+from general_service.models import Stock
 from order.models import MyOrder, OrderReceipt, OrderProduct
-from product.models import AsiaProduct
+from product.models import AsiaProduct, Collection, Category
 
 
 class MyOrderListSerializer(serializers.ModelSerializer):
@@ -73,4 +74,99 @@ class OrderAsiaProductSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['category_title'] = instance.category.title if instance.category else None
+        return rep
+
+
+class AccountantProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'vendor_code', 'title', 'is_active')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['collection_name'] = instance.collection.title
+        rep['category_name'] = instance.category.title
+        stocks_count_crm = sum(instance.counts.all().values_list('count_crm', flat=True))
+        stock = sum(instance.counts.all().values_list('count_norm', flat=True))
+        rep['stocks_count_crm'] = stocks_count_crm
+        rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
+        price = instance.prices.filter().first()
+        rep['price'] = price.price if price else '---'
+        rep['total_price'] = sum(instance.prices.all().values_list('price', flat=True))
+        rep['stock'] = stocks_count_crm - stock
+        return rep
+
+
+class AccountantCollectionSerializer(serializers.ModelSerializer):
+    category_count = serializers.SerializerMethodField(read_only=True)
+    product_count = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Collection
+        fields = '__all__'
+
+    @staticmethod
+    def get_product_count(obj):
+        return sum(obj.products.all().values_list('counts__count_crm', flat=True))
+
+    @staticmethod
+    def get_category_count(obj):
+        return obj.products.values('category').distinct().count()
+
+
+class AccountantCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if self.context.get('retrieve'):
+            params = self.context['request'].query_params
+            products = instance.products.all()
+            discount = params.get('discount')
+            new_products = params.get('new')
+            search = params.get('search')
+
+            if discount:
+                products = products.filter(is_discount=True)
+            if new_products:
+                products = products.order_by('-created_at')
+            if search:
+                products = products.filter(title__icontains=search)
+            rep['products'] = AccountantProductSerializer(products, many=True).data
+        rep['products_count_crm'] = sum(instance.products.values_list('counts__count_crm', flat=True))
+        rep['products_count_1c'] = sum(instance.products.values_list('counts__count_1c', flat=True))
+        return rep
+
+
+class AccountantStockListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        warehouse_profiles = instance.warehouse_profiles.values_list('user__name')
+        profiles = [profile for profile in warehouse_profiles]
+        rep['managers'] = profiles
+        stocks_count_crm = sum(instance.counts.all().values_list('count_crm', flat=True))
+        stock = sum(instance.counts.all().values_list('count_norm', flat=True))
+        rep['stocks_count_crm'] = stocks_count_crm
+        rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
+        rep['total_price'] = sum(instance.city.prices.all().values_list('price', flat=True))
+        rep['stock'] = stocks_count_crm - stock
+        return rep
+
+
+class AccountantStockDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        fields = ('id', 'title')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        products = instance.counts.all().values_list('product', flat=True)
+        asia_products = AsiaProduct.objects.filter(pk__in=products)
+        rep['products'] = AccountantProductSerializer(asia_products, read_only=True, many=True).data
         return rep
