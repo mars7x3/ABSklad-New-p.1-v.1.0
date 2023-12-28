@@ -482,7 +482,8 @@ class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
                                                                     product_id=prod['product']))
                 for pres in c['presents']:
                     presents.append(MotivationPresent(
-                        condition=condition, status=pres['status'], money=pres['money'], text=pres['text']
+                        condition=condition, status=pres['status'], money=pres['money'], text=pres['text'],
+                        expense=pres['expense']
                     ))
             ConditionCategory.objects.bulk_create(condition_cats)
             ConditionProduct.objects.bulk_create(condition_prods)
