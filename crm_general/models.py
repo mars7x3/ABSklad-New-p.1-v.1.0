@@ -20,6 +20,9 @@ class CRMTask(models.Model):
     creator = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='tasks')
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        ordering = ('-id',)
+
 
 class CRMTaskFile(models.Model):
     task = models.ForeignKey(CRMTask, on_delete=models.CASCADE, related_name='files')
@@ -38,6 +41,9 @@ class CRMTaskResponse(models.Model):
     grade = models.ForeignKey(CRMTaskGrade, on_delete=models.SET_NULL, blank=True, null=True, related_name='tasks')
     is_done = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ('-id',)
+
 
 class CRMTaskResponseFile(models.Model):
     task = models.ForeignKey(CRMTaskResponse, on_delete=models.CASCADE, related_name='response_files')
@@ -54,6 +60,9 @@ class KPI(models.Model):
     executor = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='executor_kpis')
     status = models.IntegerField(choices=STATUS)
     is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('-id',)
 
 
 class KPIItem(models.Model):

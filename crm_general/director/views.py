@@ -822,3 +822,18 @@ class DirectorKPIListView(mixins.ListModelMixin, GenericViewSet):
         }
     }
 
+
+class DirectorTaskTotalInfoView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request):
+        tasks = CRMTask.objects.filter(is_active=True)
+        total_count = tasks.count()
+        done_count = tasks.filter(status='completed').count()
+        now = datetime.datetime.now()
+        overdue_count = tasks.exclude(status='completed', end_date__gte=now).count()
+        return Response({'total_count': total_count, 'done_count': done_count, 'overdue_count': overdue_count},
+                        status=status.HTTP_200_OK)
+
+
+
