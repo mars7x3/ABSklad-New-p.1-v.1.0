@@ -610,7 +610,6 @@ class BalancePlusSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # TODO: добавить синхронизацию с 1С
         files = validated_data.pop("files__file", None)
-        print(files)
         balance = super().create(validated_data)
         BalancePlusFile.objects.bulk_create([BalancePlusFile(balance=balance, file=file) for file in files])
         return balance
