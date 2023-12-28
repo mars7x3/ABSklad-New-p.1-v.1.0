@@ -119,12 +119,17 @@ director_urlpatterns = [
 accountant_router = SimpleRouter()
 accountant_router.register("accountant/order/list", AccountantOrderListView)
 accountant_router.register("accountant/balance/list", AccountantBalanceListView)
+accountant_router.register("accountant/balance/plus/list", BalancePlusListView)
 
 
 accountant_urlpatterns = [
     path('accountant/order/total-info/', AccountantOrderTotalInfoView.as_view()),
     path('accountant/balance/history/list/', AccountantBalanceHistoryListView.as_view()),
     path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
+    path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
+    path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
+
+
 
 
     path('', include(accountant_router.urls)),

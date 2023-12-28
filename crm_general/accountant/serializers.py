@@ -4,7 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus
+from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus, BalancePlusFile
 from order.models import MyOrder, OrderReceipt, OrderProduct
 from product.models import AsiaProduct
 
@@ -113,7 +113,14 @@ class BalancePlusListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['user_info'] = BalancePlusDealerSerializer(instance.dealer, context=self.context).data
+        rep['files'] = BalancePlusFileSerializer(instance.files, many=True, context=self.context).data
         return rep
+
+
+class BalancePlusFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalancePlusFile
+        fields = ('city', 'user')
 
 
 class BalancePlusDealerSerializer(serializers.ModelSerializer):

@@ -1,5 +1,6 @@
 import datetime
 
+from django.db import transaction
 from django.db.models import Case, When
 from django.utils import timezone
 from rest_framework.filters import SearchFilter
@@ -10,14 +11,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.models import DealerProfile, MyUser, Wallet, BalancePlus
+from account.models import DealerProfile, MyUser, Wallet, BalancePlus, Notification
 from crm_general.accountant.permissions import IsAccountant
 from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDetailSerializer, \
     DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer
 from crm_general.views import CRMPaginationClass
 from one_c.models import MoneyDoc
 from order.models import MyOrder
-
+from crm_general.tasks import minus_quantity
 
 class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
@@ -196,7 +197,7 @@ class AccountantTotalEcoBalanceView(APIView):
         return Response({"amount_eco": amount_eco, "amount_crm": amount_crm}, status=status.HTTP_200_OK)
 
 
-class BalancePlusListView(mixins.ListModelMixin, GenericViewSet):
+class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
     queryset = BalancePlus.objects.filter(is_moderation=False)
     serializer_class = BalancePlusListSerializer
@@ -214,4 +215,56 @@ class BalancePlusListView(mixins.ListModelMixin, GenericViewSet):
         serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
 
         return Response(serializer, status=status.HTTP_200_OK)
+
+
+class BalancePlusModerationView(APIView):
+    """
+    balance_id, is_success
+    """
+    permission_classes = [IsAuthenticated, IsAccountant]
+
+    def post(self, request):
+        balance_id = request.data.get('balance_id')
+        is_success = request.data.get('is_success')
+        type_status = request.data.get('type_status')
+
+        if balance_id:
+            with transaction.atomic():
+                balance = BalancePlus.objects.get(is_moderation=False, id=balance_id)
+
+                balance.is_success = is_success
+                balance.is_moderation = True
+                balance.save()
+                if balance.is_success:
+                    pass
+                    # sync_balance_pay_to_1C(balance)
+
+                return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class AccountantOrderModerationView(APIView):
+    permission_classes = [IsAuthenticated, IsAccountant]
+
+    def post(self, request):
+        order_id = request.data.get('order_id')
+        order_status = request.data.get('status')
+
+        with transaction.atomic():
+            if order_id:
+                if order_status in ['paid', 'rejected']:
+                    order = MyOrder.objects.get(id=order_id)
+                    order.status = order_status
+                    order.save()
+                    if order.status == 'paid':
+                        minus_quantity(order.id, order.city_stock.slug)
+                        #sync_order_pay_to_1C(order)
+
+                    kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
+                              'link_id': order.id, 'status': 'order'}
+                    Notification.objects.create(**kwargs)
+
+                    return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+                return Response({'status': 'Error', 'text': 'Permission denied!'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'status': 'Error', 'text': 'order_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+
 
