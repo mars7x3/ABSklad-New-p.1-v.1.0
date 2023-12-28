@@ -90,7 +90,8 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
         rep['user_info'] = MyUserSerializer(instance.user, context=self.context).data
         rep['amount_crm'] = instance.wallet.amount_crm
         rep['amount_1c'] = instance.wallet.amount_1c
-        rep['amount_paid'] = sum(instance.orders.filter(is_active=True, status__in=['paid', 'wait']).values_list('price'))
+        rep['amount_paid'] = sum(instance.orders.filter(
+            is_active=True, status__in=['paid', 'wait']).values_list('price', flat=True))
         last_trans = instance.user.money_docs.filter(is_active=True).last()
         rep['last_trans'] = last_trans.created_at if last_trans else None
         return rep
