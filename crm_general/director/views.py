@@ -2,7 +2,7 @@ import datetime
 
 from django.db.models import Case, When
 from django.utils import timezone
-from rest_framework import viewsets, status, mixins, generics
+from rest_framework import viewsets, status, mixins, generics, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,6 +21,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
     DirectorKPIListSerializer, DirectorStaffListSerializer
+from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
 from general_service.models import Stock, City
@@ -832,5 +833,15 @@ class DirectorKPIListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = KPI.objects.all()
     serializer_class = DirectorKPIListSerializer
-
+    filter_backends = (filters.SearchFilter, FilterByFields,)
+    search_fields = ('executor__name',)
+    filter_by_fields = {
+        "status": {
+            "by": "executor__status",
+            "type": "string",
+            "addition_schema_params": {
+                "enum": [order_status for order_status, _ in MyOrder.TYPE_STATUS]
+            }
+        }
+    }
 
