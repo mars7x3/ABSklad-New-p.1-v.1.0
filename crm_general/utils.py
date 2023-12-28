@@ -26,111 +26,84 @@ def convert_bool_string_to_bool(bool_str: str) -> bool:
 
 
 def get_motivation_done(dealer):
-    response_data = []
+    motivations_data = []
+    motivations = dealer.motivations.filter(is_active=True)
 
-    for motivation in dealer.motivations.filter(is_active=True):
-        motivation_data = {"title": motivation.title}
+    for motivation in motivations:
+        motivation_data = {
+            "title": motivation.title,
+            "start_date": motivation.start_date,
+            "end_date": motivation.end_date,
+            "is_active": motivation.is_active,
+            "conditions": []
+        }
 
-        for condition in motivation.conditions.all():
-            match condition.status:
-                case "category":
-                    category_condition_data = condition.condition_cats.annotate(
-                        status=Value(condition.status),
-                        category_title=F("category__title"),
-                        total_count=F("count"),
-                        done_count=Sum(
-                            "category__order_products__count",
-                            filter=Q(
-                                category__order_products__order__is_active=True,
-                                category__order_products__order__status__in=(
-                                    'Отправлено', 'Оплачено', 'Успешно', 'Ожидание'
-                                ),
-                                category__order_products__order__paid_at__gte=motivation.start_date
-                            ),
-                            output_field=FloatField()
-                        ),
-                        per=Round(
-                            Sum(
-                                "category__order_products__count",
-                                filter=Q(
-                                    category__order_products__order__is_active=True,
-                                    category__order_products__order__status__in=(
-                                        'Отправлено', 'Оплачено', 'Успешно', 'Ожидание'
-                                    ),
-                                    category__order_products__order__paid_at__gte=motivation.start_date
-                                )
-                            ) * Value(100) / F("count"),
-                            precision=2,
-                            output_field=FloatField()
-                        )
-                    ).values("category_title", "total_count", "done_count", "per")[0]
+        conditions = motivation.conditions.all()
+        orders = dealer.orders.filter(
+            is_active=True, status__in=['sent', 'sent', 'success', 'wait'],
+            paid_at__gte=motivation.start_date)
 
-                    if not motivation_data.get("categories"):
-                        motivation_data["categories"] = []
+        for condition in conditions:
+            condition_data = {
+                "status": condition.status,
+                "presents": []
+            }
 
-                    motivation_data["categories"].append(category_condition_data)
-
-                case "product":
-                    product_condition_data = condition.condition_prods.annotate(
-                        status=Value(condition.status),
-                        product_title=F("product__title"),
-                        total_count=F("count"),
-                        done_count=Sum(
-                            "product__order_products__count",
-                            filter=Q(
-                                product__order_products__order__is_active=True,
-                                product__order_products__order__status__in=(
-                                    'Отправлено', 'Оплачено', 'Успешно', 'Ожидание'
-                                ),
-                                product__order_products__order__paid_at__gte=motivation.start_date
-                            ),
-                            output_field=FloatField()
-                        ),
-                        per=Round(
-                            Sum(
-                                "product__order_products__count",
-                                filter=Q(
-                                    product__order_products__order__is_active=True,
-                                    product__order_products__order__status__in=(
-                                        'Отправлено', 'Оплачено', 'Успешно', 'Ожидание'
-                                    ),
-                                    product__order_products__order__paid_at__gte=motivation.start_date
-                                )
-                            ) * Value(100) / F("count"),
-                            precision=2,
-                            output_field=FloatField()
-                        )
-                    ).values("product_title", "total_count", "done_count", "per")[0]
-
-                    if not motivation_data.get("products"):
-                        motivation_data["products"] = []
-
-                    motivation_data["products"].append(product_condition_data)
-
-                case 'money':
-                    money_condition_data = (
-                        dealer.orders.filter(is_active=True, aid_at__gte=motivation.start_date,
-                                             status__in=['Отправлено', 'Оплачено', 'Успешно', 'Ожидание'])
-                        .aggregate(
-                            status=Value(condition.status),
-                            total_amount=Value(condition.money),
-                            done_amount=Sum("price", output_field=FloatField()),
-                            per=Round(
-                                Sum("price") * Value(100) / Value(condition.money),
-                                precision=2,
-                                output_field=FloatField()
-                            )
-                        )
+            if condition.status == 'category':
+                condition_data["condition_cats"] = []
+                condition_cats = condition.condition_cats.all()
+                for condition_cat in condition_cats:
+                    category_data = {
+                        "count": condition_cat.count,
+                        "category": condition_cat.category.id,
+                        "category_title": condition_cat.category.title
+                    }
+                    condition_data["condition_cats"].append(category_data)
+                    total_count = sum(
+                        order_products.count
+                        for order in orders
+                        for order_products in order.order_products.filter(category=condition_cat.category)
                     )
-                    money_condition_data["money"] = money_condition_data
+                    condition_data['done'] = total_count
+                    condition_data['per'] = round(total_count * 100 / condition_cat.count)
 
-            presents = []
-            for present_data in condition.presents.values("status", "product", "money", "text"):
-                present_data["money"] = float(present_data["money"])
-                presents.append(present_data)
+            elif condition.status == 'product':
+                condition_data["condition_prods"] = []
+                condition_prods = condition.condition_prods.all()
+                for condition_prod in condition_prods:
+                    product_data = {
+                        "count": condition_prod.count,
+                        "product": condition_prod.product.id,
+                        "product_title": condition_prod.product.title
+                    }
+                    condition_data["condition_prods"].append(product_data)
 
-            motivation_data["presents"] = presents
-            response_data.append(motivation_data)
+                    total_count = sum(
+                        order_products.count
+                        for order in orders
+                        for order_products in order.order_products.filter(ab_product=condition_prod.product)
+                    )
+                    condition_data['done'] = total_count
+                    condition_data['per'] = round(total_count * 100 / condition_prod.count)
 
-        pprint(response_data)
-        # return response_data
+            elif condition.status == 'money':
+                condition_data["money"] = condition.money
+                total_count = sum(orders.values_list('price', flat=True))
+                condition_data['done'] = total_count
+                condition_data['per'] = round(total_count * 100 / condition.money)
+
+            presents = condition.presents.all()
+            for p in presents:
+                present_data = {
+                    "status": p.status,
+                    "money": p.money,
+                    "text": p.text
+                }
+
+                condition_data["presents"].append(present_data)
+
+            motivation_data["conditions"].append(condition_data)
+
+        motivations_data.append(motivation_data)
+
+    return motivations_data
