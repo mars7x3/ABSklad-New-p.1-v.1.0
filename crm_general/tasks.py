@@ -8,9 +8,9 @@ from product.models import ProductCount
 def minus_quantity(order_id, stock_id):
     order = MyOrder.objects.get(id=order_id)
     stock = Stock.objects.get(id=stock_id)
-    products_id = order.order_products.all().values_list('product_id', 'count')
-    products = ProductCount.objects.filter(stoc=stock)
+    products_id = order.order_products.all().values_list('ab_product_id', 'count')
+    counts = ProductCount.objects.filter(stock=stock)
     for p_id, count in products_id:
-        quantity = products.get(product__id=p_id)
+        quantity = counts.get(product_id=p_id)
         quantity.count -= count
         quantity.save()
