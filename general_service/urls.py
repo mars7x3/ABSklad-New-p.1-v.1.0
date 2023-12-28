@@ -10,7 +10,7 @@ router.register('dealer/city/list', CityListView)
 
 urlpatterns = [
     path('dealer/requisite/list/', RequisiteListView.as_view()),
-    path('dealer/collection/category/list/', RequisiteCategoryListView.as_view()),
+    path('dealer/requisite/category/list/', RequisiteCategoryListView.as_view()),
 
     path('', include(router.urls)),
 ]
