@@ -11,10 +11,10 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from account.main_functions import notifications_info, change_dealer_profile
-from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile
+from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile, BalanceHistory
 from account.permissions import IsAuthor
 from account.serializers import DealerMeInfoSerializer, NotificationSerializer, AccountStockSerializer, \
-    DealerStoreSerializer, BalancePlusSerializer
+    DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer
 from account.utils import random_code
 
 
@@ -164,7 +164,7 @@ class BalancePlusView(APIView):
         return Response({'text': 'amount and files is required!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class BalanceHistoryListView(viewsets.ReadOnlyModelViewSet):
+class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = BalancePlus.objects.all()
     serializer_class = BalancePlusSerializer
@@ -195,8 +195,14 @@ class BalanceHistoryListView(viewsets.ReadOnlyModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
+class BalanceHistoryListView(mixins.ListModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = BalanceHistory.objects.filter(is_active=True)
+    serializer_class = BalanceHistorySerializer
 
-
+    def get_queryset(self):
+        queryset = self.request.user.dealer_profile.balance_histories.all()
+        return queryset
 
 
 
