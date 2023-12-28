@@ -340,7 +340,7 @@ class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet)
             return self.queryset
           
           
- class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Stock.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
     pagination_class = CRMPaginationClass
