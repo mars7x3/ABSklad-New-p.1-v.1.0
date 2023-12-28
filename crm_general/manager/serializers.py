@@ -595,6 +595,7 @@ class BalancePlusSerializer(serializers.ModelSerializer):
     class Meta:
         model = BalancePlus
         fields = ("id", "dealer", "user_id", "amount", "files")
+        read_only_fields = ("dealer",)
 
     def validate(self, attrs):
         user = attrs.pop('user_id', None)
