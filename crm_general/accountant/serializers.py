@@ -209,13 +209,14 @@ class AccountantStockListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         warehouse_profiles = instance.warehouse_profiles.values_list('user__name')
-        profiles = [profile for profile in warehouse_profiles]
+        profiles = [name for names in warehouse_profiles for name in names]
         rep['managers'] = profiles
         stocks_count_crm = sum(instance.counts.all().values_list('count_crm', flat=True))
         stock = sum(instance.counts.all().values_list('count_norm', flat=True))
         rep['stocks_count_crm'] = stocks_count_crm
         rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
         rep['total_price'] = sum(instance.city.prices.all().values_list('price', flat=True))
+        rep['city_title'] = instance.city.title
         rep['stock'] = stocks_count_crm - stock
         return rep
 
