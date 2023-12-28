@@ -198,6 +198,20 @@ class AccountantTotalEcoBalanceView(APIView):
 
 class BalancePlusListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = BalancePlus.objects.all()
+    queryset = BalancePlus.objects.filter(is_moderation=False)
     serializer_class = BalancePlusListSerializer
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        is_success = request.query_params.get('is_success')
+        if is_success:
+            kwargs['is_success'] = bool(int(is_success))
+
+        queryset = queryset.filter(**kwargs)
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+
+        return Response(serializer, status=status.HTTP_200_OK)
 
