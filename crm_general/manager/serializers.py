@@ -6,7 +6,6 @@ from django.db.models import F, Q, Sum, Count, Value, DecimalField, FloatField
 from django.db.models.functions import Round
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-
 from rest_framework import serializers
 
 from account.models import (
@@ -15,6 +14,7 @@ from account.models import (
 )
 from crm_general.models import CRMTask, CRMTaskResponse
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
+from crm_general.utils import get_motivation_done
 from general_service.models import Stock
 from general_service.serializers import CitySerializer
 from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, ReturnOrder, ReturnOrderProduct
@@ -172,11 +172,12 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
     status = serializers.SerializerMethodField(read_only=True)
     is_active = serializers.SerializerMethodField(read_only=True)
+    motivations = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
         fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount", "status", "is_active")
+                  "balance_amount", "status", "is_active", "motivations")
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance):
@@ -208,6 +209,9 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 
     def get_is_active(self, instance) -> bool:
         return instance.user.is_active
+
+    def get_motivations(self, instance):
+        return get_motivation_done(instance)
 
 
 class DealerBirthdaySerializer(serializers.ModelSerializer):

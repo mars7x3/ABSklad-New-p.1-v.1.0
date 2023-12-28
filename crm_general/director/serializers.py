@@ -6,12 +6,13 @@ from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
-from crm_general.director.utils import get_motivation_done, get_motivation_margin, kpi_info
+from crm_general.director.utils import get_motivation_margin, kpi_info
 from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade, KPI, KPIItem
-from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
+from crm_general.serializers import CRMCitySerializer, ABStockSerializer
+from crm_general.utils import get_motivation_done
 from general_service.models import Stock, City, StockPhone
-from order.models import MyOrder, Cart, CartProduct
-from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
+from order.models import MyOrder, CartProduct
+from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice
 from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
     ConditionProduct
 
