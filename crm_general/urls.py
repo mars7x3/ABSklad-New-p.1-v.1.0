@@ -3,6 +3,7 @@ from rest_framework.routers import SimpleRouter
 
 from .accountant.views import AccountantOrderListView, AccountantProductListView, AccountantCollectionListView, \
     AccountantCategoryView, AccountantStockViewSet
+
 from .manager.views import (
     OrderListAPIView as ManagerOrderListView,
     OrderRetrieveAPIView as ManagerOrderRetrieveView,
