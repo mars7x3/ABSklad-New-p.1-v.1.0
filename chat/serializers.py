@@ -19,7 +19,8 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at")
-        extra_kwargs = {"id": {"read_only": True}, "chat": {"write_only": True}}
+        extra_kwargs = {"chat": {"write_only": True}}
+        read_only_fields = ("id", "sender", "is_read")
 
     def get_chat_id(self, instance):
         return str(getattr(instance, 'chat_id'))
