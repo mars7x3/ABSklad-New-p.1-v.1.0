@@ -33,7 +33,7 @@ urlpatterns = [
     path('api/v1/', include('order.urls')),
     path('api/v1/', include('product.urls')),
     path('api/v1/', include('promotion.urls')),
-    path('api/v1/chat/', include('chat.urls')),
+    path('ws/chat/', include('chat.urls')),
     path('api/v1/', include('crm_general.urls'))
 ]
 
