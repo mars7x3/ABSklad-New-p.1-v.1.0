@@ -224,12 +224,13 @@ SIMPLE_JWT = {
 }
 
 LOGGING = {
+    "version": 1,
     "loggers": {
-        'daphne': {
-            'handlers': [
-                'console',
+        "daphne": {
+            "handlers": [
+                "console",
             ],
-            'level': 'DEBUG'
+            "level": "DEBUG"
         }
     }
 }
