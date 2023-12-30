@@ -4,6 +4,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.text import slugify
 
 from account.models import DealerProfile
 
@@ -27,7 +28,7 @@ def get_limit_and_offset(req_data: dict[str, Any], max_page_size: int, default_p
 
 def get_chat_receivers(chat):
     dealer = chat.dealer
-    receivers = [dealer.username]
+    receivers = [slugify(dealer.username)]
 
     profile = get_dealer_profile(dealer)
     if not profile or not profile.city:
@@ -39,7 +40,7 @@ def get_chat_receivers(chat):
             manager_profile__city=profile.city
         ).values_list("username", flat=True)
     )
-    receivers += manager_usernames
+    receivers += list(map(lambda username: slugify(username), manager_usernames))
     return receivers
 
 
