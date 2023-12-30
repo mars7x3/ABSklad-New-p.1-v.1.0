@@ -36,7 +36,7 @@ def get_chat_receivers(chat):
     manager_usernames = list(
         get_user_model().objects.filter(
             status='manager',
-            staff_profile__city=profile.city
+            manager_profile__city=profile.city
         ).values_list("username", flat=True)
     )
     receivers += manager_usernames
@@ -52,7 +52,7 @@ def get_dealer_profile(user) -> DealerProfile | None:
 
 def get_manager_profile(user) -> DealerProfile | None:
     try:
-        return user.staff_profile
+        return user.manager_profile
     except ObjectDoesNotExist:
         return
 
