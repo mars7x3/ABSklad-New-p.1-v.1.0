@@ -14,11 +14,16 @@ class MessageAttachmentSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     chat_id = serializers.SerializerMethodField(read_only=True)
-    attachments = MessageAttachmentSerializer(many=True, required=False)
+    attachments = MessageAttachmentSerializer(many=True, read_only=True)
+    files = serializers.ListField(
+        child=serializers.FileField(allow_empty_file=False, required=True),
+        required=True,
+        write_only=True
+    )
 
     class Meta:
         model = Message
-        fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at")
+        fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at", "files")
         extra_kwargs = {"chat": {"write_only": True}}
         read_only_fields = ("id", "sender", "is_read")
 
@@ -30,11 +35,11 @@ class MessageSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        attachments = validated_data.pop("attachments", None)
+        files = validated_data.pop("files", None)
         message = super().create(validated_data)
-        if attachments:
+        if files:
             MessageAttachment.objects.bulk_create(
-                [MessageAttachment(message=message, file=attach['file']) for attach in attachments]
+                [MessageAttachment(message=message, file=file) for file in files]
             )
         ws_send_message(message.chat, self.to_representation(message))
         return message
