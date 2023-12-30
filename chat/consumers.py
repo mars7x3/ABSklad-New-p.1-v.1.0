@@ -67,7 +67,12 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
                 break
 
     async def receive(self, text_data=None, bytes_data=None):
-        req_data = json.loads(text_data)
+        try:
+            req_data = json.loads(text_data)
+        except json.JSONDecodeError:
+            await self.send_error_message(reason="support only json!")
+            return
+
         input_command = req_data.get('command')
 
         if not input_command:
