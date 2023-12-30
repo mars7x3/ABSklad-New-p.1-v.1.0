@@ -101,7 +101,7 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
     filter_by_fields = {
         "start_date": {"by": "user__date_joined__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date},
-        "status": {"by": "dealer__status_id", "type": "number"}
+        "status": {"by": "dealer_status_id", "type": "number"}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
@@ -319,6 +319,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
                        "pipline": string_date_to_date},
         "end_date": {"by": "dealer__balance_histories__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
+        "status": {"by": "dealer__dealer_status_id", "type": "number"}
     }
 
     def get_queryset(self):
