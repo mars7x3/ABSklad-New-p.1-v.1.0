@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 
 from chat.models import Chat, Message, MessageAttachment
-from chat.utils import get_dealer_name, get_dealer_profile
+from chat.utils import get_dealer_name, get_dealer_profile, ws_send_message
 
 
 class MessageAttachmentSerializer(serializers.ModelSerializer):
@@ -31,6 +31,7 @@ class MessageSerializer(serializers.ModelSerializer):
             MessageAttachment.objects.bulk_create(
                 [MessageAttachment(message=message, file=attach['file']) for attach in attachments]
             )
+        ws_send_message(message.chat, self.to_representation(message))
         return message
 
 

@@ -1,5 +1,7 @@
 from typing import Any
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -61,3 +63,11 @@ def get_dealer_name(chat):
     if profile:
         return profile.name
     return dealer.get_full_name() or dealer.email
+
+
+def ws_send_message(chat, message_data):
+    channel_layer = get_channel_layer()
+    event = {'type': 'send_message', 'data': {"message_type": "new_message", "results": message_data}}
+
+    for receiver in set(get_chat_receivers(chat)):
+        async_to_sync(channel_layer.group_send)(receiver, event)

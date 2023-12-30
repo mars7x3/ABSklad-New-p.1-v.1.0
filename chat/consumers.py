@@ -142,13 +142,13 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
         data = await create_db_message(self._user.id, chat_id, text)
         receivers = await get_chat_receivers_by_chat(chat_id)
         if not receivers:
-            await self.send_success_message(message_type, data=data)
+            await self.send_success_message("new_message", data=data)
             return
 
         for receiver in receivers or []:
             await self.send_success_message(
                 receiver=receiver,
-                message_type=message_type,
+                message_type="new_message",
                 data={"status": data}
             )
 
