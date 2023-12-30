@@ -25,6 +25,10 @@ class MessageSerializer(serializers.ModelSerializer):
     def get_chat_id(self, instance):
         return str(getattr(instance, 'chat_id'))
 
+    def validate(self, attrs):
+        attrs['sender'] = self.context["request"].user
+        return attrs
+
     def create(self, validated_data):
         attachments = validated_data.pop("attachments", None)
         message = super().create(validated_data)
