@@ -3,6 +3,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.utils.encoding import force_str
 from django.utils.functional import cached_property
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from chat.async_queries import (
@@ -21,7 +22,7 @@ class AsyncBaseChatConsumer(AsyncWebsocketConsumer):
     @cached_property
     def room(self):
         if not self._user.is_anonymous:
-            return self._user.username
+            return slugify(self._user.username)
 
     async def validate_user(self):
         pass
