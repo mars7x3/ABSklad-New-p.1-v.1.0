@@ -9,11 +9,8 @@ from chat.utils import get_dealer_name, get_manager_profile, get_chat_receivers
 @database_sync_to_async
 def get_chats_by_dealer(user, limit, offset):
     chats = Chat.objects.filter(dealer_id=user.id)[offset:offset + limit]
-    request = HttpRequest()
-    request.user = user
-    serializer = ChatSerializer(instance=chats, many=True, context={'request': request})
+    serializer = ChatSerializer(instance=chats, many=True)
     data = serializer.data
-    request.close()
     return data
 
 
