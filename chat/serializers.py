@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-
+from account.models import MyUser
 from chat.models import Chat, Message, MessageAttachment
 from chat.utils import get_dealer_name, get_dealer_profile, ws_send_message
 
@@ -12,7 +12,14 @@ class MessageAttachmentSerializer(serializers.ModelSerializer):
         extra_kwargs = {"id": {"read_only": True}}
 
 
+class SenderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ("id", "name", "image")
+
+
 class MessageSerializer(serializers.ModelSerializer):
+    sender = SenderSerializer(many=False, read_only=True)
     chat_id = serializers.SerializerMethodField(read_only=True)
     attachments = MessageAttachmentSerializer(many=True, read_only=True)
     files = serializers.ListField(
@@ -25,7 +32,7 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at", "files")
         extra_kwargs = {"chat": {"write_only": True}}
-        read_only_fields = ("id", "sender", "is_read")
+        read_only_fields = ("id", "is_read")
 
     def get_chat_id(self, instance):
         return str(getattr(instance, 'chat_id'))
