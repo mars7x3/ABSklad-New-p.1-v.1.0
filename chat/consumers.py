@@ -143,7 +143,7 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
         data = await create_db_message(self._user.id, chat_id, text)
         receivers = await get_chat_receivers_by_chat(chat_id)
         if not receivers:
-            await self.send_success_message("new_message", data=data)
+            await self.send_success_message(message_type, data=data)
             return
 
         for receiver in receivers or []:
@@ -188,7 +188,6 @@ class ManagerConsumer(AsyncCommandConsumer):
 
         limit, offset = get_limit_and_offset(req_data, max_page_size=20)
         chats = await get_chats_by_city(
-            self._user,
             city_id=city_id,
             limit=limit,
             offset=offset,
