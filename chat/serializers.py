@@ -80,7 +80,7 @@ class ChatSerializer(serializers.ModelSerializer):
             last_message = messages.filter(sender=instance.dealer).order_by('-created_at').first()
 
         if last_message:
-            return MessageSerializer(instance=last_message, many=False, context=self.context).data
+            return MessageSerializer(instance=last_message, many=False).data
 
     def get_new_messages_count(self, instance):
         if self.user == instance.dealer:
