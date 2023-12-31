@@ -69,9 +69,8 @@ class ChatSerializer(serializers.ModelSerializer):
         if self.user == instance.dealer:
             return
 
-        profile = get_dealer_profile(instance.dealer)
-        if profile:
-            return self.context['request'].build_absolute_uri(profile.image.url) if profile.image else None
+        if instance.dealer.image:
+            return self.context["request"].build_absolute_uri(instance.dealer.image.url)
 
     def get_last_message(self, instance):
         messages = instance.messages
