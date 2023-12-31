@@ -60,10 +60,7 @@ def get_manager_profile(user) -> DealerProfile | None:
 
 def get_dealer_name(chat):
     dealer = chat.dealer
-    profile = get_dealer_profile(dealer)
-    if profile:
-        return profile.name
-    return dealer.get_full_name() or dealer.email
+    return dealer.name or dealer.email
 
 
 def ws_send_message(chat, message_data):
