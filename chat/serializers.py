@@ -70,7 +70,7 @@ class ChatSerializer(serializers.ModelSerializer):
             return
 
         if instance.dealer.image:
-            return self.context["request"].build_absolute_uri(instance.dealer.image.url)
+            return instance.dealer.image.url
 
     def get_last_message(self, instance):
         messages = instance.messages
