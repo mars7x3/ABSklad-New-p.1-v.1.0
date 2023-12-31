@@ -82,10 +82,8 @@ def get_chat_messages(chat_id: str, limit, offset, search: str = None):
         base_queryset = base_queryset.filter(dealer__dealer_profile__name__icontains=search)
 
     queryset = base_queryset[offset:offset + limit]
-    request = HttpRequest()
-    serializer = MessageSerializer(instance=queryset, many=True, context={"request": request})
+    serializer = MessageSerializer(instance=queryset, many=True)
     data = serializer.data
-    request.close()
     return data
 
 
