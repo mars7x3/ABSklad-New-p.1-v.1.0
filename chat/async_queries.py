@@ -6,10 +6,11 @@ from chat.utils import get_dealer_name, get_manager_profile, get_chat_receivers
 
 
 @database_sync_to_async
-def get_chats_by_dealer(user, limit, offset):
+def get_chats_by_dealer(current_user, dealer_id, limit, offset):
     return ChatSerializer(
-        instance=Chat.objects.filter(dealer_id=user.id)[offset:offset + limit],
-        many=True
+        instance=Chat.objects.filter(dealer_id=dealer_id)[offset:offset + limit],
+        many=True,
+        context={"user": current_user}
     ).data
 
 
@@ -21,12 +22,16 @@ def get_manager_city_id(user):
 
 
 @database_sync_to_async
-def get_chats_by_city(city_id: int, limit: int, offset: int, search: str = None):
+def get_chats_by_city(current_user, city_id: int, limit: int, offset: int, search: str = None):
     queryset = Chat.objects.filter(dealer__dealer_profile__city_id=city_id)
     if search:
         queryset = queryset.filter(dealer__name__icontains=search)
 
-    return ChatSerializer(instance=queryset[offset:offset + limit], many=True).data
+    return ChatSerializer(
+        instance=queryset[offset:offset + limit],
+        many=True,
+        context={"user": current_user}
+    ).data
 
 
 @database_sync_to_async

@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from account.models import MyUser
 from chat.models import Chat, Message, MessageAttachment
-from chat.utils import get_dealer_name, get_dealer_profile, ws_send_message
+from chat.utils import get_dealer_name, ws_send_message
 
 
 class MessageAttachmentSerializer(serializers.ModelSerializer):
@@ -64,7 +64,10 @@ class ChatSerializer(serializers.ModelSerializer):
 
     @property
     def user(self):
-        return self.context['request'].user
+        request = self.context.get("request")
+        if request:
+            return request.user
+        return self.context.get('user')
 
     def get_name(self, instance):
         if self.user == instance.dealer:
