@@ -45,7 +45,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         user = self.context["request"].user
-        chat = attrs["chat_id"]
+        chat = attrs.pop("chat_id", None) or self.instance.chat
 
         if user.is_dealer and chat.dealer != user:
             raise serializers.ValidationError({"detail": "У вас нет доступа"})
@@ -59,6 +59,7 @@ class MessageSerializer(serializers.ModelSerializer):
             if not Chat.objects.filter(dealer__dealer_profile__city_id=manager_profile.city).exists():
                 raise serializers.ValidationError({"detail": "У вас нет доступа"})
 
+        attrs["chat"] = chat
         attrs['sender'] = user
         return attrs
 
