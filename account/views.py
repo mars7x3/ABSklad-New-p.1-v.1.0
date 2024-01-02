@@ -75,6 +75,9 @@ class NotificationCountView(APIView):
 
 
 class ForgotPwdView(APIView):
+    """
+    email
+    """
     def post(self, request):
         if isinstance(request.user, AnonymousUser):
             email = request.data.get('email')
@@ -93,6 +96,9 @@ class ForgotPwdView(APIView):
 
 
 class VerifyCodeView(APIView):
+    """
+    email, code
+    """
     def post(self, request):
         email = request.data.get('email')
         user = get_user_model().objects.filter(email=email, is_active=True, status='dealer').first()
@@ -106,13 +112,16 @@ class VerifyCodeView(APIView):
 
 
 class ChangePwdView(APIView):
+    """
+    email, code, password
+    """
     def post(self, request):
         email = request.data.get('email')
         user = get_user_model().objects.filter(email=email, is_active=True, status='dealer').first()
         if user:
             verify_code = user.verify_codes.first()
             request_code = request.data.get('code')
-            password = request.data.get('password')
+            password = request.data.get('pwd')
             if verify_code.code == request_code:
                 user.pwd = password
                 user.set_password(password)
