@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
 from account.models import DealerProfile
+from chat.constants import CHATS_IGNORE_COLS, CHAT_FIELDS_SUBSTITUTES
 
 
 def convert_to_int(page, default: int):
@@ -69,3 +70,21 @@ def ws_send_message(chat, message_data):
 
     for receiver in set(get_chat_receivers(chat)):
         async_to_sync(channel_layer.group_send)(receiver, event)
+
+
+def build_chats_data(chats_data) -> list[dict[str, Any]]:
+    collected_data = []
+    for chat_data in chats_data:
+        data = {}
+        for field, value in chat_data.items():
+            if field in CHATS_IGNORE_COLS:
+                continue
+
+            if value and field in CHAT_FIELDS_SUBSTITUTES:
+                value = CHAT_FIELDS_SUBSTITUTES[field](value)
+
+            data[field] = value
+
+        if data:
+            collected_data.append(data)
+    return collected_data
