@@ -7,4 +7,10 @@ class IsAuthor(BasePermission):
         if obj.dealer.user == request.user:
             return True
         return False
-        
+
+
+class IsUserAuthor(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if obj == request.user:
+            return True
+        return False

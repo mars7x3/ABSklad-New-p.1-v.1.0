@@ -20,32 +20,3 @@ def notifications_info(user):
         }
 
     return response_data
-
-
-def change_dealer_profile(request):
-    code = request.data.get('code')
-    phone = request.data.get('phone')
-    name = request.data.get('name')
-    email = request.data.get('email')
-    pwd = request.data.get('pwd')
-    image = request.FILES.get('image')
-    user = request.user
-    dealer_profile = user.dealer_profile
-    if name:
-        dealer_profile.name = name
-    if image:
-        dealer_profile.image = image
-    if code:
-        if code == user.verify_codes.first():
-            if phone:
-                dealer_profile.phone = phone
-            if email:
-                user.email = email
-            if pwd:
-                user.pwd = pwd
-                user.set_password(pwd)
-        else:
-            return False
-    user.save()
-    dealer_profile.save()
-    return True

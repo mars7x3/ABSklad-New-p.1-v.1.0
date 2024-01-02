@@ -103,3 +103,15 @@ class BalanceHistorySerializer(serializers.ModelSerializer):
         exclude = ('is_active', 'dealer')
 
 
+class DealerProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ['email', 'pwd', 'name', 'image', 'phone']
+
+    def update(self, instance, validated_data):
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.pwd = validated_data.get('pwd')
+        instance.set_password(validated_data.get('pwd'))
+        instance.save()
+        return instance
