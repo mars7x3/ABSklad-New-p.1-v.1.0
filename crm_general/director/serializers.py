@@ -915,7 +915,7 @@ class DirectorKPICRUDSerializer(serializers.ModelSerializer):
 class DirectorKKPIItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = KPIItem
-        fields = "__all__"
+        exclude = ('kpi', 'id')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
