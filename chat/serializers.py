@@ -27,12 +27,17 @@ class MessageSerializer(serializers.ModelSerializer):
         required=True,
         write_only=True
     )
+    is_dealer_message = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Message
-        fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at", "files")
+        fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at", "files",
+                  "is_dealer_message")
         extra_kwargs = {"chat": {"write_only": True}}
         read_only_fields = ("id", "is_read")
+
+    def get_is_dealer_message(self, instance) -> bool:
+        return instance.sender.status == 'dealer'
 
     def get_chat_id(self, instance):
         return str(getattr(instance, 'chat_id'))
