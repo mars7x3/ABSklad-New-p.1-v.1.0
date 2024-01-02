@@ -1,20 +1,21 @@
 import datetime
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status, mixins, viewsets
+from rest_framework import status, mixins, viewsets, generics
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.main_functions import notifications_info, change_dealer_profile
-from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile, BalanceHistory
-from account.permissions import IsAuthor
+from account.main_functions import notifications_info
+from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile, BalanceHistory, MyUser
+from account.permissions import IsAuthor, IsUserAuthor
 from account.serializers import DealerMeInfoSerializer, NotificationSerializer, AccountStockSerializer, \
-    DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer
+    DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer, DealerProfileUpdateSerializer
 from account.utils import random_code
 
 
@@ -75,12 +76,17 @@ class NotificationCountView(APIView):
 
 class ForgotPwdView(APIView):
     def post(self, request):
-        email = request.data.get('email')
-        user = get_user_model().objects.filter(email=email, is_active=True, status='dealer').first()
+        if isinstance(request.user, AnonymousUser):
+            email = request.data.get('email')
+            user = get_user_model().objects.filter(email=email, is_active=True, status='dealer').first()
+        else:
+            email = request.user.email
+            user = request.user
+
         if user:
-            request.user.verify_codes.all().delete()
-            verify_code = VerifyCode.objects.create(user=request.user, code=random_code())
-            # send code to phone or email
+            # user.verify_codes.all().delete()
+            # verify_code = VerifyCode.objects.create(user=user, code=random_code())
+            # send_code_to_phone(user.phone, verify_code.code)
 
             return Response({'text': 'Код отправлен на телефон!'}, status=status.HTTP_200_OK)
         return Response({'text': 'Пользователь не найден!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -104,10 +110,10 @@ class ChangePwdView(APIView):
         email = request.data.get('email')
         user = get_user_model().objects.filter(email=email, is_active=True, status='dealer').first()
         if user:
-            verify_code = user.verify_codes.first().code
+            verify_code = user.verify_codes.first()
             request_code = request.data.get('code')
             password = request.data.get('password')
-            if verify_code == request_code:
+            if verify_code.code == request_code:
                 user.pwd = password
                 user.set_password(password)
                 user.save()
@@ -128,25 +134,10 @@ class DealerStoreCRUDView(viewsets.ModelViewSet):
         return queryset
 
 
-class ChangeProfileView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        if change_dealer_profile(request):
-            return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
-        return Response({'text': 'Неверный код!'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class SendCodeView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        to_type = request.data.get('to')
-        if to_type == 'pwd' or to_type == 'email':
-            pass
-        elif to_type == 'phone':
-            pass
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+class ChangeProfileView(mixins.UpdateModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated, IsUserAuthor]
+    serializer_class = DealerProfileUpdateSerializer
+    queryset = MyUser.objects.all()
 
 
 class BalancePlusView(APIView):

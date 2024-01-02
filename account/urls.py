@@ -7,6 +7,7 @@ router = DefaultRouter()
 router.register('dealer-store-crud', DealerStoreCRUDView, basename="dealer-store-crud")
 router.register('dealer/balance/plus/list', BalancePlusListView)  # balance list
 router.register('dealer/transaction/history/list', BalanceHistoryListView)
+router.register('dealer/profile/change', ChangeProfileView)  # change dealer profile
 
 urlpatterns = [
     path('user/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -19,12 +20,9 @@ urlpatterns = [
     path('dealer/notification/u/', NotificationReadView.as_view()),  # notification is_read
     path('dealer/notification/info/', NotificationCountView.as_view()),  # notification info
 
-    # path('dealer/pwd/forgot/', ForgotPwdView.as_view()),  # forgot pwd
-    # path('dealer/pwd/verify-code/', VerifyCodeView.as_view()),  # verify code
-    # path('dealer/pwd/change/', ChangePwdView.as_view()),  # change pwd
-    #
-    # path('dealer/profile/change/', ChangeProfileView.as_view()),  # change dealer profile
-    # path('dealer/send-code/', SendCodeView.as_view()),  # send code to email or phone
+    path('dealer/send-code/', ForgotPwdView.as_view()),  # forgot pwd
+    path('dealer/pwd/verify-code/', VerifyCodeView.as_view()),  # verify code
+    path('dealer/pwd/change/', ChangePwdView.as_view()),  # change pwd
 
     path('dealer/balance/plus/', BalancePlusView.as_view()),  # balance plus
 
