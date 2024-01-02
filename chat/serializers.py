@@ -7,16 +7,21 @@ from chat.utils import get_dealer_name, ws_send_message
 
 
 class MessageAttachmentSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(use_url=False, read_only=True)
+
     class Meta:
         model = MessageAttachment
         fields = ("id", "file")
-        extra_kwargs = {"id": {"read_only": True}}
+        read_only_fields = ("id",)
 
 
 class SenderSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(use_url=False, read_only=True)
+
     class Meta:
         model = MyUser
         fields = ("id", "name", "image")
+        read_only_fields = ("id", "name")
 
 
 class MessageSerializer(serializers.ModelSerializer):

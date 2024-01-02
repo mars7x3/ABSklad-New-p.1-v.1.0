@@ -157,6 +157,5 @@ CITY_SEARCH_CHATS_SQL = """
 CHATS_IGNORE_COLS = ("total_messages_count", "last_message_created")
 CHAT_FIELDS_SUBSTITUTES = {
     "last_message": json.loads,
-    "id": str,
-    "image": default_storage.url
+    "id": str
 }
