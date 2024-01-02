@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from account.models import MyUser
@@ -20,7 +21,11 @@ class SenderSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = SenderSerializer(many=False, read_only=True)
-    chat_id = serializers.SerializerMethodField(read_only=True)
+    chat_id = serializers.PrimaryKeyRelatedField(
+        queryset=Chat.objects.all(),
+        required=True,
+        source="chat"
+    )
     attachments = MessageAttachmentSerializer(many=True, read_only=True)
     files = serializers.ListField(
         child=serializers.FileField(allow_empty_file=False, required=True),
@@ -31,19 +36,30 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at", "files",
+        fields = ("id", "chat_id", "sender", "text", "is_read", "attachments", "created_at", "files",
                   "is_dealer_message")
-        extra_kwargs = {"chat": {"write_only": True}}
         read_only_fields = ("id", "is_read")
 
     def get_is_dealer_message(self, instance) -> bool:
         return instance.sender.status == 'dealer'
 
-    def get_chat_id(self, instance):
-        return str(getattr(instance, 'chat_id'))
-
     def validate(self, attrs):
-        attrs['sender'] = self.context["request"].user
+        user = self.context["request"].user
+        chat = attrs["chat_id"]
+
+        if user.is_dealer and chat.dealer != user:
+            raise serializers.ValidationError({"detail": "У вас нет доступа"})
+
+        if user.is_manager:
+            try:
+                manager_profile = user.manager_profile
+            except ObjectDoesNotExist:
+                raise serializers.ValidationError({"detail": "У вас нет доступа"})
+
+            if not Chat.objects.filter(dealer__dealer_profile__city_id=manager_profile.city).exists():
+                raise serializers.ValidationError({"detail": "У вас нет доступа"})
+
+        attrs['sender'] = user
         return attrs
 
     def create(self, validated_data):
