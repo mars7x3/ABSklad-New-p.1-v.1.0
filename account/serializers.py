@@ -106,12 +106,14 @@ class BalanceHistorySerializer(serializers.ModelSerializer):
 class DealerProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ['email', 'pwd', 'name', 'image', 'phone']
+        fields = ['email', 'pwd', 'name', 'phone', 'image']
 
     def update(self, instance, validated_data):
         for key, value in validated_data.items():
             setattr(instance, key, value)
-        instance.pwd = validated_data.get('pwd')
-        instance.set_password(validated_data.get('pwd'))
+        pwd = validated_data.get('pwd')
+        if pwd:
+            instance.pwd = pwd
+            instance.set_password(validated_data.get('pwd'))
         instance.save()
         return instance
