@@ -73,6 +73,11 @@ class MessageSerializer(serializers.ModelSerializer):
         ws_send_message(message.chat, self.to_representation(message))
         return message
 
+    def to_representation(self, instance):
+        represent = super().to_representation(instance)
+        represent["chat_id"] = str(represent["chat_id"])
+        return represent
+
 
 class ChatSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
