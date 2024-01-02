@@ -113,7 +113,7 @@ class VerifyCodeView(APIView):
 
 class ChangePwdView(APIView):
     """
-    email, code, password
+    email, code, pwd
     """
     def post(self, request):
         email = request.data.get('email')
