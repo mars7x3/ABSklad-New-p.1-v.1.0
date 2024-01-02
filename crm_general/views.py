@@ -11,7 +11,7 @@ from account.models import MyUser, DealerStatus
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
-    CRMTaskResponseSerializer
+    CRMTaskResponseSerializer, CityCRUDSerializer
 from general_service.models import City, Stock
 from product.models import Collection, AsiaProduct, ProductImage, Category
 
@@ -143,3 +143,16 @@ class CRMTaskUpdateAPIView(generics.UpdateAPIView):
             .only("id", "task", "grade", "is_done")
             .filter(task__is_active=True)
         )
+
+
+class CityCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = City.objects.all()
+    serializer_class = CityCRUDSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
