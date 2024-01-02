@@ -1,3 +1,4 @@
+from django.db.models import Q, Count
 from channels.db import database_sync_to_async
 
 from chat.models import Message, Chat
@@ -27,6 +28,15 @@ def get_chats_by_city(current_user, city_id: int, limit: int, offset: int, searc
     if search:
         queryset = queryset.filter(dealer__name__icontains=search)
 
+    queryset = queryset.annotate(
+        new_messages_count=Count(
+            "messages__id",
+            filter=~Q(
+                messages__is_read=True,
+                messages__sender__status=current_user.status
+            )
+        )
+    ).order_by("-new_messages_count", "-messages__created_at")
     return ChatSerializer(
         instance=queryset[offset:offset + limit],
         many=True,

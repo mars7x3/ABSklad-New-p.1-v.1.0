@@ -115,6 +115,6 @@ class ChatSerializer(serializers.ModelSerializer):
             return MessageSerializer(instance=last_message, many=False).data
 
     def get_new_messages_count(self, instance):
-        if self.user == instance.dealer:
-            return instance.messages.exclude(sender=self.user, is_read=True).count()
-        return instance.messages.filter(sender=instance.dealer, is_read=False).count()
+        if self.user.is_manager:
+            return instance.messages.filter(sender=instance.dealer, is_read=False).count()
+        return instance.messages.exclude(sender=self.user, is_read=True).count()
