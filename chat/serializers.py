@@ -88,12 +88,7 @@ class ChatSerializer(serializers.ModelSerializer):
             return instance.dealer.image.url
 
     def get_last_message(self, instance):
-        messages = instance.messages
-        if self.user == instance.dealer:
-            last_message = messages.exclude(sender=self.user).order_by('-created_at').first()
-        else:
-            last_message = messages.filter(sender=instance.dealer).order_by('-created_at').first()
-
+        last_message = instance.messages.order_by("-created_at").first()
         if last_message:
             return MessageSerializer(instance=last_message, many=False).data
 
