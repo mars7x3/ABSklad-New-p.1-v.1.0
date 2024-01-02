@@ -112,8 +112,6 @@ director_urlpatterns = [
     path('director/task/grade/', DirectorGradeView.as_view()),
     path('director/task/total-info/', DirectorTaskTotalInfoView.as_view()),
 
-
-
     path('', include(director_router.urls)),
 ]
 
@@ -287,6 +285,8 @@ warehouse_manager_urlpatterns = [
 crm_router = SimpleRouter()
 crm_router.register("crm/collection/crud", CollectionCRUDView)
 crm_router.register("crm/category/crud", CategoryCRUDView)
+crm_router.register("crm/city/crud", CityCRUDView)
+
 crm_router.register("crm/dealer-status/list", DealerStatusListView)
 
 crm_urlpatterns = [

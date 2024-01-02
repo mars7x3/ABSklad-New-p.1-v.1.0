@@ -10,6 +10,7 @@ from transliterate import translit
 
 from account.models import MyUser, DealerStatus
 from crm_general.models import CRMTaskResponseFile, CRMTaskResponse, CRMTaskFile
+from crm_general.tasks import create_city_price
 from general_service.models import Stock, City
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
@@ -326,3 +327,20 @@ class CRMTaskResponseSerializer(serializers.ModelSerializer):
             task.status = "wait"
             task.save()
         return instance
+
+
+class CityCRUDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        fields = '__all__'
+
+    def validate(self, attrs):
+        title = translit(attrs['title'], 'ru', reversed=True)
+        attrs['slug'] = title.replace(' ', '_').lower()
+        return attrs
+
+    def create(self, validated_data):
+        city = City.objects.create(**validated_data)
+        create_city_price(city.id)
+        return city
+
