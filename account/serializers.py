@@ -106,7 +106,7 @@ class BalanceHistorySerializer(serializers.ModelSerializer):
 class DealerProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ['email', 'pwd', 'name', 'phone', 'image']
+        fields = ['email', 'pwd', 'name', 'phone', 'image', 'id']
 
     def update(self, instance, validated_data):
         for key, value in validated_data.items():
