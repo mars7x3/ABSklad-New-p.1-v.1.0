@@ -149,7 +149,7 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
             await self.send_success_message(
                 receiver=receiver,
                 message_type="new_message",
-                data={"status": data}
+                data=data
             )
 
     async def read_message_command(self, message_type, req_data):
