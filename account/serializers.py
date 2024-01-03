@@ -24,7 +24,7 @@ class UserLoginSerializer(TokenObtainPairSerializer):
 class DealerMeInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ['email', 'pwd', 'name', 'image', 'phone', 'updated_at']
+        fields = ['email', 'pwd', 'name', 'image', 'phone', 'updated_at', 'id']
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
