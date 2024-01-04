@@ -3,11 +3,12 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.utils.encoding import force_str
 from django.utils.functional import cached_property
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from chat.async_queries import (
     get_chat_messages, create_db_message, set_read_message, get_chats_by_city,
-    get_chats_by_dealer, is_dealer_message, get_chat_receivers_by_chat, get_manager_city_id
+    get_chats_for_dealer, is_dealer_message, get_chat_receivers_by_chat, get_manager_city_id
 )
 from chat.validators import validate_user_active, validate_is_manager, validate_is_dealer
 from chat.utils import get_limit_and_offset
@@ -21,7 +22,7 @@ class AsyncBaseChatConsumer(AsyncWebsocketConsumer):
     @cached_property
     def room(self):
         if not self._user.is_anonymous:
-            return self._user.username
+            return slugify(self._user.username)
 
     async def validate_user(self):
         pass
@@ -67,7 +68,12 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
                 break
 
     async def receive(self, text_data=None, bytes_data=None):
-        req_data = json.loads(text_data)
+        try:
+            req_data = json.loads(text_data)
+        except json.JSONDecodeError:
+            await self.send_error_message(reason="support only json!")
+            return
+
         input_command = req_data.get('command')
 
         if not input_command:
@@ -109,8 +115,7 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
         )
 
     async def get_chats_command(self, message_type, req_data):
-        limit, offset = get_limit_and_offset(req_data, max_page_size=20)
-        chats = await get_chats_by_dealer(self._user, limit=limit, offset=offset)
+        chats = await get_chats_for_dealer(self._user)
         await self.send_success_message(message_type, data=chats)
 
     async def get_chat_messages_command(self, message_type, req_data):
@@ -143,8 +148,8 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
         for receiver in receivers or []:
             await self.send_success_message(
                 receiver=receiver,
-                message_type=message_type,
-                data={"status": data}
+                message_type="new_message",
+                data=data
             )
 
     async def read_message_command(self, message_type, req_data):

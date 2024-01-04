@@ -23,3 +23,4 @@ transliterate
 gunicorn
 django-celery-beat==2.5.0
 transliterate
+Twisted[tls, http2]

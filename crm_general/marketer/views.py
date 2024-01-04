@@ -242,7 +242,7 @@ class CRMNotificationView(ListModelMixin,
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class MarketerTaskView(ListModelMixin, GenericViewSet):
+class MarketerTaskView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = CRMTaskResponse.objects.all()
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = MarketerCRMTaskResponseSerializer

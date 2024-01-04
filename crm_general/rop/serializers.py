@@ -11,6 +11,7 @@ from rest_framework import serializers
 from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskFile, CRMTaskResponseFile
 from crm_general.serializers import BaseProfileSerializer
+from crm_general.utils import get_motivation_done
 from general_service.models import City
 from general_service.serializers import CitySerializer
 from order.models import CartProduct, MyOrder
@@ -130,12 +131,16 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         required=True
     )
     liability = serializers.IntegerField(required=True)
+    motivations = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
         fields = ("user", "liability", "address", "birthday", "city", "dealer_status", "wallet", "stores",
-                  "price_city", "dealer_status_id", "city_id", "price_city_id")
+                  "price_city", "dealer_status_id", "city_id", "price_city_id", "motivations")
         user_status = "dealer"
+
+    def get_motivations(self, instance):
+        return get_motivation_done(instance)
 
     def validate(self, attrs):
         rop_profile = self.context['view'].rop_profile
@@ -354,11 +359,15 @@ class WalletListSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField(read_only=True)
     status = serializers.SerializerMethodField(read_only=True)
     last_replenishment_date = serializers.SerializerMethodField(read_only=True)
+    user_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Wallet
         fields = ("id", "user_id", "name", "amount_1c", "paid_amount", "amount_crm", "city", "status",
                   "last_replenishment_date")
+
+    def get_user_id(self, instance):
+        return instance.dealer.user.id
 
     def get_name(self, instance):
         return instance.dealer.user.name

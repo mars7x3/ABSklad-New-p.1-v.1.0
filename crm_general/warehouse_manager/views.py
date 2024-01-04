@@ -19,6 +19,7 @@ from .serializers import OrderListSerializer, OrderDetailSerializer, WareHousePr
     WareHouseProductSerializer, WareHouseCRMTaskResponseSerializer
 from .mixins import WareHouseManagerMixin
 from ..models import CRMTaskResponse
+from ..serializers import CRMTaskResponseSerializer
 
 
 class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
@@ -215,6 +216,7 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
 
 
 class WareHouseTaskView(ListModelMixin,
+                        RetrieveModelMixin,
                         GenericViewSet):
     queryset = CRMTaskResponse.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]

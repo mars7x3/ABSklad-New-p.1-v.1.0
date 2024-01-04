@@ -32,3 +32,6 @@ class ReturnOrderProductInline(admin.StackedInline):
 @admin.register(ReturnOrder)
 class ReturnOrderAdmin(admin.ModelAdmin):
     inlines = (ReturnOrderProductInline,)
+
+
+admin.site.register(OrderReceipt)

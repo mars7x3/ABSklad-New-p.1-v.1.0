@@ -1,37 +1,85 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
-
+from account.models import MyUser
 from chat.models import Chat, Message, MessageAttachment
-from chat.utils import get_dealer_name, get_dealer_profile
+from chat.utils import get_dealer_name, ws_send_message
 
 
 class MessageAttachmentSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(use_url=False, read_only=True)
+
     class Meta:
         model = MessageAttachment
         fields = ("id", "file")
-        extra_kwargs = {"id": {"read_only": True}}
+        read_only_fields = ("id",)
+
+
+class SenderSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(use_url=False, read_only=True)
+
+    class Meta:
+        model = MyUser
+        fields = ("id", "name", "image")
+        read_only_fields = ("id", "name")
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    chat_id = serializers.SerializerMethodField(read_only=True)
-    attachments = MessageAttachmentSerializer(many=True, required=False)
+    sender = SenderSerializer(many=False, read_only=True)
+    chat_id = serializers.PrimaryKeyRelatedField(
+        queryset=Chat.objects.all(),
+        required=True,
+        source="chat"
+    )
+    attachments = MessageAttachmentSerializer(many=True, read_only=True)
+    files = serializers.ListField(
+        child=serializers.FileField(allow_empty_file=False, required=True),
+        required=True,
+        write_only=True
+    )
+    is_dealer_message = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Message
-        fields = ("id", "chat", "chat_id", "sender", "text", "is_read", "attachments", "created_at")
-        extra_kwargs = {"id": {"read_only": True}, "chat": {"write_only": True}}
+        fields = ("id", "chat_id", "sender", "text", "is_read", "attachments", "created_at", "files",
+                  "is_dealer_message")
+        read_only_fields = ("id", "is_read")
 
-    def get_chat_id(self, instance):
-        return str(getattr(instance, 'chat_id'))
+    def get_is_dealer_message(self, instance) -> bool:
+        return instance.sender.status == 'dealer'
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        chat = attrs.get("chat")
+        if chat and user.is_dealer and chat.dealer != user:
+            raise serializers.ValidationError({"detail": "У вас нет доступа"})
+
+        if user.is_manager:
+            try:
+                manager_profile = user.manager_profile
+            except ObjectDoesNotExist:
+                raise serializers.ValidationError({"detail": "У вас нет доступа"})
+
+            if not Chat.objects.filter(dealer__dealer_profile__city_id=manager_profile.city).exists():
+                raise serializers.ValidationError({"detail": "У вас нет доступа"})
+
+        attrs['sender'] = user
+        return attrs
 
     def create(self, validated_data):
-        attachments = validated_data.pop("attachments", None)
+        files = validated_data.pop("files", None)
         message = super().create(validated_data)
-        if attachments:
+        if files:
             MessageAttachment.objects.bulk_create(
-                [MessageAttachment(message=message, file=attach['file']) for attach in attachments]
+                [MessageAttachment(message=message, file=file) for file in files]
             )
+        ws_send_message(message.chat, self.to_representation(message))
         return message
+
+    def to_representation(self, instance):
+        represent = super().to_representation(instance)
+        represent["chat_id"] = str(represent["chat_id"])
+        return represent
 
 
 class ChatSerializer(serializers.ModelSerializer):
@@ -46,7 +94,10 @@ class ChatSerializer(serializers.ModelSerializer):
 
     @property
     def user(self):
-        return self.context['request'].user
+        request = self.context.get("request")
+        if request:
+            return request.user
+        return self.context.get('user')
 
     def get_name(self, instance):
         if self.user == instance.dealer:
@@ -58,21 +109,15 @@ class ChatSerializer(serializers.ModelSerializer):
         if self.user == instance.dealer:
             return
 
-        profile = get_dealer_profile(instance.dealer)
-        if profile:
-            return self.context['request'].build_absolute_uri(profile.image.url) if profile.image else None
+        if instance.dealer.image:
+            return instance.dealer.image.url
 
     def get_last_message(self, instance):
-        messages = instance.messages
-        if self.user == instance.dealer:
-            last_message = messages.exclude(sender=self.user).order_by('-created_at').first()
-        else:
-            last_message = messages.filter(sender=instance.dealer).order_by('-created_at').first()
-
+        last_message = instance.messages.order_by("-created_at").first()
         if last_message:
-            return MessageSerializer(instance=last_message, many=False, context=self.context).data
+            return MessageSerializer(instance=last_message, many=False).data
 
     def get_new_messages_count(self, instance):
-        if self.user == instance.dealer:
-            return instance.messages.exclude(sender=self.user, is_read=True).count()
-        return instance.messages.filter(sender=instance.dealer, is_read=False).count()
+        if self.user.is_manager:
+            return instance.messages.filter(sender=instance.dealer, is_read=False).count()
+        return instance.messages.exclude(sender=self.user, is_read=True).count()

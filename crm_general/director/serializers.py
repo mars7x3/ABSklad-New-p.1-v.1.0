@@ -6,12 +6,14 @@ from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
-from crm_general.director.utils import get_motivation_done, get_motivation_margin, kpi_info
+from crm_general.director.utils import get_motivation_margin, kpi_info
 from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade, KPI, KPIItem
+
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone, PriceType
 from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
+
 from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
     ConditionProduct
 
@@ -371,7 +373,7 @@ class DirectorDealerStoreSerializer(serializers.ModelSerializer):
 class DirectorMotivationDealerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('user',)
+        fields = ('id', 'user',)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

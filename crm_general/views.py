@@ -141,7 +141,7 @@ class CRMTaskUpdateAPIView(generics.UpdateAPIView):
             .select_related("task")
             .prefetch_related("response_files")
             .only("id", "task", "grade", "is_done")
-            .filter(task__is_active=True)
+            .all()
         )
 
 

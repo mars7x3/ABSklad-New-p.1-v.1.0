@@ -123,7 +123,7 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
                 filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
             ),
-            balance=F("wallet__amount_crm")
+            balance=Sum("wallet__amount_crm", output_field=FloatField())
         )
         return Response(amounts)
 
@@ -319,6 +319,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
                        "pipline": string_date_to_date},
         "end_date": {"by": "dealer__balance_histories__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
+        "status": {"by": "dealer__dealer_status_id", "type": "number"}
     }
 
     def get_queryset(self):

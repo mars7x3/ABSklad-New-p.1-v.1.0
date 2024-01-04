@@ -87,7 +87,8 @@ class Banner(models.Model):
 
     title = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)
-    file = models.FileField(upload_to='banner-files', blank=True, null=True)
+    image = models.ImageField(upload_to='banner-images', blank=True, null=True)
+    video_url = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(choices=STATUS, default='web', max_length=3)
     created_at = models.DateTimeField(auto_now_add=True)

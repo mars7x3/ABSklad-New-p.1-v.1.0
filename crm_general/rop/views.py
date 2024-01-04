@@ -88,6 +88,9 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
 
     @decorators.action(['GET'], detail=False, url_path="amounts")
     def get_amounts(self, request):
+        """
+        Здесь нужно отправлять теже query что и в dealers
+        """
         queryset = self.filter_queryset(self.get_queryset())
         amounts = queryset.aggregate(
             incoming_funds=Sum(
@@ -99,7 +102,8 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
                 "balance_histories__amount",
                 filter=Q(balance_histories__status="order"),
                 output_field=FloatField()
-            )
+            ),
+            balance=Sum("wallet__amount_crm", output_field=FloatField())
         )
         return Response(amounts)
 
