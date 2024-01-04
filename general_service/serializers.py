@@ -46,3 +46,5 @@ class RequisiteCategorySerializer(serializers.ModelSerializer):
         model = RequisiteCategory
         exclude = ('is_active',)
 
+
+

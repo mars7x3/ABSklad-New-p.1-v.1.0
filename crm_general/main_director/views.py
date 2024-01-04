@@ -20,11 +20,13 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
-    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer
+    DirectorKPIListSerializer, DirectorStaffListSerializer
 from crm_general.filters import FilterByFields
+from crm_general.main_director.permissions import IsMainDirector
+from crm_general.main_director.serializers import MainDirectorStaffCRUDSerializer
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
-from general_service.models import Stock, City, PriceType
+from general_service.models import Stock, City
 from crm_general.views import CRMPaginationClass
 from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
@@ -32,29 +34,12 @@ from product.models import ProductPrice, AsiaProduct, Collection, Category, Prod
 from promotion.models import Discount, Motivation
 
 
-class StaffCRUDView(viewsets.ModelViewSet):
-    """
-    #rop
-        "profile_data": {
-            "cities": [id, id]
-        }
-
-    #manager
-    "profile_data": {
-        "city": id
-    }
-
-    #rop
-    "profile_data": {
-        "stock": id
-    }
-    """
-    permission_classes = [IsAuthenticated, IsDirector]
-    queryset = MyUser.objects.prefetch_related('manager_profile', 'rop_profile',
-                                               'warehouse_profile').filter(status__in=['rop', 'manager', 'marketer',
-                                                                                       'accountant', 'warehouse',
+class MainDirStaffCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsMainDirector]
+    queryset = MyUser.objects.prefetch_related('rop_profile',
+                                               'warehouse_profile').filter(status__in=['rop', 'warehouse',
                                                                                        'director'])
-    serializer_class = StaffCRUDSerializer
+    serializer_class = MainDirectorStaffCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -78,13 +63,13 @@ class StaffCRUDView(viewsets.ModelViewSet):
 
         if is_active:
             kwargs['is_active'] = bool(int(is_active))
-        print(kwargs)
+
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class BalanceListView(mixins.ListModelMixin, GenericViewSet):
+class MainDirBalanceListView(mixins.ListModelMixin, GenericViewSet):
     """
     *QueryParams:
     {
@@ -130,7 +115,7 @@ class BalanceListView(mixins.ListModelMixin, GenericViewSet):
         return self.get_paginated_response(serializer)
 
 
-class BalanceListTotalView(APIView):
+class MainDirBalanceListTotalView(APIView):
     """
     {
     "name": "name",
@@ -170,7 +155,7 @@ class BalanceListTotalView(APIView):
         return Response({"total_crm": total_crm, "total_1c": total_1c}, status=status.HTTP_200_OK)
 
 
-class BalanceHistoryListView(APIView):
+class MainDirBalanceHistoryListView(APIView):
     """
     {
     "user_id": user_id,
@@ -197,7 +182,7 @@ class BalanceHistoryListView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class TotalEcoBalanceView(APIView):
+class MainDirTotalEcoBalanceView(APIView):
     """
     {
     "user_id": user_id,
@@ -227,7 +212,7 @@ class TotalEcoBalanceView(APIView):
         return Response({"amount_eco": amount_eco, "amount_crm": amount_crm}, status=status.HTTP_200_OK)
 
 
-class DirectorProductListView(mixins.ListModelMixin, GenericViewSet):
+class MainDirDirectorProductListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.all().prefetch_related('prices', 'counts').select_related('category', 'collection')
     serializer_class = DirectorProductListSerializer
@@ -251,13 +236,13 @@ class DirectorProductListView(mixins.ListModelMixin, GenericViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class DirectorCollectionListView(generics.ListAPIView):
+class MainDirDirectorCollectionListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Collection.objects.all()
     serializer_class = DirectorCollectionListSerializer
 
 
-class CollectionCategoryListView(APIView):
+class MainDirCollectionCategoryListView(APIView):
     """
     {
     "collection_slug": "collection_slug",
@@ -283,50 +268,6 @@ class CollectionCategoryProductListView(APIView):
                     .prefetch_related('order_products', 'prices', 'counts'))
         response_data = CollectionCategoryProductListSerializer(products, many=True,
                                                                 context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-class DirectorProductCRUDView(mixins.RetrieveModelMixin,
-                              mixins.UpdateModelMixin,
-                              mixins.DestroyModelMixin,
-                              GenericViewSet):
-    permission_classes = [IsAuthenticated, IsDirector]
-    queryset = AsiaProduct.objects.all()
-    serializer_class = DirectorProductCRUDSerializer
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
-
-
-class DirectorDiscountCRUDView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsDirector]
-    queryset = Discount.objects.all()
-    serializer_class = DirectorDiscountSerializer
-
-    @action(detail=False, methods=['get'])
-    def search(self, request, **kwargs):
-        queryset = self.get_queryset()
-        kwargs = {}
-
-        title = request.query_params.get('title')
-        if title:
-            kwargs['title__icontains'] = title
-
-        is_active = request.query_params.get('is_active')
-        if is_active:
-            kwargs['is_active'] = bool(int(is_active))
-
-        planned = request.query_params.get('planned')
-        if planned:
-            kwargs['is_active'] = True
-            kwargs['start_date__gte'] = timezone.now()
-
-        queryset = queryset.filter(**kwargs)
-        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -821,7 +762,4 @@ class DirectorTaskTotalInfoView(APIView):
                         status=status.HTTP_200_OK)
 
 
-class PriceTypeCRUDView(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated,]
-    queryset = PriceType.objects.all()
-    serializer_class = PriceTypeCRUDSerializer
+

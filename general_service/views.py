@@ -3,8 +3,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Stock, City, Requisite, RequisiteCategory
-from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer
+from .models import Stock, City, Requisite, RequisiteCategory, PriceType
+from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer, \
+    PriceTypeCRUDSerializer
 
 
 class CategoryListView(viewsets.ReadOnlyModelViewSet):
@@ -38,3 +39,7 @@ class RequisiteCategoryListView(APIView):
         requisite = RequisiteCategory.objects.filter(is_active=True)
         response = RequisiteCategorySerializer(requisite, many=True, context=self.get_renderer_context()).data
         return Response(response, status=status.HTTP_200_OK)
+
+
+
+
