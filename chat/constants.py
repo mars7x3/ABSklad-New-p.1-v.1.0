@@ -1,6 +1,5 @@
 import json
 
-from django.core.files.storage import default_storage
 
 DEALER_CHAT_SQL = """
     SELECT
