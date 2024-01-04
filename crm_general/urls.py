@@ -57,6 +57,7 @@ from .rop.views import (
 )
 
 from .director.views import *
+from .main_director.views import *
 from .accountant.views import *
 
 from .views import *
@@ -70,6 +71,15 @@ from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
     WareHouseSaleReportView, WareHouseTaskView
 )
+
+main_director = SimpleRouter()
+main_director.register("main_director/staff/crud", MainDirStaffCRUDView)
+
+main_director_urlpatterns = [
+
+    path('', include(main_director.urls)),
+]
+
 
 director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
@@ -93,6 +103,7 @@ director_router.register("director/stock/list", DirectorStockListView)
 director_router.register("director/stock/product/list", DStockProductListView)
 director_router.register("director/kpi/crud", DirectorKPICRUDView)
 director_router.register("director/kpi/list", DirectorKPIListView)
+director_router.register("director/price-type/crud", PriceTypeCRUDView)
 
 
 director_urlpatterns = [
@@ -305,4 +316,4 @@ crm_urlpatterns = [
 
 # + some_urlpatterns
 urlpatterns = (manager_urlpatterns + rop_urlpatterns + director_urlpatterns + crm_urlpatterns + marketer_urlpatterns +
-               warehouse_manager_urlpatterns + accountant_urlpatterns)
+               warehouse_manager_urlpatterns + accountant_urlpatterns + main_director_urlpatterns)

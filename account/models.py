@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
-from general_service.models import City, Stock
+from general_service.models import City, Stock, PriceType
 
 
 class DealerStatus(models.Model):
@@ -23,7 +23,8 @@ class MyUser(AbstractUser):
     objects = MyUserManager()
 
     STATUS = (
-        ('director', 'Директор'),  # has no profile
+        ('main_director', 'Директор'),  # has no profile
+        ('director', 'Ком Директор'),  # has no profile
         ('rop', 'РОП'),
         ('manager', 'Менеджер'),
         ('marketer', 'Маркетолог'),  # has no profile
@@ -31,6 +32,7 @@ class MyUser(AbstractUser):
         ('dealer', 'Дилер'),
         ('warehouse', 'Зав. Склад'),
         ('dealer_1c', 'dealer_1c'),
+
     )
 
     email = models.EmailField(unique=True)
@@ -88,9 +90,11 @@ class DealerProfile(models.Model):
     dealer_status = models.ForeignKey(DealerStatus, on_delete=models.SET_NULL, blank=True, null=True,
                                       related_name='dealer_profiles')
     liability = models.PositiveIntegerField(default=0)
-    price_city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)
+    price_city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)  # TODO: delete
     push_notification = models.BooleanField(default=True)
     birthday = models.DateField(blank=True, null=True)
+    price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, blank=True, null=True,
+                                   related_name='dealer_profiles')
 
     def __str__(self):
         return f'{self.id} - {self.user.name}'

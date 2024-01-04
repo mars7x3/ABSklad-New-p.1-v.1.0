@@ -1,7 +1,7 @@
 from django.db import models
 
 from account.models import DealerStatus, MyUser
-from general_service.models import City, Stock
+from general_service.models import City, Stock, PriceType
 
 
 class Category(models.Model):
@@ -79,12 +79,14 @@ class ProductPrice(models.Model):
         ('Sum', 'Sum'),
     )
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='prices')
-    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='prices')
+    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='prices')  # TODO: delete
     d_status = models.ForeignKey(DealerStatus, on_delete=models.CASCADE, related_name='prices')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     old_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     discount_status = models.CharField(max_length=5, choices=STATUS, default='Per')
+    price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, blank=True, null=True,
+                                   related_name='prices')
 
     def __str__(self):
         return f'{self.product} - {self.city} - {self.price}'

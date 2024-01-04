@@ -59,3 +59,12 @@ class RequisiteCity(models.Model):
     city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='requisite_cities')
 
 
+class PriceType(models.Model):
+    title = models.CharField(max_length=20)
+    uid = models.CharField(max_length=40, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.title
+
+
