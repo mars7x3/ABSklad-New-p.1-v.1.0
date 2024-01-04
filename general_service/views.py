@@ -4,8 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Stock, City, Requisite, RequisiteCategory, PriceType
-from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer, \
-    PriceTypeCRUDSerializer
+from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer
 
 
 class CategoryListView(viewsets.ReadOnlyModelViewSet):

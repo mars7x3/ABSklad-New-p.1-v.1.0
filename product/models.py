@@ -86,7 +86,7 @@ class ProductPrice(models.Model):
     discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     discount_status = models.CharField(max_length=5, choices=STATUS, default='Per')
     price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, blank=True, null=True,
-                                   related_name='dealer_profiles')
+                                   related_name='prices')
 
     def __str__(self):
         return f'{self.product} - {self.city} - {self.price}'
