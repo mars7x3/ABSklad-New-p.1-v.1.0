@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
-from crm_general.director.utils import get_motivation_done, get_motivation_margin, kpi_info
+from crm_general.director.utils import get_motivation_margin, kpi_info
 from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade, KPI, KPIItem
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone
