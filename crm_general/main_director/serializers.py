@@ -8,17 +8,15 @@ from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile,
     DealerStatus, DealerStore
 from crm_general.director.utils import get_motivation_margin, kpi_info
 from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade, KPI, KPIItem
-
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
-from general_service.models import Stock, City, StockPhone, PriceType
+from general_service.models import Stock, City, StockPhone
 from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
-
 from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
     ConditionProduct
 
 
-class StaffCRUDSerializer(serializers.ModelSerializer):
+class MainDirectorStaffCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'username', 'status', 'phone', 'pwd', 'email', 'is_active', 'date_joined', 'image',
@@ -26,8 +24,6 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        if instance.status == 'manager':
-            rep['profile'] = ManagerProfileSerializer(instance.manager_profile, context=self.context).data
         if instance.status == 'rop':
             rep['profile'] = RopProfileSerializer(instance.rop_profile, context=self.context).data
         if instance.status == 'warehouse':
@@ -39,11 +35,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
 
-            if user.status == 'manager':
-                city_id = request.data.get('city')
-                ManagerProfile.objects.create(user=user, city_id=city_id)
-
-            elif user.status == 'rop':
+            if user.status == 'rop':
                 rop_profile = RopProfile.objects.create(user=user)
                 cities = request.data.get('cities', [])
                 cities = City.objects.filter(id__in=cities)
@@ -64,12 +56,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             instance.set_password(validated_data.get('password'))
             instance.save()
 
-            if instance.status == 'manager':
-                manager_profile = instance.manager_profile
-                manager_profile.city_id = request.data.get('city')
-                manager_profile.save()
-
-            elif instance.status == 'rop':
+            if instance.status == 'rop':
                 city_ids = request.data.get('cities', [])
                 cities = City.objects.filter(id__in=city_ids)
                 rop_profile = instance.rop_profile
@@ -373,7 +360,7 @@ class DirectorDealerStoreSerializer(serializers.ModelSerializer):
 class DirectorMotivationDealerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('id', 'user',)
+        fields = ('user',)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -964,8 +951,3 @@ class KPIExecutorSerializer(serializers.ModelSerializer):
             rep['city'] = '---'
         return rep
 
-
-class PriceTypeCRUDSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PriceType
-        fields = '__all__'
