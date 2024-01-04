@@ -264,6 +264,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         fields = ("user", "address", "birthday", "city", "dealer_status", "wallet", "stores",
                   "liability", "dealer_status_id", "price_city", "motivations")
         user_status = "dealer"
+        read_only_fields = ("motivations",)
 
     def validate(self, attrs):
         view = self.context["view"]
