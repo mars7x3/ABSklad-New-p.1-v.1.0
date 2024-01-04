@@ -23,8 +23,8 @@ def get_limit_and_offset(req_data: dict[str, Any], max_page_size: int, default_p
     if limit > max_page_size:
         limit = max_page_size
 
-    offset = limit * page if page > 1 else 0
-    return limit, offset
+    offset = limit * (page - 1) if page > 1 else 0
+    return limit, offset + 1
 
 
 def get_chat_receivers(chat):
