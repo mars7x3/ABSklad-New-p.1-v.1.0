@@ -11,8 +11,8 @@ from account.models import MyUser, DealerStatus
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
-    CRMTaskResponseSerializer, CityCRUDSerializer
-from general_service.models import City, Stock
+    CRMTaskResponseSerializer, CityCRUDSerializer, PriceTypeListSerializer
+from general_service.models import City, Stock, PriceType
 from product.models import Collection, AsiaProduct, ProductImage, Category
 
 
@@ -171,3 +171,10 @@ class StaffMeInfoView(APIView):
             "phone": user.phone
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class PriceTypeListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = PriceType.objects.filter(is_active=True)
+    serializer_class = PriceTypeListSerializer
+
