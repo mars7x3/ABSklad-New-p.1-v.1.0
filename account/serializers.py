@@ -16,6 +16,8 @@ class UserLoginSerializer(TokenObtainPairSerializer):
             attrs[self.username_field] = user.username
 
         data = super().validate(attrs)
+        data['status'] = self.user.status
+        data['user'] = self.user.id
         return data
 
 
