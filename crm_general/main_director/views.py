@@ -26,7 +26,7 @@ from crm_general.main_director.permissions import IsMainDirector
 from crm_general.main_director.serializers import MainDirectorStaffCRUDSerializer
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
-from general_service.models import Stock, City
+from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
 from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
@@ -539,11 +539,11 @@ class DirectorPriceCreateView(APIView):
         d_statuses = DealerStatus.objects.all()
         price_data = []
         for p in prices:
-            city = City.objects.get(id=p['city'])
+            price_type = PriceType.objects.get(id=p['price_type'])
             for s in d_statuses:
                 price_data.append(ProductPrice(
                     product=product,
-                    city=city,
+                    price_type=price_type,
                     d_status=s,
                     price=p['price']
                 ))
