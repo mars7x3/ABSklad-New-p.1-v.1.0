@@ -12,7 +12,7 @@ from rest_framework.viewsets import GenericViewSet
 from product.models import Category, AsiaProduct, Review, Collection, FilterMaxMin
 from product.permissions import IsAuthor
 from product.serializers import CategoryListSerializer, ProductListSerializer, ReviewSerializer, \
-    ProductDetailSerializer, CollectionListSerializer
+    ProductDetailSerializer, CollectionListSerializer, ProductLinkSerializer
 
 
 class AppProductPaginationClass(PageNumberPagination):
@@ -124,3 +124,7 @@ class FilterMaxMinView(APIView):
         max_min = FilterMaxMin.objects.first()
         return Response({'max': max_min.max_price, 'min': max_min.min_price}, status=status.HTTP_200_OK)
 
+
+class ProductLinkView(mixins.RetrieveModelMixin, GenericViewSet):
+    queryset = AsiaProduct.objects.filter(is_active=True, is_show=True)
+    serializer_class = ProductLinkSerializer
