@@ -310,6 +310,8 @@ crm_urlpatterns = [
 
     re_path(r"^crm/task-response/(?P<response_task_id>.+)/complete/$", CRMTaskUpdateAPIView.as_view(),
             name="crm_general-task-responses-complete"),
+    path("crm/staff/me-info/", StaffMeInfoView.as_view()),
+
 
     path("", include(crm_router.urls)),
 ]

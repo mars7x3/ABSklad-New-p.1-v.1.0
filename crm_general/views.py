@@ -156,3 +156,18 @@ class CityCRUDView(viewsets.ModelViewSet):
         instance.save()
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
+
+class StaffMeInfoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        response_data = {
+            "id": user.id,
+            "status": user.status,
+            "name": user.name,
+            "email": user.email,
+            "image": request.build_absolute_uri(user.image.url) if user.image else None,
+            "phone": user.phone
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
