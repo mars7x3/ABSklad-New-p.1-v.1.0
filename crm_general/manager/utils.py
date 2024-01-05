@@ -4,10 +4,12 @@ from django.db.models import Subquery, OuterRef, F
 from product.models import AsiaProduct, ProductPrice, ProductImage, ProductCostPrice
 
 
-def order_total_price(product_counts, price_city, dealer_status):
+def order_total_price(product_counts, price_type, dealer_status):
     prices = (
         ProductPrice.objects.only("product_id", "price")
-                            .filter(product_id__in=list(product_counts), city=price_city, d_status_id=dealer_status)
+                            .filter(product_id__in=list(product_counts),
+                                    price_type=price_type,
+                                    d_status_id=dealer_status)
     )
     return sum([price_obj.price * product_counts[str(price_obj.product_id)] for price_obj in prices])
 
@@ -35,7 +37,7 @@ def calculate_order_cost_price(product_counts: dict[str: int]):
     return sum([price * product_counts[str(p_id)] for p_id, price in product_cost_prices])
 
 
-def build_order_products_data(product_counts: dict[str: int], price_city, dealer_status):
+def build_order_products_data(product_counts: dict[str: int], price_type, dealer_status):
     product_ids = list(product_counts)
     db_product_data = (
         AsiaProduct.objects.filter(id__in=product_ids)
@@ -47,7 +49,7 @@ def build_order_products_data(product_counts: dict[str: int], price_city, dealer
                                 )
                            )
     )
-    filters = dict(product_id__in=product_ids, city=price_city, d_status=dealer_status)
+    filters = dict(product_id__in=product_ids, price_type=price_type, d_status=dealer_status)
     prices = (
         ProductPrice.objects.filter(**filters)
                             .values_list("product_id", "price", "old_price")

@@ -15,7 +15,7 @@ from account.models import (
 from crm_general.models import CRMTask, CRMTaskResponse
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
 from crm_general.utils import get_motivation_done
-from general_service.models import Stock
+from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
 from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, ReturnOrder, ReturnOrderProduct
 from order.tasks import create_order_notification
@@ -125,10 +125,10 @@ class OrderSerializer(serializers.ModelSerializer):
                     ]}
                 )
 
-            attrs["price"] = order_total_price(product_counts, dealer.price_city, dealer.dealer_status)
+            attrs["price"] = order_total_price(product_counts, dealer.price_type, dealer.dealer_status)
             attrs["cost_price"] = calculate_order_cost_price(product_counts)
             try:
-                attrs["products"] = build_order_products_data(product_counts, dealer.price_city, dealer.dealer_status)
+                attrs["products"] = build_order_products_data(product_counts, dealer.price_type, dealer.dealer_status)
             except ObjectDoesNotExist:
                 raise serializers.ValidationError({"detail": "Попробуйте позже!"})
 
@@ -246,6 +246,12 @@ class DealerStoreSerializer(serializers.ModelSerializer):
         }
 
 
+class PriceTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PriceType
+        fields = "__all__"
+
+
 class DealerProfileDetailSerializer(BaseProfileSerializer):
     wallet = ShortWalletSerializer(many=False, read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
@@ -256,13 +262,18 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     )
     stores = DealerStoreSerializer(many=True, source="dealer_stores", read_only=True)
     liability = serializers.IntegerField(required=True)
-    price_city = CitySerializer(read_only=True, many=False)
+    price_type = PriceTypeSerializer(read_only=True, many=False)
+    price_type_id = serializers.PrimaryKeyRelatedField(
+        queryset=PriceType.objects.all(),
+        required=True,
+        write_only=True
+    )
     city = CitySerializer(read_only=True, many=False)
 
     class Meta:
         model = DealerProfile
         fields = ("user", "address", "birthday", "city", "dealer_status", "wallet", "stores",
-                  "liability", "dealer_status_id", "price_city", "motivations")
+                  "liability", "dealer_status_id", "price_type", "price_type_id", "motivations")
         user_status = "dealer"
         read_only_fields = ("motivations",)
 
@@ -270,7 +281,10 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         view = self.context["view"]
         manager_profile_city = view.manager_profile.city
         attrs["city"] = manager_profile_city
-        attrs["price_city"] = manager_profile_city
+
+        price_type = attrs.pop("price_type_id", None)
+        if price_type:
+            attrs["price_type"] = price_type
         dealer_status = attrs.pop("dealer_status_id", None)
         if dealer_status:
             attrs["dealer_status"] = dealer_status

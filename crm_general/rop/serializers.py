@@ -12,7 +12,7 @@ from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, 
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskFile, CRMTaskResponseFile
 from crm_general.serializers import BaseProfileSerializer
 from crm_general.utils import get_motivation_done
-from general_service.models import City
+from general_service.models import City, PriceType
 from general_service.serializers import CitySerializer
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, AsiaProduct, ProductPrice, ProductImage, ProductSize
@@ -109,6 +109,12 @@ class DealerStoreSerializer(serializers.ModelSerializer):
         }
 
 
+class PriceTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PriceType
+        fields = "__all__"
+
+
 class DealerProfileDetailSerializer(BaseProfileSerializer):
     wallet = ShortWalletSerializer(many=False, read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
@@ -124,9 +130,9 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         write_only=True,
         required=True
     )
-    price_city = CitySerializer(many=False, read_only=True)
-    price_city_id = serializers.PrimaryKeyRelatedField(
-        queryset=City.objects.all(),
+    price_type = PriceTypeSerializer(many=False, read_only=True)
+    price_type_id = serializers.PrimaryKeyRelatedField(
+        queryset=PriceType.objects.all(),
         write_only=True,
         required=True
     )
@@ -136,7 +142,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     class Meta:
         model = DealerProfile
         fields = ("user", "liability", "address", "birthday", "city", "dealer_status", "wallet", "stores",
-                  "price_city", "dealer_status_id", "city_id", "price_city_id", "motivations")
+                  "price_type", "dealer_status_id", "city_id", "price_type_id", "motivations")
         user_status = "dealer"
 
     def get_motivations(self, instance):
@@ -152,12 +158,9 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         if city:
             attrs["city"] = city
 
-        price_city = attrs.pop("price_city_id", None)
-        if price_city and not rop_profile.cities.filter(id=price_city.id).exists():
-            raise serializers.ValidationError({"price_city_id": "Данный город не поддерживается или вам не доступен"})
-
-        if price_city:
-            attrs["price_city"] = price_city
+        price_type = attrs.pop("price_type_id", None)
+        if price_type:
+            attrs["price_type"] = price_type
 
         dealer_status = attrs.pop("dealer_status_id", None)
         if dealer_status:
