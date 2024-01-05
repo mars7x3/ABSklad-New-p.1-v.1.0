@@ -10,7 +10,7 @@ from transliterate import translit
 
 from account.models import MyUser, DealerStatus
 from crm_general.models import CRMTaskResponseFile, CRMTaskResponse, CRMTaskFile
-from general_service.models import Stock, City
+from general_service.models import Stock, City, PriceType
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
 
@@ -347,5 +347,11 @@ class CityCRUDSerializer(serializers.ModelSerializer):
         title = translit(attrs['title'], 'ru', reversed=True)
         attrs['slug'] = title.replace(' ', '_').lower()
         return attrs
+
+
+class PriceTypeListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PriceType
+        fields = '__all__'
 
 
