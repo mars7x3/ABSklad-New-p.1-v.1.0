@@ -598,11 +598,11 @@ class DirectorPriceCreateView(APIView):
         d_statuses = DealerStatus.objects.all()
         price_data = []
         for p in prices:
-            city = City.objects.get(id=p['city'])
+            price_type = PriceType.objects.get(id=p['city'])
             for s in d_statuses:
                 price_data.append(ProductPrice(
                     product=product,
-                    city=city,
+                    price_type=price_type,
                     d_status=s,
                     price=p['price']
                 ))
