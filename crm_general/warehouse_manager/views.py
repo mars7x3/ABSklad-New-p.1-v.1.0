@@ -43,10 +43,10 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             queryset = queryset.filter(type_status=type_status)
 
         if start_time and end_time:
-            queryset = queryset.filter(created_at__gte=start_time, created_at=end_time)
+            queryset = queryset.filter(created_at__gte=start_time, created_at__lte=end_time)
 
         if search:
-            queryset = queryset.filter(Q(name__iconatins=search), Q(gmail__icontains=search))
+            queryset = queryset.filter(Q(name__icontains=search), Q(gmail__icontains=search))
 
         paginator = GeneralPurposePagination()
         page = paginator.paginate_queryset(queryset, request)
