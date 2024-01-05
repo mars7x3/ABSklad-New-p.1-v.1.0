@@ -70,7 +70,7 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
 
         discount = request.query_params.get('discount')
         if discount:
-            kwargs['prices__discount__gt'] = 0
+            kwargs['is_discount'] = True
 
         category = request.query_params.get('category')
         if category:
