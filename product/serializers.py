@@ -135,3 +135,16 @@ class ReviewsImagesSerializer(serializers.ModelSerializer):
         fields = ('image',)
 
 
+class ProductLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('title', 'vendor_code', 'category', 'collection', 'made_in', 'guarantee', 'description',
+                  'video_link', 'weight', 'package_count', 'diagram')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['images'] = ProductImageSerializer(instance.images, many=True, context=self.context).data
+        rep['sizes'] = ProductSizeSerializer(instance.sizes, many=True, context=self.context).data
+        rep['category'] = instance.category.title if instance.category else '---'
+        rep['collection'] = instance.collection.title if instance.collection else '---'
+        return rep
