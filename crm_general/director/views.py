@@ -825,3 +825,5 @@ class PriceTypeCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,]
     queryset = PriceType.objects.all()
     serializer_class = PriceTypeCRUDSerializer
+
+

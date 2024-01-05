@@ -17,15 +17,4 @@ def minus_quantity(order_id, stock_id):
         quantity.save()
 
 
-@app.task
-def create_city_price(city_id):
-    city_data = []
-    for p in AsiaProduct.objects.all():
-        for s in DealerStatus.objects.all():
-            city_data.append(
-                ProductPrice(
-                    product=p, city_id=city_id, d_status=s
-                )
-            )
-    ProductPrice.objects.bulk_create(city_data)
 

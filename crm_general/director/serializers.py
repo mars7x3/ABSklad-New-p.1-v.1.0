@@ -6,7 +6,8 @@ from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
-from crm_general.director.utils import get_motivation_margin, kpi_info
+from crm_general.director.tasks import create_product_prices
+from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done
 from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
@@ -969,3 +970,10 @@ class PriceTypeCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = PriceType
         fields = '__all__'
+
+    def create(self, validated_data):
+        price_type = PriceType.objects.create(**validated_data)
+        create_product_prices(price_type.id)
+        return price_type
+
+
