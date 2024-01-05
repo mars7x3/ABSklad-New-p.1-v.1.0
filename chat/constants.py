@@ -93,7 +93,7 @@ CITY_CHATS_SQL = """
     JOIN account_myuser AS cu ON cu.id = c.dealer_id
     JOIN account_dealerprofile AS dp ON dp.user_id = cu.id
     WHERE dp.city_id = %s
-    ORDER BY new_messages_count DESC, last_message_created DESC, total_messages_count DESC
+    ORDER BY last_message_created DESC NULLS LAST, new_messages_count DESC, total_messages_count DESC
     LIMIT %s OFFSET %s
 """
 
@@ -149,7 +149,7 @@ CITY_SEARCH_CHATS_SQL = """
     JOIN account_myuser AS cu ON cu.id = c.dealer_id
     JOIN account_dealerprofile AS dp ON dp.user_id = cu.id
     WHERE dp.city_id = %s AND cu.name ILIKE %s
-    ORDER BY new_messages_count DESC, last_message_created DESC, total_messages_count DESC
+    ORDER BY last_message_created DESC NULLS LAST, new_messages_count DESC, total_messages_count DESC
     LIMIT %s OFFSET %s
 """
 
