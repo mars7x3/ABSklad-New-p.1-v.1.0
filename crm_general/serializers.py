@@ -95,7 +95,7 @@ class CRMUserSerializer(serializers.ModelSerializer):
 
         email = validated_data.get('email')
         if email and MyUser.objects.exclude(id=instance.id).filter(email=email).exists():
-            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+            raise serializers.ValidationError({"email": "Пользователь с данным параметром уже существует!"})
 
         password = validated_data.pop("password", None)
         if password:
@@ -114,6 +114,16 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
+        if MyUser.objects.filter(username=user_data["username"]).exists():
+            raise serializers.ValidationError(
+                {"user": {"username": "Пользователь с данным параметром уже существует!"}}
+            )
+
+        if MyUser.objects.filter(username=user_data["email"]).exists():
+            raise serializers.ValidationError(
+                {"user": {"email": "Пользователь с данным параметром уже существует!"}}
+            )
+
         validated_data['user'] = MyUser.objects.create_user(status=self._user_status, **user_data)
         # calling this method `create` should not return an error.
         # Therefore, the validation must be perfect,
