@@ -118,7 +118,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         rep['sizes'] = ProductSizeSerializer(instance.sizes, many=True, context=self.context).data
         rep['counts'] = ProductCountSerializer(instance.counts, many=True, context=self.context).data
 
-        rep['price_info'] = ProductPriceListSerializer(instance.prices.filter(city=dealer.price_city,
+        rep['price_info'] = ProductPriceListSerializer(instance.prices.filter(price_type=dealer.price_type,
                                                                               d_status=dealer.dealer_status).first(),
                                                        context=self.context).data
         image_list = ReviewImage.objects.filter(review__product=instance, review__is_active=True)
