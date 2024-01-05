@@ -38,5 +38,5 @@ def synchronization_back_to_1C():
             for status in dealer_statuses:
                 amount = 10000 * x
                 prod_price_data.append(ProductPrice(price_type=price, product=product, price=amount,
-                                                dealer_status=status))
+                                                    d_status=status))
         ProductPrice.objects.bulk_create(prod_price_data)
