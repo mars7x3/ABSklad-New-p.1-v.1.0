@@ -608,11 +608,11 @@ class DirectorPriceListSerializer(serializers.ModelSerializer):
 class DirectorProductPriceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductPrice
-        fields = ('price', 'city')
+        fields = ('price', 'price_type')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['price_type_title'] = instance.price_type.title if instance.price_type else '---'
         return rep
 
 
