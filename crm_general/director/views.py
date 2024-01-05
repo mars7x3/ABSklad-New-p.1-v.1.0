@@ -821,7 +821,7 @@ class DirectorTaskTotalInfoView(APIView):
                         status=status.HTTP_200_OK)
 
 
-class PriceTypeCRUDView(viewsets.ReadOnlyModelViewSet):
+class PriceTypeCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,]
     queryset = PriceType.objects.all()
     serializer_class = PriceTypeCRUDSerializer
