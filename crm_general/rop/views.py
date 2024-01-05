@@ -360,6 +360,7 @@ class RopTaskListAPIView(BaseManagerMixin, generics.ListAPIView):
         "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
     }
     ordering_fields = ("title", "updated_at", "created_at", "end_date")
+    pagination_class = AppPaginationClass
 
     def get_queryset(self):
         return (
