@@ -72,7 +72,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
         rep['price_info'] = ProductPriceListSerializer(
-            instance=instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first(),
+            instance=instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first(),
             many=False,
             context=self.context
         ).data
