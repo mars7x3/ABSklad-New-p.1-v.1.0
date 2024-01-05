@@ -43,3 +43,4 @@ class RequisiteAdmin(admin.ModelAdmin):
 
 
 admin.site.register(RequisiteCategory)
+admin.site.register(PriceType)
