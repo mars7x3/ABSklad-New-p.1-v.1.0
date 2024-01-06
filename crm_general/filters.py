@@ -1,5 +1,6 @@
 from django.utils.encoding import force_str
 from rest_framework.filters import BaseFilterBackend
+from rest_framework.validators import ValidationError
 
 
 class FilterByFields(BaseFilterBackend):
@@ -31,7 +32,10 @@ class FilterByFields(BaseFilterBackend):
                 filters[params["by"]] = value
 
         if filters:
-            return queryset.filter(**filters)
+            try:
+                return queryset.filter(**filters)
+            except (ValueError, TypeError):
+                raise ValidationError({"detail": "wrong params!"})
         return queryset
 
     def get_schema_operation_parameters(self, view):
