@@ -15,9 +15,16 @@ class UserLoginSerializer(TokenObtainPairSerializer):
         if user:
             attrs[self.username_field] = user.username
 
+            if user.status != 'dealer':
+                magazine = user.magazines.filter(is_active=True).first()
+                if magazine:
+                    if magazine.status not in ['hired', 'restored']:
+                        raise serializers.ValidationError({'text': 'Вы пока не можете авторизоваться!'})
+
         data = super().validate(attrs)
         data['status'] = self.user.status
         data['user'] = self.user.id
+
         return data
 
 

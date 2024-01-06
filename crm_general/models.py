@@ -106,3 +106,26 @@ class ProductToBuyCount(models.Model):
     product_to_buy = models.ForeignKey(ProductToBuy, on_delete=models.CASCADE, related_name="counts")
     city = models.ForeignKey(City, on_delete=models.CASCADE)
     count = models.PositiveIntegerField(validators=[MinValueValidator(1)], default=1)
+
+    
+class Inventory(models.Model):
+    STATUS = (
+        ('new', 'new'),
+        ('moderated', 'moderated'),
+        ('rejected', 'rejected'),
+    )
+    sender = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='sender_inventories',
+                               blank=True, null=True)
+    receiver = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='receiver_inventories',
+                                 null=True, blank=True)
+    status = models.CharField(max_length=255, choices=STATUS, default='new')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+
+class InventoryProduct(models.Model):
+    inventory = models.ForeignKey(Inventory, on_delete=models.CASCADE, related_name='products')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='inventory_products')
+    count = models.PositiveIntegerField(default=0)
+

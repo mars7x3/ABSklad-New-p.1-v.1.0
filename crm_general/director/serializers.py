@@ -324,7 +324,6 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
             profile_serializer = DirectorDealerProfileSerializer(data=profile)
             profile_serializer.is_valid(raise_exception=True)
             profile_serializer.save(user=user)
-            Wallet.objects.create(dealer=user.dealer_profile)
             return user
 
     def update(self, instance, validated_data):

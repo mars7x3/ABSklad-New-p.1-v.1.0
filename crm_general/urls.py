@@ -69,7 +69,7 @@ from .marketer.views import (
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
-    WareHouseSaleReportView, WareHouseTaskView
+    WareHouseSaleReportView, WareHouseTaskView, WareHouseInventoryView, WareHouseSaleReportDetailView
 )
 
 main_director = SimpleRouter()
@@ -263,7 +263,7 @@ rop_urlpatterns = [
             name="crm_general-rop-task-responses-detail"),
     path("rop/", include(rop_router.urls)),
 ]
-# ---------------------------
+# --------------------------- MARKETER
 
 marketer_router = SimpleRouter()
 marketer_router.register('product', MarketerProductRUViewSet)
@@ -280,6 +280,7 @@ marketer_urlpatterns = [
     path('marketer/', include(marketer_router.urls)),
 ]
 
+# --------------------------- WARE HOUSE MANAGER
 
 warehouse_manager_router = SimpleRouter()
 warehouse_manager_router.register('order', WareHouseOrderView, basename='warehouse-order')
@@ -287,10 +288,12 @@ warehouse_manager_router.register('product', WareHouseProductViewSet, basename='
 warehouse_manager_router.register('category', WareHouseCategoryViewSet, basename='warehouse-category')
 warehouse_manager_router.register('collection', WareHouseCollectionViewSet, basename='warehouse-collection')
 warehouse_manager_router.register('task', WareHouseTaskView, basename='warehouse-task')
+warehouse_manager_router.register('inventory', WareHouseInventoryView, basename='warehouse-inventory')
 
 warehouse_manager_urlpatterns = [
     path('warehouse-manager/', include(warehouse_manager_router.urls)),
     path('warehouse-manager/report/', WareHouseSaleReportView.as_view()),
+    path('warehouse-manager/report/<int:pk>/', WareHouseSaleReportDetailView.as_view()),
 ]
 
 crm_router = SimpleRouter()

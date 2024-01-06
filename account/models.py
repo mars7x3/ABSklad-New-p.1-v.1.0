@@ -32,7 +32,7 @@ class MyUser(AbstractUser):
         ('dealer', 'Дилер'),
         ('warehouse', 'Зав. Склад'),
         ('dealer_1c', 'dealer_1c'),
-
+        ('hr', 'HR менеджер'),
     )
 
     email = models.EmailField(unique=True)
@@ -66,6 +66,20 @@ class MyUser(AbstractUser):
     @property
     def is_rop(self) -> bool:
         return self.status == 'rop'
+
+
+class StaffMagazine(models.Model):
+    STATUS = (
+        ('new', 'Новый'),
+        ('hired', 'Принят на работу'),
+        ('fired', 'Уволен'),
+        ('vacation', 'Отпуск'),
+        ('restored', 'Востановлен'),
+    )
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='magazines')
+    status = models.CharField(choices=STATUS, max_length=20, default='new')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now=True)
 
 
 class RopProfile(models.Model):
