@@ -78,7 +78,9 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
     filter_by_fields = {
         "start_date": {"by": "user__date_joined__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date},
-        "status": {"by": "dealer_status_id", "type": "number"}
+        "status": {"by": "user__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
+        "dealer_status": {"by": "dealer_status_id", "type": "number"},
+        "city_id": {"by": "city_id", "type": "number"}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
