@@ -59,3 +59,8 @@ admin.site.register(BalanceHistory)
 admin.site.register(CRMNotification)
 admin.site.register(VerifyCode)
 
+
+@admin.register(StaffMagazine)
+class StaffMagazineAdmin(admin.ModelAdmin):
+    list_display = ("id", "user")
+    list_display_links = ("id", "user")
