@@ -10,5 +10,7 @@ admin.site.register(KPIItem)
 
 admin.site.register(CRMTaskResponse)
 admin.site.register(CRMTaskResponseFile)
+admin.site.register(Inventory)
+admin.site.register(InventoryProduct)
 
 

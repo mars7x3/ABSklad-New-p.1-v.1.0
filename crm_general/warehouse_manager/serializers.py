@@ -1,7 +1,8 @@
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from crm_general.models import CRMTaskResponse, CRMTask, CRMTaskFile, CRMTaskResponseFile
+from crm_general.models import CRMTaskResponse, CRMTask, CRMTaskFile, CRMTaskResponseFile, Inventory, InventoryProduct
 from crm_general.serializers import VerboseChoiceField
 from order.models import MyOrder, OrderProduct
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
@@ -139,3 +140,51 @@ class WareHouseCRMTaskResponseSerializer(serializers.ModelSerializer):
         model = CRMTaskResponse
         fields = '__all__'
 
+
+class InventoryProductSerializer(serializers.ModelSerializer):
+    product_title = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = InventoryProduct
+        exclude = ('inventory', )
+
+    @staticmethod
+    def get_product_title(obj):
+        return obj.product.title
+
+
+class WareHouseInventorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Inventory
+        fields = '__all__'
+
+    def create(self, validated_data):
+        sender = self.context.get('request').user
+        instance = Inventory.objects.create(sender=sender, **validated_data)
+
+        products = self.context['request'].data.get('products')
+        inventory_products = []
+
+        for obj in products:
+            product = AsiaProduct.objects.get(id=obj['product'])
+            inventory_product = InventoryProduct(
+                inventory=instance,
+                product=product,
+                count=obj['count']
+            )
+            inventory_products.append(inventory_product)
+
+        InventoryProduct.objects.bulk_create(inventory_products)
+        return instance
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if self.context.get('retrieve'):
+            rep['products'] = InventoryProductSerializer(instance.products.all(),  read_only=True, many=True).data
+        return rep
+
+
+class InventoryProductListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title')
