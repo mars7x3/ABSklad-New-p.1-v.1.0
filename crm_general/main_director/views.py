@@ -327,7 +327,7 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
 
         is_active = request.query_params.get('is_active')
         if is_active:
-            kwargs['is_active'] = bool(int(is_active))
+            kwargs['user__is_active'] = bool(int(is_active))
 
         queryset = queryset.filter(**kwargs)
         page = self.paginate_queryset(queryset)
