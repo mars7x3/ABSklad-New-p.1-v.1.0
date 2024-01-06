@@ -143,6 +143,7 @@ class WareHouseCRMTaskResponseSerializer(serializers.ModelSerializer):
 
 class InventoryProductSerializer(serializers.ModelSerializer):
     product_title = serializers.SerializerMethodField(read_only=True)
+    category_title = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = InventoryProduct
@@ -152,8 +153,14 @@ class InventoryProductSerializer(serializers.ModelSerializer):
     def get_product_title(obj):
         return obj.product.title
 
+    @staticmethod
+    def get_category_title(obj):
+        return obj.product.category.title
+
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Inventory
         fields = '__all__'
@@ -182,6 +189,10 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
         if self.context.get('retrieve'):
             rep['products'] = InventoryProductSerializer(instance.products.all(),  read_only=True, many=True).data
         return rep
+
+    @staticmethod
+    def get_sender_name(obj):
+        return obj.sender.name
 
 
 class InventoryProductListSerializer(serializers.ModelSerializer):

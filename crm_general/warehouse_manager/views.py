@@ -236,7 +236,7 @@ class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
 
         sale = order_products.values('order__created_at__date', 'order__author__user', 'order__author__user__username',
                                      'order__author__user__name').annotate(
-            total_count=Sum('count')
+            total_count=Sum('count'), total_price=Sum('total_price')
         )
         for sale_item in sale:
             data['sales'].append({
@@ -245,6 +245,7 @@ class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
                 'username': sale_item['order__author__user__username'],
                 'name': sale_item['order__author__user__name'],
                 'total_count': sale_item['total_count'],
+                'total_price': sale_item['total_price']
             })
 
         return Response({'result': data})
@@ -294,6 +295,23 @@ class WareHouseInventoryView(ListModelMixin,
         if self.detail:
             return {'request': self.request, 'retrieve': True}
         return {'request': self.request}
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        type_status = self.request.query_params.get('status')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+
+        if type_status:
+            queryset = queryset.filter(status=type_status)
+
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__gte=start_date, created_at__lte=end_date)
+
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @action(methods=['GET'], detail=False, url_path='products')
     def get_products(self, request, *args, **kwargs):
