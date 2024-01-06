@@ -331,4 +331,5 @@ crm_urlpatterns = [
 
 # + some_urlpatterns
 urlpatterns = (manager_urlpatterns + rop_urlpatterns + director_urlpatterns + crm_urlpatterns + marketer_urlpatterns +
-               warehouse_manager_urlpatterns + accountant_urlpatterns + main_director_urlpatterns)
+               warehouse_manager_urlpatterns + accountant_urlpatterns + main_director_urlpatterns
+               + hr_urlpatterns)
