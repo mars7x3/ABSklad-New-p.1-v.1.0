@@ -1,6 +1,8 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 from account.models import MyUser
+from general_service.models import City
 from product.models import Category, AsiaProduct
 
 
@@ -78,3 +80,29 @@ class KPIItem(models.Model):
     categories = models.ManyToManyField(Category, related_name='kpi_items')
     amount = models.IntegerField()
 
+
+class DealerKPIPlan(models.Model):
+    objects = models.Manager()
+
+    dealer = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name="kpi_plans")
+    spend_amount = models.DecimalField(max_digits=20, decimal_places=2)  # pds
+    target_month = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ["dealer", "target_month"]
+
+
+class ProductToBuy(models.Model):
+    objects = models.Manager()
+
+    kpi_plan = models.ForeignKey(DealerKPIPlan, on_delete=models.CASCADE, related_name="products_to_buy")
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name="kpi_plans")
+
+
+class ProductToBuyCount(models.Model):
+    objects = models.Manager()
+
+    product_to_buy = models.ForeignKey(ProductToBuy, on_delete=models.CASCADE, related_name="counts")
+    city = models.ForeignKey(City, on_delete=models.CASCADE)
+    count = models.PositiveIntegerField(validators=[MinValueValidator(1)], default=1)
