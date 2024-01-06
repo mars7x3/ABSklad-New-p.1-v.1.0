@@ -30,6 +30,29 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
             return HRStaffDetailSerializer
         return self.serializer_class
 
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        name = request.query_params.get('name')
+        if name:
+            kwargs['name__icontains'] = name
+
+        u_status = request.query_params.get('status')
+        if u_status:
+            kwargs['status'] = u_status
+
+        employee = request.query_params.get('employee')
+        if status:
+            kwargs['magazines__status'] = employee
+            kwargs['magazines__is_active'] = True
+
+        queryset = queryset.filter(**kwargs)
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return self.get_paginated_response(serializer)
+
 
 class StaffMagazineCreateView(mixins.CreateModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsHR]
