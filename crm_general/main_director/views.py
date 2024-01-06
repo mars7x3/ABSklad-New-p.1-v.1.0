@@ -325,6 +325,10 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
         if city_slug:
             kwargs['city__slug'] = city_slug
 
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['user__is_active'] = bool(int(is_active))
+
         queryset = queryset.filter(**kwargs)
         page = self.paginate_queryset(queryset)
         response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
