@@ -1,13 +1,14 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, F
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
+from account.models import MyUser
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
 from order.models import MyOrder, OrderProduct
@@ -16,10 +17,10 @@ from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
-    WareHouseProductSerializer, WareHouseCRMTaskResponseSerializer
+    WareHouseProductSerializer, WareHouseCRMTaskResponseSerializer, WareHouseInventorySerializer, \
+    InventoryProductListSerializer
 from .mixins import WareHouseManagerMixin
-from ..models import CRMTaskResponse
-from ..serializers import CRMTaskResponseSerializer
+from ..models import CRMTaskResponse, Inventory
 
 
 class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
@@ -206,13 +207,47 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
                 "vendor_code": product.vendor_code,
                 "title": product.title,
                 "category": product.category.title,
-                "before": remains + sold,
+                "before": remains + sold + movement_delta,
                 "sold": sold,
                 "movements": movement_delta,
                 "remains": remains
             }
             stat.append(statistics_entry)
         return Response(stat, status=status.HTTP_200_OK)
+
+
+class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+
+    def get(self, request, pk, *args, **kwargs):
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        product = AsiaProduct.objects.get(id=pk)
+        order_products = OrderProduct.objects.filter(ab_product=pk,
+                                                     order__stock=self.warehouse_profile.stock,
+                                                     order__created_at__gte=start_date, order__created_at__lte=end_date,
+                                                     order__status__in=['paid', 'sent', 'wait', 'success']
+                                                     )
+        data = {
+            'id': product.id,
+            'title': product.title,
+            'sales': []
+        }
+
+        sale = order_products.values('order__created_at__date', 'order__author__user', 'order__author__user__username',
+                                     'order__author__user__name').annotate(
+            total_count=Sum('count')
+        )
+        for sale_item in sale:
+            data['sales'].append({
+                'date': sale_item['order__created_at__date'],
+                'user_id': sale_item['order__author__user'],
+                'username': sale_item['order__author__user__username'],
+                'name': sale_item['order__author__user__name'],
+                'total_count': sale_item['total_count'],
+            })
+
+        return Response({'result': data})
 
 
 class WareHouseTaskView(ListModelMixin,
@@ -242,3 +277,30 @@ class WareHouseTaskView(ListModelMixin,
         serializer = self.get_serializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
+
+class WareHouseInventoryView(ListModelMixin,
+                             RetrieveModelMixin,
+                             CreateModelMixin,
+                             GenericViewSet):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = WareHouseInventorySerializer
+    pagination_class = GeneralPurposePagination
+
+    def get_queryset(self):
+        return (Inventory.objects.filter(products__product__counts__stock=self.request.user.warehouse_profile.stock)
+                .distinct())
+
+    def get_serializer_context(self):
+        if self.detail:
+            return {'request': self.request, 'retrieve': True}
+        return {'request': self.request}
+
+    @action(methods=['GET'], detail=False, url_path='products')
+    def get_products(self, request, *args, **kwargs):
+        category_id = self.request.query_params.get('category_id')
+        search = self.request.query_params.get('search')
+        products = AsiaProduct.objects.filter(category__id=category_id)
+        if search:
+            products = products.filter(title__icontains=search)
+        serializer = InventoryProductListSerializer(products, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
