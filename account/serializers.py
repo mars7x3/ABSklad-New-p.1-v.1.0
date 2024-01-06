@@ -19,7 +19,7 @@ class UserLoginSerializer(TokenObtainPairSerializer):
                 magazine = user.magazines.filter(is_active=True).first()
                 if magazine:
                     if magazine.status not in ['hired', 'restored']:
-                        return serializers.ValidationError({'text': 'Вы пока не можете авторизоваться!'})
+                        raise serializers.ValidationError({'text': 'Вы пока не можете авторизоваться!'})
 
         data = super().validate(attrs)
         data['status'] = self.user.status
