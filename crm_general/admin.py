@@ -14,3 +14,6 @@ admin.site.register(Inventory)
 admin.site.register(InventoryProduct)
 
 
+admin.site.register(DealerKPIPlan)
+admin.site.register(ProductToBuy)
+admin.site.register(ProductToBuyCount)
