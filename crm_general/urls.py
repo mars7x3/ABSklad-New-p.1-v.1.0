@@ -66,7 +66,7 @@ from .views import *
 from .marketer.views import (
     MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeView,
     MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView,
-    MarketerTaskView,
+    MarketerTaskView, DealersFilterAPIView,
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
@@ -290,6 +290,7 @@ marketer_router.register('task', MarketerTaskView)
 marketer_urlpatterns = [
     path('marketer/dealer-status/list/', MarketerDealerStatusListView.as_view({'get': 'list'})),
     path('marketer/', include(marketer_router.urls)),
+    path('marketer/dealers/filter/', DealersFilterAPIView.as_view()),
 ]
 
 # --------------------------- WARE HOUSE MANAGER

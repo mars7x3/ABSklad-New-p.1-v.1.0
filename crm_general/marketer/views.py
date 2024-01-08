@@ -3,6 +3,7 @@ from rest_framework import status
 
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, \
     CreateModelMixin
@@ -235,8 +236,9 @@ class CRMNotificationView(ListModelMixin,
         serializer = DiscountSerializer(actions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path='dealers')
-    def get_dealers(self, request):
+
+class DealersFilterAPIView(APIView):
+    def post(self, request):
         cities_list = self.request.data.getlist('cities')
         categories_list = self.request.data.getlist('categories')
         if cities_list:
