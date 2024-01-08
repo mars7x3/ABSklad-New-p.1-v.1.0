@@ -8,7 +8,7 @@ from product.models import AsiaProduct, ProductImage, ProductPrice
 class StoryListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = ('id', 'image')
+        fields = ('id', 'file')
 
 
 class StoryDetailSerializer(serializers.ModelSerializer):
