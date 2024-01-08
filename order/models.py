@@ -100,11 +100,3 @@ class CartProduct(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
 
-class Reservation(models.Model):
-    author = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='reservations')
-    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='reservations')
-    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='reservations')
-    count = models.IntegerField()
-    is_active = models.BooleanField(default=True)
-    is_success = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
