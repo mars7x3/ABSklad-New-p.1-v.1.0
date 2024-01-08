@@ -5,6 +5,7 @@ from django.db.models.functions import Coalesce, Round
 from django.utils import timezone
 
 from account.models import DealerStatus
+from general_service.models import City
 from order.models import MyOrder
 from product.models import AsiaProduct, ProductPrice
 
@@ -190,3 +191,17 @@ def get_motivation_done(dealer):
     return motivations_data
 
 
+def verified_director(product):
+    n1, n2 = 0, 2
+
+    cost_price = product.cost_prices.filter(is_active=True).first()
+    if cost_price:
+        n1 += 1
+
+    prices = product.prices.all()
+    cities = City.objects.all()
+    d_statuses = DealerStatus.objects.all()
+    number = len(cities) * len(d_statuses)
+    if number == len(prices):
+        n1 += 1
+    return f'{n1}/{n2}'
