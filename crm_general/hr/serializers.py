@@ -11,7 +11,8 @@ class HRStaffListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['employee_status'] = instance.magazines.filter(is_active=True).first().status
+        employee = instance.magazines.filter(is_active=True).first()
+        rep['employee_status'] = employee.status if employee else None
         return rep
 
 
