@@ -1,5 +1,6 @@
 from django.db.models import F, Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
@@ -7,7 +8,7 @@ from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer, CRMTaskResponseSerializer
 from crm_general.paginations import AppPaginationClass
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
-from order.models import MyOrder, CartProduct, ReturnOrder
+from order.models import MyOrder, CartProduct, ReturnOrder, Reservation
 from product.models import ProductPrice, Collection, Category, AsiaProduct
 
 from .mixins import BaseOrderMixin, BaseDealerViewMixin, BaseDealerRelationViewMixin, BaseManagerMixin
@@ -18,7 +19,8 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ManagerTaskListSerializer
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ManagerTaskListSerializer,
+    ManagerReservationCRUDSerializer
 )
 
 
@@ -450,3 +452,11 @@ class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
             .only("id", "task", "grade", "is_done")
             .filter(task__is_active=True)
         )
+
+
+class ManagerReservationCRUDView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsManager]
+    queryset = Reservation.objects.all()
+    serializer_class = ManagerReservationCRUDSerializer
+
+

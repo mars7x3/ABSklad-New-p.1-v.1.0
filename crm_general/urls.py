@@ -28,7 +28,8 @@ from .manager.views import (
     ReturnRetrieveAPIView as ManagerReturnRetrieveAPIView,
     ReturnUpdateAPIView as ManagerReturnUpdateAPIView,
     BalancePlusManagerView as ManagerBalancePlusManagerView,
-    ManagerTaskListAPIView, ManagerTaskRetrieveAPIView
+    ManagerTaskListAPIView, ManagerTaskRetrieveAPIView,
+    ManagerReservationCRUDView
 )
 
 from .rop.views import (
@@ -169,6 +170,8 @@ accountant_urlpatterns = [
 manager_router = SimpleRouter()
 manager_router.register("dealers", ManagerDealerListViewSet, basename="crm_general-manager-dealers")
 manager_router.register("balances", ManagerBalanceViewSet, basename="crm_general-manager-balances")
+manager_router.register("reservations", ManagerReservationCRUDView, basename="crm_general-manager-reservations")
+
 
 manager_urlpatterns = [
     # Dealers
