@@ -570,6 +570,7 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = CRMTask.objects.all()
     serializer_class = DirectorTaskListSerializer
+    pagination_class = CRMPaginationClass
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
@@ -601,8 +602,10 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
             kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
-        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+
+        return self.get_paginated_response(serializer)
 
 
 class DirectorGradeCRUDView(viewsets.ModelViewSet):
