@@ -23,7 +23,6 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
     queryset = MyUser.objects.filter(
         status__in=['director', 'main_director', 'rop', 'manager', 'marketer', 'accountant', 'warehouse', 'hr'])
     serializer_class = HRStaffListSerializer
-    pagination_class = CRMPaginationClass
 
     def get_serializer_class(self):
         if self.detail:
@@ -49,9 +48,8 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
             kwargs['magazines__is_active'] = True
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(serializer)
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class StaffMagazineCreateView(mixins.CreateModelMixin, GenericViewSet):
