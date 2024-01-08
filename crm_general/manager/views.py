@@ -8,7 +8,7 @@ from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer, CRMTaskResponseSerializer
 from crm_general.paginations import AppPaginationClass
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
-from order.models import MyOrder, CartProduct, ReturnOrder, Reservation
+from order.models import MyOrder, CartProduct, ReturnOrder
 from product.models import ProductPrice, Collection, Category, AsiaProduct
 
 from .mixins import BaseOrderMixin, BaseDealerViewMixin, BaseDealerRelationViewMixin, BaseManagerMixin
@@ -20,7 +20,6 @@ from .serializers import (
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
     ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ManagerTaskListSerializer,
-    ManagerReservationCRUDSerializer
 )
 
 
@@ -454,9 +453,6 @@ class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
         )
 
 
-class ManagerReservationCRUDView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsManager]
-    queryset = Reservation.objects.all()
-    serializer_class = ManagerReservationCRUDSerializer
+
 
 

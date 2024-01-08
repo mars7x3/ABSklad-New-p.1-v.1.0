@@ -17,7 +17,7 @@ from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
 from crm_general.utils import get_motivation_done
 from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
-from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, ReturnOrder, ReturnOrderProduct, Reservation
+from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, ReturnOrder, ReturnOrderProduct
 from order.tasks import create_order_notification
 from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage
 
@@ -650,34 +650,5 @@ class ManagerTaskListSerializer(serializers.ModelSerializer):
         fields = ("id", "task", "grade", "is_done")
 
 
-class ManagerReservationCRUDSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Reservation
-        fields = '__all__'
 
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['author_info'] = ReservationMyUserSerializer(instance.author, context=self.context).data
-        rep['product_info'] = ReservationAsiaProductSerializer(instance.product, context=self.context).data
-        rep['stock_info'] = ReservationStockSerializer(instance.stock, context=self.context).data
-
-        return rep
-
-
-class ReservationMyUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MyUser
-        fields = ('name', 'id')
-
-
-class ReservationStockSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Stock
-        fields = ('title', 'id')
-
-
-class ReservationAsiaProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AsiaProduct
-        fields = ('title', 'id')
 
