@@ -8,13 +8,13 @@ from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateMode
     CreateModelMixin
 from rest_framework.permissions import IsAuthenticated
 
-from account.models import DealerStatus, CRMNotification, MyUser, Notification
+from account.models import DealerStatus, CRMNotification, MyUser, Notification, DealerProfile
 from product.serializers import ProductSizeSerializer
 from promotion.models import Banner, Story, Motivation, Discount
 from .serializers import MarketerProductSerializer, MarketerProductListSerializer, MarketerCollectionSerializer, \
     MarketerCategorySerializer, BannerSerializer, BannerListSerializer, DealerStatusSerializer, StoryListSerializer, \
     StoryDetailSerializer, ShortProductSerializer, CRMNotificationSerializer, MotivationSerializer, \
-    DiscountSerializer, MarketerCRMTaskResponseSerializer
+    DiscountSerializer, MarketerCRMTaskResponseSerializer, DealerProfileSerializer
 from ..models import CRMTaskResponse
 from ..paginations import ProductPagination, GeneralPurposePagination
 from product.models import AsiaProduct, Collection, Category, ProductSize
@@ -114,7 +114,7 @@ class MarketerBannerModelViewSet(ListModelMixin,
                                  UpdateModelMixin,
                                  CreateModelMixin,
                                  GenericViewSet):
-    queryset = Banner.objects.prefetch_related('cities', 'products').all()
+    queryset = Banner.objects.prefetch_related('products').all()
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = BannerListSerializer
     retrieve_serializer_class = BannerSerializer
@@ -235,10 +235,17 @@ class CRMNotificationView(ListModelMixin,
         serializer = DiscountSerializer(actions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['GET'], detail=False, url_path='groups')
-    def get_groups(self, request):
-        users = DealerStatus.objects.all()
-        serializer = DealerStatusSerializer(users, many=True)
+    @action(methods=['POST'], detail=False, url_path='dealers')
+    def get_dealers(self, request):
+        cities_list = self.request.data.getlist('cities')
+        categories_list = self.request.data.getlist('categories')
+        if cities_list:
+            dealers = DealerProfile.objects.filter(city__in=cities_list)
+        elif categories_list:
+            dealers = DealerProfile.objects.filter(dealer_status__in=categories_list)
+        else:
+            return Response({'detail': 'filter by cities or categories needed'})
+        serializer = DealerProfileSerializer(dealers, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

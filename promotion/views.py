@@ -32,7 +32,7 @@ class MotivationView(APIView):
 
 class BannerListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Banner.objects.filter(is_active=True, status='app')
+    queryset = Banner.objects.filter(is_active=True)
     serializer_class = BannerListSerializer
 
     def get_serializer_class(self):
