@@ -284,8 +284,7 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
     queryset = AsiaProduct.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = AccountantProductSerializer
-    pagination_class = CRMPaginationClass
-    
+
     def list(self, request, *args, **kwargs):
         queryset = self.queryset
         pr_status = self.request.query_params.get('status')
@@ -298,10 +297,8 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
         if search:
             queryset = queryset.filter(title__icontains=search)
 
-        paginator = CRMPaginationClass()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
       
 class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
