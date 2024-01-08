@@ -105,6 +105,12 @@ class ProductCountSerializer(serializers.ModelSerializer):
         model = ProductCount
         fields = ('stock', 'count_crm', 'arrival_time')
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['count_crm'] = instance.count_crm - sum(instance.reservations.filter(is_active=True).values_list('count'))
+
+        return rep
+
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
