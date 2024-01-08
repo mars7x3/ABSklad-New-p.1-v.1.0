@@ -239,8 +239,8 @@ class CRMNotificationView(ListModelMixin,
 
 class DealersFilterAPIView(APIView):
     def post(self, request):
-        cities_list = self.request.data.getlist('cities')
-        categories_list = self.request.data.getlist('categories')
+        cities_list = self.request.data.get('cities')
+        categories_list = self.request.data.get('categories')
         if cities_list:
             dealers = DealerProfile.objects.filter(city__in=cities_list)
         elif categories_list:

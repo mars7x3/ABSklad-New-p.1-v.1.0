@@ -56,6 +56,7 @@ class AsiaProduct(models.Model):
     avg_rating = models.DecimalField(max_digits=2, decimal_places=1, default=0)
     reviews_count = models.IntegerField(default=0)
     diagram = models.FileField(upload_to='product_diagrams', blank=True, null=True)
+    diagram_link = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.vendor_code}. {self.title}"

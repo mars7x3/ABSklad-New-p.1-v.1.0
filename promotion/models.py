@@ -14,8 +14,7 @@ class Story(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     products = models.ManyToManyField(AsiaProduct, related_name='stories')
-    cities = models.ManyToManyField(City, related_name='stories')
-    dealer_groups = models.ManyToManyField(DealerStatus, related_name='stories')
+    dealer_profiles = models.ManyToManyField(DealerProfile, related_name='stories')
 
 
 class Motivation(models.Model):
