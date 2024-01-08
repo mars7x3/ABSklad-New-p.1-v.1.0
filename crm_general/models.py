@@ -88,6 +88,7 @@ class DealerKPIPlan(models.Model):
     spend_amount = models.DecimalField(max_digits=20, decimal_places=2)  # pds
     target_month = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
     created_at = models.DateTimeField(auto_now_add=True)
+    done_amount = models.DecimalField(max_digits=20, decimal_places=2)
 
     class Meta:
         unique_together = ["dealer", "target_month"]
@@ -106,6 +107,7 @@ class ProductToBuyCount(models.Model):
     product_to_buy = models.ForeignKey(ProductToBuy, on_delete=models.CASCADE, related_name="counts")
     city = models.ForeignKey(City, on_delete=models.CASCADE)
     count = models.PositiveIntegerField(validators=[MinValueValidator(1)], default=1)
+    done_count = models.DecimalField(max_digits=20, decimal_places=2)
 
     
 class Inventory(models.Model):

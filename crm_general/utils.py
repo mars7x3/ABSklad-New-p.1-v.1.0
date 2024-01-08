@@ -1,7 +1,8 @@
+from decimal import Decimal
 import logging
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import F, Q, Count, Value, Case, When, Sum, DecimalField
+from django.db.models import F, Q, Count, Value, Case, When, Sum, DecimalField, IntegerField, ExpressionWrapper
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -133,14 +134,14 @@ def create_dealer_kpi_plans(target_month: int, months: int):
             )
         )
         .annotate(
-            count=Case(
+            avg_count=Case(
                 When(
                     products_count__gt=Value(months),
                     then=F("products_count") / Value(months)
                 ),
                 default=Value(1)
             ),
-            spend_amount=Case(
+            avg_spend_amount=Case(
                 When(
                     spend_amount_sum__isnull=False,
                     spend_amount_sum__gt=months,
@@ -154,6 +155,10 @@ def create_dealer_kpi_plans(target_month: int, months: int):
                 default=Value(0.0),
                 output_field=DecimalField()
             )
+        )
+        .annotate(
+            count=F("avg_count") + ExpressionWrapper(F("avg_count") * Value(0.2), output_field=IntegerField()),
+            spend_amount=F("avg_spend_amount") + (F("avg_spend_amount") * Value(Decimal("0.2")))
         )
     )
 
@@ -202,7 +207,3 @@ def create_dealer_kpi_plans(target_month: int, months: int):
 
         if new_product_counts:
             ProductToBuyCount.objects.bulk_create(new_product_counts)
-
-
-def create_dealer_kpi_to_next_month():
-    create_dealer_kpi_plans(target_month=(timezone.now() + relativedelta(months=1)).month, months=3)
