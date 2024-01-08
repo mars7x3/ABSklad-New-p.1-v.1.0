@@ -379,6 +379,7 @@ class AccountantTaskListAPIView(generics.ListAPIView):
     serializer_class = ManagerTaskListSerializer
     filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
     search_fields = ("task__title",)
+    pagination_class = CRMPaginationClass
     filter_by_fields = {
         "start_date": {"by": "task__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
         "end_date": {"by": "task__created_at__date__lte", "type": "date", "pipline": string_date_to_date},
