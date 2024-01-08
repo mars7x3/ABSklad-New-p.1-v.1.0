@@ -110,10 +110,8 @@ class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMix
         if search:
             queryset = queryset.filter(title__icontains=search)
 
-        paginator = ProductPagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def get_queryset(self):
         return self.queryset.filter(counts__stock=self.request.user.warehouse_profile.stock)
