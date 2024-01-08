@@ -7,7 +7,7 @@ from rest_framework import serializers
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
 from crm_general.director.tasks import create_product_prices
-from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done
+from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director
 from crm_general.models import CRMTask, CRMTaskFile, CRMTaskResponse, CRMTaskResponseFile, CRMTaskGrade, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
@@ -170,6 +170,8 @@ class DirectorProductListSerializer(serializers.ModelSerializer):
         rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
         cost_price = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_price.price if cost_price else '---'
+        rep['verified'] = verified_director(instance)
+
         return rep
 
 
