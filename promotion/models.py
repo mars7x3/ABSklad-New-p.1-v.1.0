@@ -75,26 +75,21 @@ class Discount(models.Model):
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     products = models.ManyToManyField(AsiaProduct, related_name='discount_products')
-    cities = models.ManyToManyField(City, related_name='discount_cities')
-    dealer_statuses = models.ManyToManyField(DealerStatus, related_name='discount_d_statuses')
+    dealer_profiles = models.ManyToManyField(DealerProfile, related_name='discount_d_profiles')
 
 
 class Banner(models.Model):
-    STATUS = (
-        ('web', 'web'),
-        ('app', 'app'),
-    )
-
     title = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='banner-images', blank=True, null=True)
+    motivation = models.ForeignKey(Motivation, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
+    discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
+    image = models.ImageField(upload_to='banner-images', blank=True, null=True)  # TODO: delete after demo version
+    web_image = models.ImageField(upload_to='banner-images', blank=True, null=True)  # TODO: delete after demo version
     video_url = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    status = models.CharField(choices=STATUS, default='web', max_length=3)
     created_at = models.DateTimeField(auto_now_add=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     clicks = models.PositiveIntegerField(default=0)
-    cities = models.ManyToManyField(City, related_name='banners')
-    products = models.ManyToManyField(AsiaProduct, related_name='banners')
-    groups = models.ManyToManyField(DealerStatus, related_name='banner_groups')
+    products = models.ManyToManyField(AsiaProduct, related_name='banners', blank=True)
+    dealer_profiles = models.ManyToManyField(DealerProfile, related_name='banners', blank=True)

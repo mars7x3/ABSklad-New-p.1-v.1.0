@@ -104,13 +104,13 @@ class MotivationPresentSerializer(serializers.ModelSerializer):
 class BannerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active', 'products')
+        exclude = ('dealers', 'clicks', 'is_active', 'products')
 
 
 class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active')
+        exclude = ('dealers', 'clicks', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
