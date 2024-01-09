@@ -57,12 +57,12 @@ def synchronization_back_to_1C():
         for pri in PriceType.objects.all():
             for sta in DealerStatus.objects.all():
                 price_types.append(
-                    PriceType(
+                    ProductPrice(
                         price_type=pri, product=product,
                         d_status=sta
                     )
                 )
-        PriceType.objects.bulk_create(price_types)
+        ProductPrice.objects.bulk_create(price_types)
 
         prod_price_data = []
         for c in p.get('Prices'):
