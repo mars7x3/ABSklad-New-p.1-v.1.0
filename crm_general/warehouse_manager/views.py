@@ -96,7 +96,6 @@ class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMix
     serializer_class = WareHouseProductListSerializer
     retrieve_serializer_class = WareHouseProductSerializer
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = ProductPagination
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -127,7 +126,6 @@ class WareHouseCollectionViewSet(ListModelMixin,
                                  GenericViewSet):
     queryset = Collection.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = ProductPagination
     serializer_class = WareHouseCollectionListSerializer
 
     def list(self, request, *args, **kwargs):
@@ -142,10 +140,9 @@ class WareHouseCollectionViewSet(ListModelMixin,
 
         if search:
             queryset = queryset.filter(title__icontains=search)
-        paginator = GeneralPurposePagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class WareHouseCategoryViewSet(ListModelMixin,
@@ -153,7 +150,6 @@ class WareHouseCategoryViewSet(ListModelMixin,
                                GenericViewSet):
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = ProductPagination
     serializer_class = WareHouseCategoryListSerializer
 
     def get_serializer_context(self):
