@@ -236,8 +236,8 @@ class CRMNotificationView(ListModelMixin,
 
 class DealersFilterAPIView(APIView):
     def post(self, request):
-        cities = self.request.data.getlist('cities', [])
-        categories = self.request.data.getlist('categories', [])
+        cities = self.request.data.get('cities', [])
+        categories = self.request.data.get('categories', [])
         if not cities and not categories:
             return Response({'detail': 'filter by cities or categories needed'}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -38,6 +38,10 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
         if name:
             kwargs['name__icontains'] = name
 
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = bool(int(is_active))
+
         u_status = request.query_params.get('status')
         if u_status:
             kwargs['status'] = u_status

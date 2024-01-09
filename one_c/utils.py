@@ -4,7 +4,8 @@ import json
 import requests
 
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile
-from general_service.models import Stock, City, PriceType
+from general_service.models import Stock, City, PriceType, CashBox
+from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
 from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Collection
 
@@ -83,7 +84,7 @@ def synchronization_back_to_1C():
         ProductPrice.objects.bulk_update(prod_price_data, ['price'])
 
 
-def synchronization_1C_to_back(request):  # sync product 1C -> CRM
+def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
     products = request.data.get('products')
     print('***Product CRUD***')
     print(products)
@@ -110,6 +111,7 @@ def synchronization_1C_to_back(request):  # sync product 1C -> CRM
                 product.category = category
                 product.save()
 
+        price_create = []
         if prices_1c:
             for p in prices_1c:
                 price_type = PriceType.objects.filter(uid=p.get('city_uid')).first()
@@ -124,8 +126,9 @@ def synchronization_1C_to_back(request):  # sync product 1C -> CRM
                             price.price = amount
                             price.save()
                         else:
-                            ProductPrice.objects.create(price_type=price_type, product=product, price=amount,
-                                                        d_status=status)
+                            price_create.append(ProductPrice(price_type=price_type, product=product, price=amount,
+                                                d_status=status))
+        ProductPrice.objects.bulk_create(price_create)
 
         if is_new:
             product.counts.all().delete()
@@ -275,3 +278,40 @@ def sync_order_histories_1c_to_crm():
         if order:
             order.created_at = datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S")
             order.save()
+
+
+def sync_pay_doc_histories():
+    url = 'http://91.211.251.134/testcrm/hs/asoi/GetPyments'
+    username = 'Директор'
+    password = '757520ля***'
+    response = requests.get(url, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response_data = json.loads(response.content)
+
+    payments = response_data.get('pyments')
+
+    data_payment = []
+
+    for p in payments:
+        user = MyUser.objects.filter(uid=p['user_uid']).first()
+        cashbox_uid = CashBox.objects.filter(uid=p['cashbox_uid']).first()
+        if user and cashbox_uid:
+            data_payment.append(MoneyDoc(
+                status=p['order_type'],
+                user=user,
+                amount=p['amount'],
+                cash_box=cashbox_uid,
+                uid=p['uid'],
+            ))
+    MoneyDoc.objects.bulk_create(data_payment)
+
+    update_data = []
+    for p in payments:
+        date_object = datetime.datetime.strptime(p['created_at'], "%d.%m.%Y %H:%M:%S")
+        money_doc = MoneyDoc.objects.filter(uid=p['uid']).first()
+        if money_doc:
+            money_doc.created_at = date_object
+            update_data.append(money_doc)
+
+    MoneyDoc.objects.bulk_update(update_data, ['created_at'])
+
+
