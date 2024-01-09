@@ -393,10 +393,10 @@ class ShortProductSerializer(serializers.ModelSerializer):
                   "last_fifteen_days_ratio", "avg_receipt_amount", "created_at")
 
     def get_collection(self, instance):
-        return instance.collection.title if instance.collection.title else None
+        return instance.collection.title if instance.collection else None
 
     def get_category(self, instance):
-        return instance.category.title if instance.category.title else None
+        return instance.category.title if instance.category else None
 
     def get_last_fifteen_days_ratio(self, instance):
         fifteen_days_ago = timezone.now() - timezone.timedelta(days=15)
