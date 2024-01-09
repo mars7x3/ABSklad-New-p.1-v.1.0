@@ -152,8 +152,6 @@ def sync_dealer():
             dict_ = {'name': c.get('Name'),
                      'uid': c.get('UID'),
                      'phone': c.get('Telephone'),
-                     'address': c.get('Address'),
-                     'liability': c.get('Liability'),
                      'email': c.get('UID') + "@absklad.com",
                      'password': password,
                      'pwd': password,
