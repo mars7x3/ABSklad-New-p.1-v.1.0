@@ -236,18 +236,20 @@ class CRMNotificationView(ListModelMixin,
 
 class DealersFilterAPIView(APIView):
     def post(self, request):
-        cities = self.request.data.getlist('cities', [])
-        categories = self.request.data.getlist('categories', [])
+        cities = self.request.data.get('cities', [])
+        categories = self.request.data.get('categories', [])
         if not cities and not categories:
             return Response({'detail': 'filter by cities or categories needed'}, status=status.HTTP_400_BAD_REQUEST)
 
         base_query = Q(user__is_active=True)
 
         if cities:
-            base_query &= Q(city__in=cities)
+            cities_list = self.request.data.getlist('cities')
+            base_query &= Q(city__in=cities_list)
 
         if categories:
-            base_query &= Q(dealer_status__in=categories)
+            categories_list = self.request.data.getlist('categories')
+            base_query &= Q(dealer_status__in=categories_list)
 
         dealers = DealerProfile.objects.filter(base_query)
 
