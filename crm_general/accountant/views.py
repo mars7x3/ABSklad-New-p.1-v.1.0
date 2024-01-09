@@ -304,7 +304,6 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
 class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Collection.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
-    pagination_class = CRMPaginationClass
     serializer_class = AccountantCollectionSerializer
 
     def list(self, request, *args, **kwargs):
@@ -319,16 +318,14 @@ class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericVi
 
         if search:
             queryset = queryset.filter(title__icontains=search)
-        paginator = CRMPaginationClass()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
       
       
 class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
-    pagination_class = CRMPaginationClass
     serializer_class = AccountantCategorySerializer
 
     def get_serializer_context(self):
@@ -347,7 +344,6 @@ class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet)
 class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Stock.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
-    pagination_class = CRMPaginationClass
     serializer_class = AccountantStockListSerializer
     retrieve_serializer_class = AccountantStockDetailSerializer
 
@@ -362,10 +358,9 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
 
         if search:
             queryset = queryset.filter(city__icontains=search)
-        paginator = CRMPaginationClass()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
     def get_serializer_class(self):
         if self.detail:
