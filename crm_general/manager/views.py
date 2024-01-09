@@ -277,7 +277,6 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
                             .all()
     )
     serializer_class = ProductPriceListSerializer
-    pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("product__name",)
     filter_by_fields = {
