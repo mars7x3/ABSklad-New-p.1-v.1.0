@@ -43,7 +43,7 @@ def synchronization_back_to_1C():
                 count.count_crm = s.get('NomenclatureAmount')
                 count.count_norm = 20
                 prod_count_data.append(count)
-        ProductCount.objects.bulk_update(prod_count_data, ['count'])
+        ProductCount.objects.bulk_update(prod_count_data, ['count_1c', 'count_crm', 'count_norm'])
 
         price_types = []
         for pri in PriceType.objects.all():
