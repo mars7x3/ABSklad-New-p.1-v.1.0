@@ -89,7 +89,7 @@ class ProductPrice(models.Model):
                                    related_name='prices')
 
     def __str__(self):
-        return f'{self.product} - {self.price_type.title} - {self.price}'
+        return f'{self.product} - {self.price}'
 
 
 class ProductCount(models.Model):
