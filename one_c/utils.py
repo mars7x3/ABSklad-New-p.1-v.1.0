@@ -39,7 +39,9 @@ def synchronization_back_to_1C():
             stock = Stock.objects.filter(uid=s.get('WarehouseUID')).first()
             if stock:
                 count = ProductCount.objects.filter(stock=stock, product=product).first()
-                count.count = s.get('NomenclatureAmount')
+                count.count_1c = s.get('NomenclatureAmount')
+                count.count_crm = s.get('NomenclatureAmount')
+                count.count_norm = 20
                 prod_count_data.append(count)
         ProductCount.objects.bulk_update(prod_count_data, ['count'])
 
