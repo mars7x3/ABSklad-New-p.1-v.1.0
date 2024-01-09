@@ -91,7 +91,7 @@ class ProductPriceListSerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ('image',)
+        fields = ('image', 'position')
 
 
 class ProductSizeSerializer(serializers.ModelSerializer):
@@ -105,12 +105,6 @@ class ProductCountSerializer(serializers.ModelSerializer):
         model = ProductCount
         fields = ('stock', 'count_crm', 'arrival_time')
 
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['count_crm'] = instance.count_crm - sum(instance.reservations.filter(is_active=True).values_list('count'))
-
-        return rep
-
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -120,7 +114,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
-        rep['images'] = ProductImageSerializer([instance.images.first()], many=True, context=self.context).data
+        rep['images'] = ProductImageSerializer(instance.images, many=True, context=self.context).data
         rep['sizes'] = ProductSizeSerializer(instance.sizes, many=True, context=self.context).data
         rep['counts'] = ProductCountSerializer(instance.counts, many=True, context=self.context).data
 
