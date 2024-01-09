@@ -58,11 +58,7 @@ def get_chat_messages(chat_id: str, limit, offset, search: str = None):
     base_queryset = Message.objects.filter(chat_id=chat_id).select_related("sender").order_by('-created_at')
     if search:
         base_queryset = base_queryset.filter(dealer__name__icontains=search)
-
-    page = list(base_queryset[offset:offset + limit])
-    if page:
-        page.reverse()
-    return MessageSerializer(instance=page, many=True).data
+    return MessageSerializer(instance=list(base_queryset[offset:offset + limit]), many=True).data
 
 
 @database_sync_to_async
