@@ -3,25 +3,32 @@ from rest_framework import serializers
 
 from account.models import MyUser
 from chat.models import Chat, Message, MessageAttachment
-from chat.utils import get_dealer_name, ws_send_message
+from chat.utils import get_dealer_name, ws_send_message, build_file_url
 
 
 class MessageAttachmentSerializer(serializers.ModelSerializer):
-    file = serializers.FileField(use_url=False, read_only=True)
+    file = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MessageAttachment
         fields = ("id", "file")
         read_only_fields = ("id",)
 
+    def get_file(self, instance):
+        return build_file_url(instance.file.url)
+
 
 class SenderSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(use_url=False, read_only=True)
+    image = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyUser
         fields = ("id", "name", "image")
         read_only_fields = ("id", "name")
+
+    def get_image(self, instance):
+        if instance.image:
+            return build_file_url(instance.image.url)
 
 
 class MessageSerializer(serializers.ModelSerializer):
