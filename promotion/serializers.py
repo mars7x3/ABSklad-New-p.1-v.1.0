@@ -14,7 +14,7 @@ class StoryListSerializer(serializers.ModelSerializer):
 class StoryDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = '__all__'
+        exclude = ('clicks', 'dealer_profiles', 'end_date', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -104,13 +104,14 @@ class MotivationPresentSerializer(serializers.ModelSerializer):
 class BannerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        exclude = ('dealers', 'clicks', 'is_active', 'products')
+        exclude = ('dealer_profiles', 'clicks', 'is_active', 'products', 'web_image', 'discount', 'motivation',
+                   'created_at', 'description', 'video_url')
 
 
 class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        exclude = ('dealers', 'clicks', 'is_active')
+        exclude = ('dealer_profiles', 'clicks', 'is_active', 'web_image', 'discount', 'motivation', 'created_at')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

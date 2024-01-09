@@ -43,7 +43,7 @@ class BannerListView(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         dealer = self.request.user.dealer_profile
-        queryset = self.queryset.filter(cities=dealer.city, groups=dealer.dealer_status)
+        queryset = dealer.banners.filter(is_active=True)
         return queryset
 
 

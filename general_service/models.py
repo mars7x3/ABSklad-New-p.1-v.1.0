@@ -36,6 +36,9 @@ class CashBox(models.Model):
     title = models.CharField(max_length=30)
     uid = models.CharField(max_length=40, blank=True, null=True)
 
+    def __str__(self):
+        return self.title
+
 
 class StockPhone(models.Model):
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, null=True, related_name='phones')
