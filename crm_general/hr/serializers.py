@@ -7,7 +7,7 @@ from account.models import MyUser, StaffMagazine
 class HRStaffListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('email', 'id', 'status', 'name')
+        fields = ('email', 'id', 'status', 'name', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -19,7 +19,7 @@ class HRStaffListSerializer(serializers.ModelSerializer):
 class HRStaffDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('email', 'id', 'status', 'name')
+        fields = ('email', 'id', 'status', 'name', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
