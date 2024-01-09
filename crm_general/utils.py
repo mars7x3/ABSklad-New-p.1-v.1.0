@@ -1,14 +1,12 @@
-from decimal import Decimal
+import math
 import logging
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import F, Q, Count, Value, Case, When, Sum, DecimalField, IntegerField, ExpressionWrapper
+from django.db.models import F, Q, Count, Value, Case, When, Sum, FloatField, ExpressionWrapper, DecimalField
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from order.models import MyOrder
-
-from .models import DealerKPIPlan, ProductToBuy, ProductToBuyCount
 
 
 def today_on_true(field_value):
@@ -112,10 +110,16 @@ def get_motivation_done(dealer):
     return motivations_data
 
 
-def create_dealer_kpi_plans(target_month: int, months: int):
-    assert 0 < months < 13
-    months_ago = timezone.now() - relativedelta(months=months)
-    orders = (
+def round_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return math.ceil(n * multiplier) / multiplier
+
+
+def collect_orders_data_for_kpi_plan(check_months_ago, increase_threshold: float):
+    assert 0 < check_months_ago < 13
+    months_ago = timezone.now() - relativedelta(months=check_months_ago)
+
+    return (
         MyOrder.objects.filter(
             status__in=("wait", "sent", "paid", "success"),
             created_at__date__gte=months_ago
@@ -136,74 +140,30 @@ def create_dealer_kpi_plans(target_month: int, months: int):
         .annotate(
             avg_count=Case(
                 When(
-                    products_count__gt=Value(months),
-                    then=F("products_count") / Value(months)
+                    products_count__gt=Value(check_months_ago),
+                    then=F("products_count") / Value(check_months_ago)
                 ),
                 default=Value(1)
             ),
             avg_spend_amount=Case(
                 When(
                     spend_amount_sum__isnull=False,
-                    spend_amount_sum__gt=months,
-                    then=F("spend_amount_sum") / Value(months)
+                    spend_amount_sum__gt=check_months_ago,
+                    then=F("spend_amount_sum") / Value(check_months_ago)
                 ),
                 When(
                     spend_amount_sum__isnull=False,
-                    spend_amount_sum__lte=months,
+                    spend_amount_sum__lte=check_months_ago,
                     then=F("spend_amount_sum")
                 ),
                 default=Value(0.0),
-                output_field=DecimalField()
+                output_field=FloatField()
             )
         )
         .annotate(
-            count=F("avg_count") + ExpressionWrapper(F("avg_count") * Value(0.2), output_field=IntegerField()),
-            spend_amount=F("avg_spend_amount") + (F("avg_spend_amount") * Value(Decimal("0.2")))
+            spend_amount=ExpressionWrapper(
+                F("avg_spend_amount") + (F("avg_spend_amount") * Value(increase_threshold)),
+                output_field=DecimalField()
+            )
         )
     )
-
-    new_plans = []
-    processed_dealer_ids = set()
-    collected_products_to_buy = {}
-    collected_product_counts = {}
-
-    for order in orders:
-        dealer_id = order["dealer_id"]
-        if dealer_id not in processed_dealer_ids:
-            new_plan = DealerKPIPlan(
-                dealer_id=dealer_id,
-                target_month=target_month,
-                spend_amount=order["spend_amount"]
-            )
-            new_plans.append(new_plan)
-
-        product_id = order["product_id"]
-        if dealer_id not in collected_products_to_buy:
-            collected_products_to_buy[dealer_id] = []
-
-        collected_products_to_buy[dealer_id].append(product_id)
-
-        if product_id not in collected_product_counts:
-            collected_product_counts[product_id] = []
-
-        collected_product_counts[product_id].append(dict(city_id=order["city_id"], count=order["count"]))
-        processed_dealer_ids.add(dealer_id)
-
-    if new_plans:
-        kpi_plans = DealerKPIPlan.objects.bulk_create(new_plans)
-
-        new_products_to_buy = [
-            ProductToBuy(kpi_plan=kpi_plan, product_id=product_id)
-            for kpi_plan in kpi_plans
-            for product_id in collected_products_to_buy.get(getattr(kpi_plan, "dealer_id")) or []
-        ]
-
-        saved_products = ProductToBuy.objects.bulk_create(new_products_to_buy) if new_products_to_buy else []
-        new_product_counts = [
-            ProductToBuyCount(product_to_buy=saved_product, **purchase_data)
-            for saved_product in saved_products
-            for purchase_data in collected_product_counts.get(getattr(saved_product, "product_id")) or []
-        ]
-
-        if new_product_counts:
-            ProductToBuyCount.objects.bulk_create(new_product_counts)

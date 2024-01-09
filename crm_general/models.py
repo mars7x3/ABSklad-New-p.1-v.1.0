@@ -88,10 +88,17 @@ class DealerKPIPlan(models.Model):
     spend_amount = models.DecimalField(max_digits=20, decimal_places=2)  # pds
     target_month = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
     created_at = models.DateTimeField(auto_now_add=True)
-    done_amount = models.DecimalField(max_digits=20, decimal_places=2)
 
     class Meta:
         unique_together = ["dealer", "target_month"]
+
+
+class DealerKPIPlanStat(models.Model):
+    objects = models.Manager()
+
+    kpi_plan = models.ForeignKey(DealerKPIPlan, on_delete=models.CASCADE, related_name="stats")
+    done_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class ProductToBuy(models.Model):
@@ -101,15 +108,22 @@ class ProductToBuy(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name="kpi_plans")
 
 
-class ProductToBuyCount(models.Model):
+class CityProductToBuy(models.Model):
     objects = models.Manager()
 
-    product_to_buy = models.ForeignKey(ProductToBuy, on_delete=models.CASCADE, related_name="counts")
+    product_to_buy = models.ForeignKey(ProductToBuy, on_delete=models.CASCADE, related_name="count_for_cities")
     city = models.ForeignKey(City, on_delete=models.CASCADE)
     count = models.PositiveIntegerField(validators=[MinValueValidator(1)], default=1)
-    done_count = models.DecimalField(max_digits=20, decimal_places=2)
 
-    
+
+class CityProductToBuyStat(models.Model):
+    objects = models.Manager()
+
+    city_product_to_buy = models.ForeignKey(CityProductToBuy, on_delete=models.CASCADE, related_name="stats")
+    done_count = models.DecimalField(max_digits=20, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class Inventory(models.Model):
     STATUS = (
         ('new', 'new'),
