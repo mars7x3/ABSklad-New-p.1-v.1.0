@@ -72,7 +72,7 @@ def synchronization_back_to_1C():
 
                 for status in dealer_statuses:
                     prod_price = ProductPrice.objects.filter(price_type=price_type, product=product,
-                                                             d_status=status)
+                                                             d_status=status).first()
                     amount = int(c.get('PriceAmount'))
                     prod_price.price = amount
 
