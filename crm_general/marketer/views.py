@@ -57,7 +57,6 @@ class MarketerCollectionModelViewSet(ListModelMixin,
                                      GenericViewSet):
     queryset = Collection.objects.all()
     permission_classes = [IsAuthenticated, IsMarketer]
-    pagination_class = ProductPagination
     serializer_class = MarketerCollectionSerializer
 
     def list(self, request, *args, **kwargs):
@@ -72,10 +71,9 @@ class MarketerCollectionModelViewSet(ListModelMixin,
 
         if search:
             queryset = queryset.filter(title__icontains=search)
-        paginator = GeneralPurposePagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+
+        serializer = ShortProductSerializer(queryset, many=True, context=self.get_renderer_context())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class MarketerCategoryModelViewSet(ListModelMixin,
@@ -85,7 +83,6 @@ class MarketerCategoryModelViewSet(ListModelMixin,
                                    GenericViewSet):
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated, IsMarketer]
-    pagination_class = ProductPagination
     serializer_class = MarketerCategorySerializer
 
     def get_serializer_context(self):
