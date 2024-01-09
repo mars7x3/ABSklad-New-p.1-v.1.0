@@ -8,7 +8,7 @@ from order.models import OrderProduct
 from .tasks import create_dealer_kpi_plan_stats, create_dealer_kpi_plan_product_stats
 
 
-@receiver(post_save, sender=MoneyDoc)
+# @receiver(post_save, sender=MoneyDoc)
 def on_save_money_doc(sender, instance, created, **kwargs):
     today = now()
     if instance.created_at.month != today.month or instance.created_at.year != today.year:
@@ -22,7 +22,7 @@ def on_save_money_doc(sender, instance, created, **kwargs):
     )
 
 
-@receiver(post_delete, sender=MoneyDoc)
+# @receiver(post_delete, sender=MoneyDoc)
 def on_delete_money_doc(sender, instance, **kwargs):
     today = now()
     if instance.created_at.month != today.month or instance.created_at.year != today.year:
@@ -36,7 +36,7 @@ def on_delete_money_doc(sender, instance, **kwargs):
     )
 
 
-@receiver(post_save, sender=OrderProduct)
+# @receiver(post_save, sender=OrderProduct)
 def on_save_order_product(sender, instance, created, **kwargs):
     today = now()
     if instance.created_at.month != today.month or instance.created_at.year != today.year:
@@ -52,7 +52,7 @@ def on_save_order_product(sender, instance, created, **kwargs):
     )
 
 
-@receiver(post_delete, sender=OrderProduct)
+# @receiver(post_delete, sender=OrderProduct)
 def on_delete_order_product(sender, instance, **kwargs):
     today = now()
     if instance.created_at.month != today.month or instance.created_at.year != today.year:
