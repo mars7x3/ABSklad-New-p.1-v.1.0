@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 
@@ -138,6 +139,7 @@ class MarketerBannerModelViewSet(ListModelMixin,
         serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
         return paginator.get_paginated_response(serializer)
 
+
     def get_serializer_class(self):
         if self.detail:
             return self.retrieve_serializer_class
@@ -234,14 +236,21 @@ class CRMNotificationView(ListModelMixin,
 
 class DealersFilterAPIView(APIView):
     def post(self, request):
-        cities_list = self.request.data.get('cities')
-        categories_list = self.request.data.get('categories')
-        if cities_list:
-            dealers = DealerProfile.objects.filter(city__in=cities_list)
-        elif categories_list:
-            dealers = DealerProfile.objects.filter(dealer_status__in=categories_list)
-        else:
-            return Response({'detail': 'filter by cities or categories needed'})
+        cities = self.request.data.getlist('cities', [])
+        categories = self.request.data.getlist('categories', [])
+        if not cities and not categories:
+            return Response({'detail': 'filter by cities or categories needed'}, status=status.HTTP_400_BAD_REQUEST)
+
+        base_query = Q(user__is_active=True)
+
+        if cities:
+            base_query &= Q(city__in=cities)
+
+        if categories:
+            base_query &= Q(dealer_status__in=categories)
+
+        dealers = DealerProfile.objects.filter(base_query)
+
         serializer = DealerProfileSerializer(dealers, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
