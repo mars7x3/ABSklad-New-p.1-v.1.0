@@ -244,12 +244,10 @@ class DealersFilterAPIView(APIView):
         base_query = Q(user__is_active=True)
 
         if cities:
-            cities_list = self.request.data.getlist('cities')
-            base_query &= Q(city__in=cities_list)
+            base_query &= Q(city__in=cities)
 
         if categories:
-            categories_list = self.request.data.getlist('categories')
-            base_query &= Q(dealer_status__in=categories_list)
+            base_query &= Q(dealer_status__in=categories)
 
         dealers = DealerProfile.objects.filter(base_query)
 
