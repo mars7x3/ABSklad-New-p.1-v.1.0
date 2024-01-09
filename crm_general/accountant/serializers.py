@@ -146,8 +146,8 @@ class AccountantProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['collection_name'] = instance.collection.title
-        rep['category_name'] = instance.category.title
+        rep['collection_name'] = instance.collection.title if instance.collection.title else None
+        rep['category_name'] = instance.category.title if instance.category.title else None
         stocks_count_crm = sum(instance.counts.all().values_list('count_crm', flat=True))
         stock = sum(instance.counts.all().values_list('count_norm', flat=True))
         rep['stocks_count_crm'] = stocks_count_crm

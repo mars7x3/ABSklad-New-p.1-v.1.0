@@ -65,8 +65,8 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['collection_name'] = instance.collection.title
-        rep['category_name'] = instance.category.title
+        rep['collection_name'] = instance.collection.title if instance.collection.title else None
+        rep['category_name'] = instance.category.title if instance.category.title else None
         rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
         cost_price = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_price.price if cost_price else '---'
