@@ -1,6 +1,7 @@
 from django.db import models
 
 from account.models import DealerProfile, DealerStatus, MyUser
+from general_service.compress import WEBPField, banner_image_folder
 from general_service.models import City
 from product.models import AsiaProduct, Category
 
@@ -83,7 +84,7 @@ class Banner(models.Model):
     is_active = models.BooleanField(default=False)
     motivation = models.ForeignKey(Motivation, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
     discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
-    image = models.ImageField(upload_to='banner-images', blank=True, null=True)  # TODO: delete after demo version
+    image = WEBPField(upload_to=banner_image_folder)
     web_image = models.ImageField(upload_to='banner-images', blank=True, null=True)  # TODO: delete after demo version
     video_url = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)

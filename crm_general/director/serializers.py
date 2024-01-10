@@ -254,6 +254,13 @@ class DirectorDiscountSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['products'] = DirectorDiscountProductSerializer(instance.products, many=True).data
+        dealer_profiles_data = rep.get('dealer_profiles', [])
+
+        dealer_profiles_list = [
+            {'id': profile.id, 'name': profile.user.name}
+            for profile in DealerProfile.objects.filter(id__in=dealer_profiles_data)
+        ]
+        rep['dealer_profiles'] = dealer_profiles_list
 
         return rep
 
