@@ -2,7 +2,8 @@ from django.db import connection
 from channels.db import database_sync_to_async
 
 from general_service.utils import dictfetchall
-from .constants import CITY_CHATS_SQL, CITY_SEARCH_CHATS_SQL, DEALER_CHAT_SQL
+from .constants import CITY_CHATS_SQL, CITY_SEARCH_CHATS_SQL, DEALER_CHAT_SQL, MANAGER_CHATS_SQL, \
+    MANAGER_CHATS_SEARCH_SQL
 from .models import Message, Chat
 from .serializers import MessageSerializer
 from .utils import get_manager_profile, get_chat_receivers, build_chats_data
@@ -29,6 +30,23 @@ def get_chats_by_city(current_user, city_id: int, limit: int, offset: int, searc
     sql = CITY_CHATS_SQL
     if search:
         sql = CITY_SEARCH_CHATS_SQL
+        params.append(f'%{search}%')
+
+    params += [limit, offset]
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        chats = dictfetchall(cursor)
+
+    return build_chats_data(chats)
+
+
+@database_sync_to_async
+def get_chats_for_manager(current_user, limit: int, offset: int, search: str = None):
+    params = [current_user.status, current_user.id]
+    sql = MANAGER_CHATS_SQL
+    if search:
+        sql = MANAGER_CHATS_SEARCH_SQL
         params.append(f'%{search}%')
 
     params += [limit, offset]
