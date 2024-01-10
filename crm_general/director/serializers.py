@@ -27,11 +27,11 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        if instance.status == 'manager':
+        if instance.status in ['manager', 'mng_assistant']:
             rep['profile'] = ManagerProfileSerializer(instance.manager_profile, context=self.context).data
         if instance.status == 'rop':
             rep['profile'] = RopProfileSerializer(instance.rop_profile, context=self.context).data
-        if instance.status == 'warehouse':
+        if instance.status in ['warehouse', 'wh_assistant']:
             rep['profile'] = WarehouseProfileSerializer(instance.warehouse_profile, context=self.context).data
         return rep
 
@@ -40,7 +40,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
 
-            if user.status == 'manager':
+            if user.status in ['manager', 'mng_assistant']:
                 city_id = request.data.get('city')
                 ManagerProfile.objects.create(user=user, city_id=city_id)
 
@@ -50,7 +50,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
                 cities = City.objects.filter(id__in=cities)
                 rop_profile.cities.add(*cities)
 
-            elif user.status == 'warehouse':
+            elif user.status in ['warehouse', 'wh_assistant']:
                 stock_id = request.data.get('stock')
                 WarehouseProfile.objects.create(user=user, stock_id=stock_id)
 
@@ -65,7 +65,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             instance.set_password(validated_data.get('password'))
             instance.save()
 
-            if instance.status == 'manager':
+            if instance.status in ['manager', 'mng_assistant']:
                 manager_profile = instance.manager_profile
                 manager_profile.city_id = request.data.get('city')
                 manager_profile.save()
@@ -78,7 +78,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
                 rop_profile.cities.add(*cities)
                 rop_profile.save()
 
-            elif instance.status == 'warehouse':
+            elif instance.status in ['warehouse', 'wh_assistant']:
                 warehouse_profile = instance.warehouse_profile
                 warehouse_profile.stock_id = request.data.get('stock')
                 warehouse_profile.save()
