@@ -72,7 +72,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
         price_list_type = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
-        price_list_city = instance.prices.filter(price_city=dealer.price_city, d_status=dealer.dealer_status).first()
+        price_list_city = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
 
         if price_list_type:
             rep['price_info'] = ProductPriceListSerializer(
@@ -140,7 +140,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         rep['collection'] = instance.collection.title if instance.collection else '---'
 
         price_list_type = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
-        price_list_city = instance.prices.filter(price_city=dealer.price_city, d_status=dealer.dealer_status).first()
+        price_list_city = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
 
         if price_list_type:
             rep['price_info'] = ProductPriceListSerializer(

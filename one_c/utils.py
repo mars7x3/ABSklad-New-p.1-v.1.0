@@ -118,7 +118,7 @@ def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
 
             for d in dealer_statuses:
                 for c in cities:
-                    price_create.append(ProductPrice(price_city=c, product=product, d_status=d))
+                    price_create.append(ProductPrice(city=c, product=product, d_status=d))
             for d in dealer_statuses:
                 for t in p_types:
                     price_create.append(ProductPrice(price_type=t, product=product, d_status=d))

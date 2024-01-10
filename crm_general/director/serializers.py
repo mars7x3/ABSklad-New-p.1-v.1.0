@@ -606,7 +606,7 @@ class DirectorPriceListSerializer(serializers.ModelSerializer):
                                                                many=True, context=self.context).data
         if price_city:
             rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
-                                                                                      price_city__isnull=False),
+                                                                                      city__isnull=False),
                                                                many=True, context=self.context).data
         return rep
 
