@@ -135,6 +135,8 @@ director_urlpatterns = [
     path('director/task/total-info/', DirectorTaskTotalInfoView.as_view()),
     path('director/free/main-warehouses/list/', DirFreeMainWarehouseListView.as_view()),
     path('director/free/assistant-warehouses/list/', DirFreeAssistantWarehouseListView.as_view()),
+    path('director/main-warehouses/add-to-stock/', DirJoinWarehouseToStockListView.as_view()),
+
 
     path('', include(director_router.urls)),
 ]
