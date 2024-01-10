@@ -978,3 +978,11 @@ class PriceTypeCRUDSerializer(serializers.ModelSerializer):
         return price_type
 
 
+class WarehouseListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('name', 'id')
+
+
+
+
