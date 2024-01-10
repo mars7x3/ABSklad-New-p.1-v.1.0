@@ -254,7 +254,6 @@ class DirectorDiscountSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['products'] = DirectorDiscountProductSerializer(instance.products, many=True).data
-        rep['dealer_statuses'] = DirectorDiscountDealerStatusSerializer(instance.dealer_statuses, many=True).data
 
         return rep
 
