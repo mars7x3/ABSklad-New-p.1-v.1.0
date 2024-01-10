@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile
+from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile, WarehouseProfile
 from crm_general.director.permissions import IsDirector
 from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSerializer, BalanceHistoryListSerializer, \
     DirectorProductListSerializer, DirectorCollectionListSerializer, CollectionCategoryListSerializer, \
@@ -20,7 +20,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
-    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer
+    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, WarehouseListSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
@@ -827,3 +827,28 @@ class PriceTypeCRUDView(viewsets.ModelViewSet):
     serializer_class = PriceTypeCRUDSerializer
 
 
+class DirFreeMainWarehouseListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request):
+        users = MyUser.objects.filter(status='warehouse', is_active=True, warehouse_profile__stock__isnull=True)
+        response_data = WarehouseListSerializer(users, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DirJoinWarehouseToStockListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        stock_id = request.data['stock']
+        user_ids = request.data['users']
+        stock = Stock.objects.filter(id=stock_id).first()
+        users = MyUser.objects.filter(id__in=user_ids)
+        if users and stock:
+            update_data = []
+            for u in users:
+                profile = u.warehouse_profile
+                profile.stock = stock
+            WarehouseProfile.objects.bulk_update(update_data, ['stock'])
+            return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+        return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)

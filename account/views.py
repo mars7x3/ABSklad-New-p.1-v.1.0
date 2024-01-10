@@ -126,7 +126,7 @@ class ChangePwdView(APIView):
                 user.pwd = password
                 user.set_password(password)
                 user.save()
-                verify_code.delete()
+                # verify_code.delete()
 
                 return Response({'text': 'Пароль успешно изменен!'}, status=status.HTTP_200_OK)
             return Response({'text': 'Неверный код!'}, status=status.HTTP_400_BAD_REQUEST)

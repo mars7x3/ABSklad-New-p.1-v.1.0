@@ -254,8 +254,6 @@ class DirectorDiscountSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['products'] = DirectorDiscountProductSerializer(instance.products, many=True).data
-        rep['cities'] = DirectorDiscountCitySerializer(instance.cities, many=True).data
-        rep['dealer_statuses'] = DirectorDiscountDealerStatusSerializer(instance.dealer_statuses, many=True).data
 
         return rep
 
@@ -976,5 +974,11 @@ class PriceTypeCRUDSerializer(serializers.ModelSerializer):
         price_type = PriceType.objects.create(**validated_data)
         create_product_prices(price_type.id)
         return price_type
+
+
+class WarehouseListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('name', 'id')
 
 

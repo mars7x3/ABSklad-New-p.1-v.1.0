@@ -66,7 +66,7 @@ from .views import *
 from .marketer.views import (
     MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeView,
     MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView,
-    MarketerTaskView, DealersFilterAPIView,
+    MarketerTaskView,
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
@@ -133,6 +133,9 @@ director_urlpatterns = [
     path('director/price/create/', DirectorPriceCreateView.as_view()),
     path('director/task/grade/', DirectorGradeView.as_view()),
     path('director/task/total-info/', DirectorTaskTotalInfoView.as_view()),
+    path('director/free/warehouses/list/', DirFreeMainWarehouseListView.as_view()),
+    path('director/warehouses/add-to-stock/', DirJoinWarehouseToStockListView.as_view()),
+
 
     path('', include(director_router.urls)),
 ]
@@ -290,7 +293,6 @@ marketer_router.register('task', MarketerTaskView)
 marketer_urlpatterns = [
     path('marketer/dealer-status/list/', MarketerDealerStatusListView.as_view({'get': 'list'})),
     path('marketer/', include(marketer_router.urls)),
-    path('marketer/dealers/filter/', DealersFilterAPIView.as_view()),
 ]
 
 # --------------------------- WARE HOUSE MANAGER
@@ -329,8 +331,8 @@ crm_urlpatterns = [
     re_path(r"^crm/task-response/(?P<response_task_id>.+)/complete/$", CRMTaskUpdateAPIView.as_view(),
             name="crm_general-task-responses-complete"),
     path("crm/staff/me-info/", StaffMeInfoView.as_view()),
-
-
+    path('crm/dealers/filter/', DealersFilterAPIView.as_view()),
+    path('crm/products/filter/discount/', FilterProductByDiscountAPIView.as_view()),
     path("", include(crm_router.urls)),
 ]
 
