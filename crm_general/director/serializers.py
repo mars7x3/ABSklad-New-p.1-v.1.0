@@ -290,20 +290,10 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        request = self.context.get('request')
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
-        end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+
         rep['id'] = instance.user.id
         rep['is_active'] = instance.user.is_active
         rep['name'] = instance.user.name
-        balance_histories = instance.balance_histories.filter(is_active=True, created_at__gte=start_date,
-                                                              created_at__lte=end_date)
-        rep['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
-        rep['shipment_amount'] = sum(balance_histories.filter(status='order').values_list('amount', flat=True))
-        rep['balance'] = balance_histories.last().balance if balance_histories else 0
-
         rep['city'] = instance.city.title if instance.city else '---'
         rep['status'] = True if instance.wallet.amount_crm > 50000 else False
         last_order = instance.orders.filter(is_active=True, status__in=['success', 'sent', 'paid',
