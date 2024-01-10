@@ -25,7 +25,7 @@ DEALER_CHAT_SQL = """
                 ARRAY_AGG(
                     JSONB_BUILD_OBJECT(
                         ('id')::text, att.id,
-                        ('file')::text, att.file
+                        ('file')::text, CONCAT(%s, att.file)
                     )
                 ) END
             )
@@ -33,7 +33,7 @@ DEALER_CHAT_SQL = """
         LEFT JOIN chat_messageattachment AS att ON att.message_id = m.id
         WHERE m.chat_id = c.id
         GROUP BY m.id
-        ORDER BY m.id ASC, m.created_at DESC
+        ORDER BY m.created_at DESC
         LIMIT 1
     ) AS last_message
     FROM chat_chat AS c
@@ -65,7 +65,7 @@ CITY_CHATS_SQL = """
                 ARRAY_AGG(
                     JSONB_BUILD_OBJECT(
                         ('id')::text, att.id,
-                        ('file')::text, att.file
+                        ('file')::text, CONCAT(%s, att.file)
                     )
                 ) END
             )
@@ -74,7 +74,7 @@ CITY_CHATS_SQL = """
         LEFT JOIN chat_messageattachment AS att ON att.message_id = m.id
         WHERE m.chat_id = c.id
         GROUP BY m.id, mu.id
-        ORDER BY m.id ASC, m.created_at DESC
+        ORDER BY m.created_at DESC
         LIMIT 1
     ) AS last_message,
     (
@@ -86,7 +86,7 @@ CITY_CHATS_SQL = """
         SELECT m.created_at
         FROM chat_message AS m
         WHERE m.chat_id = c.id
-        ORDER BY m.id ASC, m.created_at DESC
+        ORDER BY m.created_at DESC
         LIMIT 1
     ) AS last_message_created
     FROM chat_chat AS c
@@ -121,7 +121,7 @@ CITY_SEARCH_CHATS_SQL = """
                 ARRAY_AGG(
                     JSONB_BUILD_OBJECT(
                         ('id')::text, att.id,
-                        ('file')::text, att.file
+                        ('file')::text, CONCAT(%s, att.file)
                     )
                 ) END
             )
@@ -130,7 +130,7 @@ CITY_SEARCH_CHATS_SQL = """
         LEFT JOIN chat_messageattachment AS att ON att.message_id = m.id
         WHERE m.chat_id = c.id
         GROUP BY m.id, mu.id
-        ORDER BY m.id ASC, m.created_at DESC
+        ORDER BY m.created_at DESC
         LIMIT 1
     ) AS last_message,
     (
