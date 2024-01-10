@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile
+from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile, WarehouseProfile
 from crm_general.director.permissions import IsDirector
 from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSerializer, BalanceHistoryListSerializer, \
     DirectorProductListSerializer, DirectorCollectionListSerializer, CollectionCategoryListSerializer, \
@@ -849,6 +849,6 @@ class DirJoinWarehouseToStockListView(APIView):
             for u in users:
                 profile = u.warehouse_profile
                 profile.stock = stock
-            DealerProfile.objects.bulk_update(update_data, ['stock'])
+            WarehouseProfile.objects.bulk_update(update_data, ['stock'])
             return Response({"text": "Success!"}, status=status.HTTP_200_OK)
         return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
