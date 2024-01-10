@@ -842,3 +842,18 @@ class DirFreeAssistantWarehouseListView(APIView):
         user = MyUser.objects.filter(status='wh_assistant', is_active=True, warehouse_profile__stock__isnull=True)
         return Response({'id': user.id, 'name': user.name}, status=status.HTTP_200_OK)
 
+
+class DirJoinWarehouseToStockListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        stock_id = request.data['stock']
+        user_id = request.data['user']
+        stock = Stock.objects.filter(id=stock_id).first()
+        user = MyUser.objects.filter(id=user_id).first()
+        if user and stock:
+            profile = user.warehouse_profile
+            profile.stock = stock
+            profile.save()
+            return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+        return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
