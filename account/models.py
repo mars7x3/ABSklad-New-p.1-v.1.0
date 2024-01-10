@@ -109,6 +109,7 @@ class DealerProfile(models.Model):
     birthday = models.DateField(blank=True, null=True)
     price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, blank=True, null=True,
                                    related_name='dealer_profiles')
+    managers = models.ManyToManyField(MyUser, related_name='dealer_profiles')
 
     def __str__(self):
         return f'{self.id} - {self.user.name}'
