@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
+from general_service.compress import WEBPField, user_image_folder, notification_image_folder
 from general_service.models import City, Stock, PriceType
 
 
@@ -41,7 +42,7 @@ class MyUser(AbstractUser):
     pwd = models.CharField(max_length=40, blank=True, null=True)
 
     name = models.CharField(max_length=50, blank=True, null=True)
-    image = models.ImageField(upload_to='users', blank=True, null=True)
+    image = WEBPField(upload_to=user_image_folder, blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -216,7 +217,7 @@ class CRMNotification(models.Model):
     )
 
     dealer_profiles = models.ManyToManyField(DealerProfile, related_name='crm_notifications', blank=True)
-    image = models.FileField(upload_to='notification', blank=True, null=True)
+    image = WEBPField(upload_to=notification_image_folder, blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     dispatch_date = models.DateTimeField()

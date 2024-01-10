@@ -212,6 +212,5 @@ class FilterProductByDiscountAPIView(APIView):
         discounts = Discount.objects.all()
         for discount in discounts:
             products = products.exclude(id__in=discount.products.values_list('id', flat=True))
-
         serializer = ShortProductSerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

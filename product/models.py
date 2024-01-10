@@ -1,6 +1,7 @@
 from django.db import models
 
 from account.models import DealerStatus, MyUser
+from general_service.compress import WEBPField, product_image_folder
 from general_service.models import City, Stock, PriceType
 
 
@@ -113,7 +114,7 @@ class ProductSize(models.Model):
 
 class ProductImage(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='images')
-    image = models.FileField(upload_to='product-images')
+    image = WEBPField(upload_to=product_image_folder)
     position = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:
