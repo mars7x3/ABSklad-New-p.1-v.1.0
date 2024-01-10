@@ -34,7 +34,8 @@ urlpatterns = [
     path('api/v1/', include('product.urls')),
     path('api/v1/', include('promotion.urls')),
     path('ws/chat/', include('chat.urls')),
-    path('api/v1/', include('crm_general.urls'))
+    path('api/v1/', include('crm_general.urls')),
+    path('api/v1/', include('crm_stat.urls'))
 ]
 
 if settings.DEBUG:
