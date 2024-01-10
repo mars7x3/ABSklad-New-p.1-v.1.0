@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework import viewsets, status, generics, mixins
 from rest_framework.pagination import PageNumberPagination
@@ -7,13 +8,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.models import MyUser, DealerStatus
+from account.models import MyUser, DealerStatus, DealerProfile
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
-    CRMTaskResponseSerializer, CityCRUDSerializer, PriceTypeListSerializer
+    CRMTaskResponseSerializer, CityCRUDSerializer, PriceTypeListSerializer, DealerProfileSerializer, \
+    ShortProductSerializer
 from general_service.models import City, Stock, PriceType
+from order.db_request import query_debugger
 from product.models import Collection, AsiaProduct, ProductImage, Category
+from promotion.models import Discount
 
 
 class CRMPaginationClass(PageNumberPagination):
@@ -178,3 +182,36 @@ class PriceTypeListView(generics.ListAPIView):
     queryset = PriceType.objects.filter(is_active=True)
     serializer_class = PriceTypeListSerializer
 
+
+class DealersFilterAPIView(APIView):
+    @query_debugger
+    def post(self, request):
+        cities = self.request.data.get('cities', [])
+        categories = self.request.data.get('categories', [])
+        if not cities and not categories:
+            return Response({'detail': 'filter by cities or categories needed'}, status=status.HTTP_400_BAD_REQUEST)
+
+        base_query = Q(user__is_active=True)
+
+        if cities:
+            base_query &= Q(city__in=cities)
+
+        if categories:
+            base_query &= Q(dealer_status__in=categories)
+
+        dealers = DealerProfile.objects.filter(base_query)
+
+        serializer = DealerProfileSerializer(dealers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FilterProductByDiscountAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        category = self.request.query_params.get('category')
+        products = AsiaProduct.objects.filter(is_active=True, is_discount=False, category=category)
+        discounts = Discount.objects.all()
+        for discount in discounts:
+            products = products.exclude(id__in=discount.products.values_list('id', flat=True))
+
+        serializer = ShortProductSerializer(products, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
