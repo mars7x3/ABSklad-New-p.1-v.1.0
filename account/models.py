@@ -27,10 +27,12 @@ class MyUser(AbstractUser):
         ('director', 'Ком Директор'),  # has no profile
         ('rop', 'РОП'),
         ('manager', 'Менеджер'),
+        ('mng_assistant', 'Пом. Менеджера'),
         ('marketer', 'Маркетолог'),  # has no profile
         ('accountant', 'Бухгалтер'),  # has no profile
         ('dealer', 'Дилер'),
         ('warehouse', 'Зав. Склад'),
+        ('wh_assistant', 'Пом. Зав. Склад'),
         ('dealer_1c', 'dealer_1c'),
         ('hr', 'HR менеджер'),
     )
