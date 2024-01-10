@@ -62,12 +62,7 @@ class MessageSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"detail": "У вас нет доступа"})
 
         if user.is_manager:
-            try:
-                manager_profile = user.manager_profile
-            except ObjectDoesNotExist:
-                raise serializers.ValidationError({"detail": "У вас нет доступа"})
-
-            if not Chat.objects.filter(dealer__dealer_profile__city_id=manager_profile.city).exists():
+            if not Chat.objects.filter(dealer__dealer_profile__managers=user.id).exists():
                 raise serializers.ValidationError({"detail": "У вас нет доступа"})
 
         attrs['sender'] = user

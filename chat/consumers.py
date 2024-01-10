@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from chat.async_queries import (
     get_chat_messages, create_db_message, set_read_message, get_chats_by_city,
-    get_chats_for_dealer, is_dealer_message, get_chat_receivers_by_chat, get_manager_city_id
+    get_chats_for_dealer, is_dealer_message, get_chat_receivers_by_chat, get_manager_city_id, get_chats_for_manager
 )
 from chat.validators import validate_user_active, validate_is_manager, validate_is_dealer
 from chat.utils import get_limit_and_offset
@@ -180,15 +180,9 @@ class ManagerConsumer(AsyncCommandConsumer):
     user_validators = (validate_user_active, validate_is_manager)
 
     async def get_chats_command(self, message_type, req_data):
-        city_id = await get_manager_city_id(self._user)
-        if not city_id:
-            await self.send_error_message(reason=_("Not found city id"))
-            return
-
         limit, offset = get_limit_and_offset(req_data, max_page_size=20)
-        chats = await get_chats_by_city(
+        chats = await get_chats_for_manager(
             self._user,
-            city_id=city_id,
             limit=limit,
             offset=offset,
             search=req_data.get('search')
@@ -207,6 +201,8 @@ class ManagerConsumer(AsyncCommandConsumer):
             return
 
         return await super().read_message_command(message_type, req_data)
+
+    # TODO: add checking manager on send message because any users can send message to any chats
 
 
 class DealerConsumer(AsyncCommandConsumer):
