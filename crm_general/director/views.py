@@ -850,12 +850,14 @@ class DirJoinWarehouseToStockListView(APIView):
 
     def post(self, request):
         stock_id = request.data['stock']
-        user_id = request.data['user']
+        user_ids = request.data['users']
         stock = Stock.objects.filter(id=stock_id).first()
-        user = MyUser.objects.filter(id=user_id).first()
-        if user and stock:
-            profile = user.warehouse_profile
-            profile.stock = stock
-            profile.save()
+        users = MyUser.objects.filter(id__in=user_ids)
+        if users and stock:
+            update_data = []
+            for u in users:
+                profile = u.warehouse_profile
+                profile.stock = stock
+            DealerProfile.objects.bulk_update(update_data, ['stock'])
             return Response({"text": "Success!"}, status=status.HTTP_200_OK)
         return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
