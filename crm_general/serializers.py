@@ -8,7 +8,7 @@ from django.db.models import Sum, Q
 from rest_framework import serializers
 from transliterate import translit
 
-from account.models import MyUser, DealerStatus
+from account.models import MyUser, DealerStatus, DealerProfile
 from crm_general.models import CRMTaskResponseFile, CRMTaskResponse, CRMTaskFile
 from general_service.models import Stock, City, PriceType
 from product.models import AsiaProduct, ProductImage, Category, Collection
@@ -355,3 +355,19 @@ class PriceTypeListSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DealerProfileSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = DealerProfile
+        fields = ('id', 'name')
+
+    @staticmethod
+    def get_name(obj):
+        return obj.user.name
+
+
+class ShortProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title')

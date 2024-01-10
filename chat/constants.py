@@ -25,7 +25,7 @@ DEALER_CHAT_SQL = """
                 ARRAY_AGG(
                     JSONB_BUILD_OBJECT(
                         ('id')::text, att.id,
-                        ('file')::text, att.file
+                        ('file')::text, CONCAT(%s, att.file)
                     )
                 ) END
             )
@@ -65,7 +65,7 @@ CITY_CHATS_SQL = """
                 ARRAY_AGG(
                     JSONB_BUILD_OBJECT(
                         ('id')::text, att.id,
-                        ('file')::text, att.file
+                        ('file')::text, CONCAT(%s, att.file)
                     )
                 ) END
             )
@@ -121,7 +121,7 @@ CITY_SEARCH_CHATS_SQL = """
                 ARRAY_AGG(
                     JSONB_BUILD_OBJECT(
                         ('id')::text, att.id,
-                        ('file')::text, att.file
+                        ('file')::text, CONCAT(%s, att.file)
                     )
                 ) END
             )

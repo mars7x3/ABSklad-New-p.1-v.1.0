@@ -1,7 +1,9 @@
 from typing import Any
+from urllib.parse import urljoin
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
@@ -88,3 +90,7 @@ def build_chats_data(chats_data) -> list[dict[str, Any]]:
         if data:
             collected_data.append(data)
     return collected_data
+
+
+def build_file_url(file_path):
+    return urljoin(settings.SERVER_URL, file_path)
