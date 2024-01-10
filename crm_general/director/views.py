@@ -20,7 +20,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
-    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer
+    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, WarehouseListSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
@@ -831,16 +831,18 @@ class DirFreeMainWarehouseListView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
-        user = MyUser.objects.filter(status='warehouse', is_active=True, warehouse_profile__stock__isnull=True)
-        return Response({'id': user.id, 'name': user.name}, status=status.HTTP_200_OK)
+        users = MyUser.objects.filter(status='warehouse', is_active=True, warehouse_profile__stock__isnull=True)
+        response_data = WarehouseListSerializer(users, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class DirFreeAssistantWarehouseListView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
-        user = MyUser.objects.filter(status='wh_assistant', is_active=True, warehouse_profile__stock__isnull=True)
-        return Response({'id': user.id, 'name': user.name}, status=status.HTTP_200_OK)
+        users = MyUser.objects.filter(status='wh_assistant', is_active=True, warehouse_profile__stock__isnull=True)
+        response_data = WarehouseListSerializer(users, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class DirJoinWarehouseToStockListView(APIView):
