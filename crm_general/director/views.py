@@ -636,7 +636,7 @@ class DirectorPriceCityCreateView(APIView):
             for s in d_statuses:
                 price_data.append(ProductPrice(
                     product=product,
-                    price_city=price_city,
+                    city=price_city,
                     d_status=s,
                     price=p['price']
                 ))
