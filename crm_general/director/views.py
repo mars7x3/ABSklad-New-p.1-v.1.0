@@ -827,3 +827,18 @@ class PriceTypeCRUDView(viewsets.ModelViewSet):
     serializer_class = PriceTypeCRUDSerializer
 
 
+class DirFreeMainWarehouseListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request):
+        user = MyUser.objects.filter(status='warehouse', is_active=True, warehouse_profile__stock__isnull=True)
+        return Response({'id': user.id, 'name': user.name}, status=status.HTTP_200_OK)
+
+
+class DirFreeAssistantWarehouseListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request):
+        user = MyUser.objects.filter(status='wh_assistant', is_active=True, warehouse_profile__stock__isnull=True)
+        return Response({'id': user.id, 'name': user.name}, status=status.HTTP_200_OK)
+
