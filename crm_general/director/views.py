@@ -576,12 +576,16 @@ class DirectorPriceListView(mixins.ListModelMixin, GenericViewSet):
         if category:
             kwargs['category__slug'] = category
 
+        collection = request.query_params.get('collection')
+        if collection:
+            kwargs['collection__slug'] = collection
+
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class DirectorPriceCreateView(APIView):
+class DirectorPriceTypeCreateView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
     def post(self, request):
@@ -598,11 +602,41 @@ class DirectorPriceCreateView(APIView):
         d_statuses = DealerStatus.objects.all()
         price_data = []
         for p in prices:
-            price_type = PriceType.objects.get(id=p['city'])
+            price_type = PriceType.objects.get(id=p['price_type'])
             for s in d_statuses:
                 price_data.append(ProductPrice(
                     product=product,
                     price_type=price_type,
+                    d_status=s,
+                    price=p['price']
+                ))
+        product.prices.all().delete()
+        ProductPrice.objects.bulk_create(price_data)
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class DirectorPriceCityCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        product_id = request.data.get('id')
+        c_price = request.data.get('cost_price')
+        prices = request.data.get('prices')
+        product = AsiaProduct.objects.filter(id=product_id).first()
+        cost_price = product.cost_prices.filter(is_active=True).first()
+        if cost_price.price != c_price:
+            cost_price.is_active = False
+            cost_price.save()
+            ProductCostPrice.objects.create(product=product, price=c_price)
+
+        d_statuses = DealerStatus.objects.all()
+        price_data = []
+        for p in prices:
+            price_city = City.objects.get(id=p['city'])
+            for s in d_statuses:
+                price_data.append(ProductPrice(
+                    product=product,
+                    price_city=price_city,
                     d_status=s,
                     price=p['price']
                 ))

@@ -602,8 +602,17 @@ class DirectorPriceListSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         cost_price = instance.cost_prices.filter(is_active=True).last()
         rep['cost_price'] = cost_price.price if cost_price else '---'
-        rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0),
-                                                           many=True, context=self.context).data
+        price_type = self.context['request'].query_params['price_type']
+        price_city = self.context['request'].query_params['price_city']
+
+        if price_type:
+            rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                      price_type__isnull=False),
+                                                               many=True, context=self.context).data
+        if price_city:
+            rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                      price_city__isnull=False),
+                                                               many=True, context=self.context).data
         return rep
 
 

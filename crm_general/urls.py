@@ -74,7 +74,6 @@ from .warehouse_manager.views import (
 )
 
 main_director_router = SimpleRouter()
-main_director_router.register("main_director/staff/crud", MainDirStaffCRUDView)
 
 main_director_urlpatterns = [
 
@@ -130,7 +129,8 @@ director_urlpatterns = [
     path('director/dealer/cart/list/', DirectorDealerCartListView.as_view()),
     path('director/dealer/balance-history/list/', DirectorBalanceHistoryListView.as_view()),
     path('director/dealer/total-amounts/', DirectorTotalAmountView.as_view()),
-    path('director/price/create/', DirectorPriceCreateView.as_view()),
+    path('director/price-type/create/', DirectorPriceTypeCreateView.as_view()),
+    path('director/price-city/create/', DirectorPriceCityCreateView.as_view()),
     path('director/task/grade/', DirectorGradeView.as_view()),
     path('director/task/total-info/', DirectorTaskTotalInfoView.as_view()),
     path('director/free/warehouses/list/', DirFreeMainWarehouseListView.as_view()),
