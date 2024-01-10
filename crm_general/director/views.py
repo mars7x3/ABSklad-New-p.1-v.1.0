@@ -836,15 +836,6 @@ class DirFreeMainWarehouseListView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class DirFreeAssistantWarehouseListView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
-
-    def get(self, request):
-        users = MyUser.objects.filter(status='wh_assistant', is_active=True, warehouse_profile__stock__isnull=True)
-        response_data = WarehouseListSerializer(users, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
 class DirJoinWarehouseToStockListView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
