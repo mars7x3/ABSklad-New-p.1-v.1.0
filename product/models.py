@@ -81,7 +81,7 @@ class ProductPrice(models.Model):
         ('Sum', 'Sum'),
     )
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='prices')
-    city = models.ForeignKey(City, on_delete=models.CASCADE, blank=True, null=True, related_name='prices')  # TODO: delete
+    city = models.ForeignKey(City, on_delete=models.CASCADE, blank=True, null=True, related_name='prices')
     d_status = models.ForeignKey(DealerStatus, on_delete=models.CASCADE, related_name='prices')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     old_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)

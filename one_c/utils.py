@@ -88,8 +88,13 @@ def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
     products = request.data.get('products')
     print('***Product CRUD***')
     print(products)
+    dealer_statuses = DealerStatus.objects.all()
+    cities = City.objects.all()
+    p_types = PriceType.objects.all()
+
+    price_create = []
+
     for prod in products:
-        prices_1c = prod.get('prices')
         uid = prod.get('product_uid')
         product = AsiaProduct.objects.filter(uid=uid).first()
         is_new = True
@@ -111,29 +116,17 @@ def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
                 product.category = category
                 product.save()
 
-        price_create = []
-        if prices_1c:
-            for p in prices_1c:
-                price_type = PriceType.objects.filter(uid=p.get('city_uid')).first()
-                if price_type:
-                    dealer_statuses = DealerStatus.objects.all()
+            for d in dealer_statuses:
+                for c in cities:
+                    price_create.append(ProductPrice(price_city=c, product=product, d_status=d))
+            for d in dealer_statuses:
+                for t in p_types:
+                    price_create.append(ProductPrice(price_type=t, product=product, d_status=d))
 
-                    for status in dealer_statuses:
-                        price = ProductPrice.objects.filter(price_type=price_type, product=product,
-                                                            d_status=status).first()
-                        amount = int(p.get('price'))
-                        if price:
-                            price.price = amount
-                            price.save()
-                        else:
-                            price_create.append(ProductPrice(price_type=price_type, product=product, price=amount,
-                                                d_status=status))
-        ProductPrice.objects.bulk_create(price_create)
-
-        if is_new:
-            product.counts.all().delete()
             p_count_data = [ProductCount(stock=s, product=product) for s in Stock.objects.all()]
-            ProductCount.objects.bulk_create([ProductCount(**i) for i in p_count_data])
+            ProductCount.objects.bulk_create(p_count_data)
+
+    ProductPrice.objects.bulk_create(price_create)
 
 
 def sync_dealer():

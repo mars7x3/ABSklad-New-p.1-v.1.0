@@ -105,7 +105,7 @@ class DealerProfile(models.Model):
     dealer_status = models.ForeignKey(DealerStatus, on_delete=models.SET_NULL, blank=True, null=True,
                                       related_name='dealer_profiles')
     liability = models.PositiveIntegerField(default=0)
-    price_city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)  # TODO: delete
+    price_city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)
     push_notification = models.BooleanField(default=True)
     birthday = models.DateField(blank=True, null=True)
     price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, blank=True, null=True,

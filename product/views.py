@@ -84,10 +84,16 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
         if price:
             start_price = price.split('$')[0]
             end_price = price.split('$')[1]
-            kwargs['prices__price__gte'] = start_price
-            kwargs['prices__d_status'] = dealer.dealer_status
-            kwargs['prices__price_type'] = dealer.price_type
-            kwargs['prices__price__lte'] = end_price
+            if dealer.price_type:
+                kwargs['prices__price__gte'] = start_price
+                kwargs['prices__d_status'] = dealer.dealer_status
+                kwargs['prices__price_type'] = dealer.price_type
+                kwargs['prices__price__lte'] = end_price
+            else:
+                kwargs['prices__price__gte'] = start_price
+                kwargs['prices__d_status'] = dealer.dealer_status
+                kwargs['prices__price_city'] = dealer.price_city
+                kwargs['prices__price__lte'] = end_price
 
         text = request.query_params.get('text')
         if text:
