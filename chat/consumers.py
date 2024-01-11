@@ -28,12 +28,16 @@ class AsyncBaseChatConsumer(AsyncWebsocketConsumer):
         pass
 
     async def connect(self):
-        if self.room:
-            await self.validate_user()
+        if not self.room:
+            await self.close(code=4004)
+            return
+
+        valid_user = await self.validate_user()
+        if not valid_user:
+            await self.close(code=4004)
+        else:
             await self.channel_layer.group_add(self.room, self.channel_name)
             await self.accept()
-        else:
-            await self.close(code=4004)
 
     async def disconnect(self, code):
         if self.room:
@@ -61,11 +65,11 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
     def commands(self):
         return self.BASE_COMMANDS
 
-    async def validate_user(self):
+    async def validate_user(self) -> bool:
         for validator in self.user_validators or []:
             if validator(self._user) is False:
-                await self.close(code=4002)
-                break
+                return False
+        return True
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
