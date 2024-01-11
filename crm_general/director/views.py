@@ -21,7 +21,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
-    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, WarehouseListSerializer, \
+    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, \
     RopProfileSerializer, UserListSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
@@ -887,13 +887,6 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
         serializer = UserListSerializer(active_rops, many=True).data
         return Response(serializer, status=status.HTTP_200_OK)
 
-    @action(methods=['GET'], detail=False, url_path='wh-list')
-    def get_active_wh_list(self, request, *args, **kwargs):
-        active_whouses = MyUser.objects.filter(is_active=True, status='warehouse',
-                                               warehouse_profile__stock__isnull=True)
-        serializer = UserListSerializer(active_whouses, many=True).data
-        return Response(serializer, status=status.HTTP_200_OK)
-
 
 class DirectorKPICRUDView(mixins.CreateModelMixin,
                           mixins.RetrieveModelMixin,
@@ -947,14 +940,12 @@ class PriceTypeCRUDView(viewsets.ModelViewSet):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-
-
 class DirFreeMainWarehouseListView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
         users = MyUser.objects.filter(status='warehouse', is_active=True, warehouse_profile__stock__isnull=True)
-        response_data = WarehouseListSerializer(users, many=True, context=self.get_renderer_context()).data
+        response_data = UserListSerializer(users, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -965,12 +956,22 @@ class DirJoinWarehouseToStockListView(APIView):
         stock_id = request.data['stock']
         user_ids = request.data['users']
         stock = Stock.objects.filter(id=stock_id).first()
+        if user_ids:
+            user_ids = request.data.getlist('users')
         users = MyUser.objects.filter(id__in=user_ids)
         if users and stock:
-            update_data = []
             for u in users:
                 profile = u.warehouse_profile
+                if profile.stock is not None:
+                    return Response({'detail': 'Warehouse is already has stock'},
+                                    status=status.HTTP_400_BAD_REQUEST)
                 profile.stock = stock
-            WarehouseProfile.objects.bulk_update(update_data, ['stock'])
+                profile.save()
             return Response({"text": "Success!"}, status=status.HTTP_200_OK)
         return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StockListView(mixins.ListModelMixin, GenericViewSet):
+    queryset = Stock.objects.all().prefetch_related('counts')
+    permission_classes = [IsAuthenticated, IsDirector]
+    serializer_class = StockListSerializer
