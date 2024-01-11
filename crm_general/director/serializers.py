@@ -589,8 +589,9 @@ class DirectorPriceListSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         cost_price = instance.cost_prices.filter(is_active=True).last()
         rep['cost_price'] = cost_price.price if cost_price else '---'
-        price_type = self.context['request'].query_params['price_type']
-        price_city = self.context['request'].query_params['price_city']
+        request = self.context['request']
+        price_type = request.query_params.get('price_type')
+        price_city = request.query_params.get('price_city')
 
         if price_type:
             rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
@@ -606,7 +607,7 @@ class DirectorPriceListSerializer(serializers.ModelSerializer):
 class DirectorProductPriceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductPrice
-        fields = ('price', 'price_type')
+        fields = ('price', 'price_type', 'city')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
