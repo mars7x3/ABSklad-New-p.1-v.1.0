@@ -33,6 +33,7 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
         kwargs = {}
+        print(request.query_params.get('is_active'))
 
         name = request.query_params.get('name')
         if name:
@@ -47,7 +48,7 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
             kwargs['status'] = u_status
 
         employee = request.query_params.get('employee')
-        if status:
+        if employee:
             kwargs['magazines__status'] = employee
             kwargs['magazines__is_active'] = True
 
