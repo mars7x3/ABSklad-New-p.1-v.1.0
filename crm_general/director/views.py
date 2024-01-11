@@ -44,16 +44,13 @@ class StaffCRUDView(viewsets.ModelViewSet):
         "city": id
     }
 
-    #rop
+    #warehouse
     "profile_data": {
         "stock": id
     }
     """
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = MyUser.objects.prefetch_related('manager_profile', 'rop_profile',
-                                               'warehouse_profile').filter(status__in=['rop', 'manager', 'marketer',
-                                                                                       'accountant', 'warehouse',
-                                                                                       'director'])
+    queryset = MyUser.objects.filter(status__in=['rop', 'warehouse'])
     serializer_class = StaffCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):

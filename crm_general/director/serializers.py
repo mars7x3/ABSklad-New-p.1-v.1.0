@@ -27,8 +27,6 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        if instance.status == 'manager':
-            rep['profile'] = ManagerProfileSerializer(instance.manager_profile, context=self.context).data
         if instance.status == 'rop':
             rep['profile'] = RopProfileSerializer(instance.rop_profile, context=self.context).data
         if instance.status == 'warehouse':
@@ -40,11 +38,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
 
-            if user.status == 'manager':
-                city_id = request.data.get('city')
-                ManagerProfile.objects.create(user=user, city_id=city_id)
-
-            elif user.status == 'rop':
+            if user.status == 'rop':
                 rop_profile = RopProfile.objects.create(user=user)
                 cities = request.data.get('cities', [])
                 cities = City.objects.filter(id__in=cities)
@@ -65,12 +59,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             instance.set_password(validated_data.get('password'))
             instance.save()
 
-            if instance.status == 'manager':
-                manager_profile = instance.manager_profile
-                manager_profile.city_id = request.data.get('city')
-                manager_profile.save()
-
-            elif instance.status == 'rop':
+            if instance.status == 'rop':
                 city_ids = request.data.get('cities', [])
                 cities = City.objects.filter(id__in=city_ids)
                 rop_profile = instance.rop_profile
@@ -771,7 +760,6 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
         rep['city_title'] = instance.city.title if instance.city else '---'
         rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
         rep['phones'] = StockPhoneSerializer(instance.phones, many=True, context=self.context).data
-        rep['managers'] = StockManagerSerializer(instance.city.manager_profiles, many=True, context=self.context).data
 
         return rep
 
