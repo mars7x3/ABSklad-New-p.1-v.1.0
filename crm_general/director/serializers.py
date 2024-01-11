@@ -611,7 +611,9 @@ class DirectorProductPriceListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['price_type_title'] = instance.price_type.title if instance.price_type else '---'
+        rep['price_type_title'] = instance.price_type.title if instance.price_type else None
+        rep['city_title'] = instance.city.title if instance.city else None
+
         return rep
 
 
