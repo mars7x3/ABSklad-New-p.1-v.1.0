@@ -86,6 +86,7 @@ class StaffMagazine(models.Model):
 class RopProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='rop_profile')
     cities = models.ManyToManyField(City, related_name='rop_profiles')
+    managers = models.ManyToManyField('ManagerProfile', related_name='managers')
 
 
 class ManagerProfile(models.Model):
