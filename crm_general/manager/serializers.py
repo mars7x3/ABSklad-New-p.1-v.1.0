@@ -125,10 +125,21 @@ class OrderSerializer(serializers.ModelSerializer):
                     ]}
                 )
 
-            attrs["price"] = order_total_price(product_counts, dealer.price_type, dealer.dealer_status)
+            price_type = dealer.price_type or None
+            attrs["price"] = order_total_price(
+                product_counts=product_counts,
+                dealer_status=dealer.dealer_status,
+                city=dealer.city,
+                price_type=price_type,
+            )
             attrs["cost_price"] = calculate_order_cost_price(product_counts)
             try:
-                attrs["products"] = build_order_products_data(product_counts, dealer.price_type, dealer.dealer_status)
+                attrs["products"] = build_order_products_data(
+                    product_counts=product_counts,
+                    dealer_status=dealer.dealer_status,
+                    city=dealer.city,
+                    price_type=price_type
+                )
             except ObjectDoesNotExist:
                 raise serializers.ValidationError({"detail": "Попробуйте позже!"})
 
