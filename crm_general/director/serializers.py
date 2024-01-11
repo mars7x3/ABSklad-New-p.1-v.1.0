@@ -782,16 +782,18 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
         return stock
 
     def update(self, instance, validated_data):
-        phones = self.context['request'].data['phones']
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-        instance.save()
-        phones_list = []
-        for p in phones:
-            phones_list.append(StockPhone(stock=instance, phone=p['phone']))
-        instance.phones.all().delete()
-        StockPhone.objects.bulk_create(phones_list)
-        return instance
+        phones = self.context['request'].data.get('phones')
+        if phones:
+            for key, value in validated_data.items():
+                setattr(instance, key, value)
+            instance.save()
+            phones_list = []
+            for p in phones:
+                phones_list.append(StockPhone(stock=instance, phone=p['phone']))
+            instance.phones.all().delete()
+            StockPhone.objects.bulk_create(phones_list)
+            return instance
+        return super().update(instance, validated_data)
 
 
 class StockPhoneSerializer(serializers.ModelSerializer):
@@ -840,9 +842,18 @@ class DirectorDealerListSerializer(serializers.ModelSerializer):
 
 
 class DirectorStaffListSerializer(serializers.ModelSerializer):
+    only_wh_in_stock = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = MyUser
         fields = ('status', 'name', 'id')
+
+    @staticmethod
+    def get_only_wh_in_stock(obj):
+        profile = WarehouseProfile.objects.filter(user=obj).first()
+        stock = profile.stock
+        count = stock.warehouse_profiles.filter(user__is_active=True).count()
+        return True if count < 2 else False
 
 
 class DirectorKPIStaffListSerializer(serializers.ModelSerializer):

@@ -139,7 +139,6 @@ class MarketerBannerModelViewSet(ListModelMixin,
         serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
         return paginator.get_paginated_response(serializer)
 
-
     def get_serializer_class(self):
         if self.detail:
             return self.retrieve_serializer_class
