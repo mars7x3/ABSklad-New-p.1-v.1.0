@@ -86,6 +86,12 @@ class WarehouseProfileSerializer(serializers.ModelSerializer):
         return rep
 
 
+class UserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name')
+
+
 class RopProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = RopProfile

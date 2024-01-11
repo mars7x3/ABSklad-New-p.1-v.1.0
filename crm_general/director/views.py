@@ -1,5 +1,6 @@
 import datetime
 
+from django.db import transaction
 from django.db.models import Case, When
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins, generics, filters
@@ -20,7 +21,8 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
-    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, WarehouseListSerializer
+    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, WarehouseListSerializer, \
+    RopProfileSerializer, UserListSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
 
@@ -79,6 +81,72 @@ class StaffCRUDView(viewsets.ModelViewSet):
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=False, url_path='rop-list')
+    def get_active_rop_list(self, request, *args, **kwargs):
+        active_rops = MyUser.objects.filter(is_active=True, status='rop')
+        serializer = UserListSerializer(active_rops, many=True).data
+        return Response(serializer, status=status.HTTP_200_OK)
+
+
+class ROPChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request, *args, **kwargs):
+        data = self.request.data
+        deactivate_rop = data.get('deactivate_rop_id')
+        new_rop = data.get('new_rop_id')
+        if new_rop is None:
+            return Response({'detail:', 'Can not deactivate rop without new rop for his role "new_rop_id"'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            if deactivate_rop:
+                inactive_rop = MyUser.objects.get(id=deactivate_rop)
+                inactive_rop.is_active = False
+                inactive_rop.save()
+                managers = inactive_rop.rop_profile.managers.values_list('id', flat=True)
+                cities = inactive_rop.rop_profile.cities.values_list('id', flat=True)
+                active_rop = MyUser.objects.get(id=new_rop)
+                if managers:
+                    active_rop.rop_profile.managers.add(*managers)
+                    inactive_rop.rop_profile.managers.clear()
+                if cities:
+                    active_rop.rop_profile.cities.add(*cities)
+                    inactive_rop.rop_profile.cities.clear()
+                active_rop.save()
+
+                return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
+            return Response({'detail', 'deactivate_rop_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class WareHouseChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request, *args, **kwargs):
+        data = self.request.data
+        deactivate_wh = data.get('deactivate_wh_id')
+        new_wh = data.get('new_wh_id')
+        if deactivate_wh is None:
+            return Response({'detail:', 'deactivate_wh_id required!'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        profile = WarehouseProfile.objects.filter(user=deactivate_wh)
+        stock = Stock.objects.filter(warehouse_profiles__user__id=deactivate_wh)
+        if stock.warehouse_profiles.filter(user__is_active=True) == 1:
+            with transaction.atomic():
+                if deactivate_wh:
+                    inactive_wh = MyUser.objects.get(id=deactivate_wh)
+                    inactive_wh.is_active = False
+                    inactive_wh.save()
+                    active_wh = MyUser.objects.get(id=new_wh)
+                    wh_profile = WarehouseProfile.objects.get(active_wh)
+                    wh_profile.stock = stock
+                    wh_profile.save()
+
+                    return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
+                return Response({'detail', 'deactivate_rop_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
 
 
 class BalanceListView(mixins.ListModelMixin, GenericViewSet):
@@ -677,6 +745,10 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
         overdue = request.query_params.get('overdue')
         if overdue:
             kwargs['end_date__lte'] = timezone.now()
+
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = True
 
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
