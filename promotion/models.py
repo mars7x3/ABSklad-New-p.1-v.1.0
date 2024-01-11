@@ -84,7 +84,7 @@ class Banner(models.Model):
     is_active = models.BooleanField(default=False)
     motivation = models.ForeignKey(Motivation, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
     discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
-    image = WEBPField(upload_to=banner_image_folder)
+    image = WEBPField(upload_to=banner_image_folder, null=True, blank=True)  # TODO: delete null=True after demo version
     web_image = models.ImageField(upload_to='banner-images', blank=True, null=True)  # TODO: delete after demo version
     video_url = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
