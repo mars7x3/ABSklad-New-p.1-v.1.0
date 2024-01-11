@@ -16,7 +16,7 @@ class BaseOrderMixin:
         return self.request.user.manager_profile
 
     def get_queryset(self):
-        return super().get_queryset().filter(author__city=self.manager_profile.city)
+        return super().get_queryset().filter(author__managers=self.request.user.id)
 
 
 class BaseDealerViewMixin:
@@ -28,7 +28,7 @@ class BaseDealerViewMixin:
         return self.request.user.manager_profile
 
     def get_queryset(self):
-        return super().get_queryset().filter(city=self.manager_profile.city)
+        return super().get_queryset().filter(managers=self.request.user.id)
 
 
 class BaseDealerRelationViewMixin:
@@ -41,7 +41,7 @@ class BaseDealerRelationViewMixin:
         return self.request.user.manager_profile
 
     def get_dealers_queryset(self):
-        return DealerProfile.objects.filter(user__status='dealer', city=self.manager_profile.city)
+        return DealerProfile.objects.filter(user__status='dealer', managers=self.request.user.id)
 
     def get_dealer_profile(self) -> DealerProfile:
         queryset = self.get_dealers_queryset()

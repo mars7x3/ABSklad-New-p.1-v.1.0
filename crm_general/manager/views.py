@@ -1,6 +1,5 @@
-from django.db.models import F, Sum, Q, FloatField
+from django.db.models import Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
@@ -209,7 +208,7 @@ class DealerImageUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer_profile__city=self.manager_profile.city)
+        return super().get_queryset().filter(dealer_profile__managers=self.request.user.id)
 
 
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
@@ -284,11 +283,9 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
     search_fields = ("product__name",)
     filter_by_fields = {
         "is_active": {"by": "product__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
-        "category_slug": {"by": "product__category__slug", "type": "string"}
+        "category_slug": {"by": "product__category__slug", "type": "string"},
+        "city_id": {"by": "city_id", "type": "number"}
     }
-
-    def get_queryset(self):
-        return super().get_queryset().filter(city=self.manager_profile.city)
 
 
 class ProductRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
@@ -325,7 +322,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
     }
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer__city=self.manager_profile.city).distinct()
+        return super().get_queryset().filter(dealer__managers=self.request.user.id).distinct()
 
     @decorators.action(["GET"], detail=False, url_path="amounts")
     def get_amounts(self, request):
@@ -354,7 +351,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        dealers_queryset = self.dealers_queryset.filter(city=self.manager_profile.city)
+        dealers_queryset = self.dealers_queryset.filter(managers=request.user.id)
         dealer_profile = generics.get_object_or_404(dealers_queryset, user_id=user_id)
         saved_amount = MyOrder.objects.filter(
             author=dealer_profile,
@@ -392,7 +389,7 @@ class ReturnListAPIView(BaseManagerMixin, generics.ListAPIView):
     }
 
     def get_queryset(self):
-        return super().get_queryset().filter(order__author__city=self.manager_profile.city)
+        return super().get_queryset().filter(order__author__managers=self.request.user.id)
 
 
 class ReturnRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
@@ -402,7 +399,7 @@ class ReturnRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
     lookup_url_kwarg = "return_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(order__author__city=self.manager_profile.city)
+        return super().get_queryset().filter(order__author__managers=self.request.user.id)
 
 
 class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
@@ -412,7 +409,7 @@ class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     lookup_url_kwarg = "return_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(order__author__city=self.manager_profile.city)
+        return super().get_queryset().filter(order__author__managers=self.request.user.id)
 
 
 # ---------------------------------------- TASKS
@@ -450,8 +447,3 @@ class ManagerTaskRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
             .only("id", "task", "grade", "is_done")
             .filter(task__is_active=True)
         )
-
-
-
-
-

@@ -2,14 +2,13 @@ from decimal import Decimal
 from datetime import date, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
 from django.db.models import DecimalField, FloatField, Sum, Count, Q, Value
 from django.db.models.functions import Round
 from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
-from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskFile, CRMTaskResponseFile
+from crm_general.models import CRMTask, CRMTaskResponse
 from crm_general.serializers import BaseProfileSerializer
 from crm_general.utils import get_motivation_done
 from general_service.models import City, PriceType

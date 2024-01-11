@@ -86,7 +86,7 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(managers__city__in=self.rop_profile.cities.all())
 
     @decorators.action(['GET'], detail=False, url_path="amounts")
     def get_amounts(self, request):
@@ -150,7 +150,7 @@ class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.List
 
     def get_queryset(self):
         return super().get_queryset().filter(
-            dealer__city__in=self.rop_profile.cities.all(),
+            dealer__managers__city__in=self.rop_profile.cities.all(),
             **{self.lookup_field: self.kwargs[self.lookup_url_kwarg]}
         )
 
@@ -194,7 +194,7 @@ class OrderListAPIView(BaseRopMixin, generics.ListAPIView):
     }
 
     def get_queryset(self):
-        return super().get_queryset().filter(author__city_id__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(author__managers__city_id__in=self.rop_profile.cities.all())
 
 
 class DealerChangeActivityView(BaseDealerMixin, generics.GenericAPIView):
@@ -224,7 +224,7 @@ class DealerImageUpdateAPIView(BaseRopMixin, generics.UpdateAPIView):
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer_profile__city__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(dealer_profile__managers__city__in=self.rop_profile.cities.all())
 
 
 class DealerStatusListAPIView(BaseRopMixin, generics.ListAPIView):
@@ -269,11 +269,9 @@ class ProductPriceListAPIView(BaseRopMixin, generics.ListAPIView):
     search_fields = ("product__name",)
     filter_by_fields = {
         "is_active": {"by": "product__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
-        "category_slug": {"by": "product__category__slug", "type": "string"}
+        "category_slug": {"by": "product__category__slug", "type": "string"},
+        "city_id": {"by": "city_id", "type": "number"}
     }
-
-    def get_queryset(self):
-        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
 
 
 class ProductRetrieveAPIView(BaseRopMixin, generics.RetrieveAPIView):
@@ -309,7 +307,7 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
     }
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer__city_id__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(dealer__managers__city_id__in=self.rop_profile.cities.all())
 
     @decorators.action(["GET"], detail=False, url_path="amounts")
     def get_amounts(self, request):
@@ -335,7 +333,7 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        dealers_queryset = self.dealers_queryset.filter(city__in=self.rop_profile.cities.all())
+        dealers_queryset = self.dealers_queryset.filter(managers__city__in=self.rop_profile.cities.all())
         dealer_profile = generics.get_object_or_404(dealers_queryset, user_id=user_id)
         saved_amount = MyOrder.objects.filter(
             author=dealer_profile,
