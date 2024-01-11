@@ -312,11 +312,14 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
-                  'image')
+                  'image', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['profile'] = DirectorDealerProfileSerializer(instance.dealer_profile, context=self.context).data
+        rep['managers'] = DirectorStaffListSerializer(instance.dealer_profile.managers,
+                                                      many=True, context=self.context).data
+
         return rep
 
     def create(self, validated_data):
