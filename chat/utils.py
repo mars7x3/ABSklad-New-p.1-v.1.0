@@ -37,7 +37,7 @@ def get_chat_receivers(chat):
     if not profile:
         return receivers
     receivers += list(map(lambda username: slugify(username), profile.managers.values_list("name", flat=True)))
-    return receivers
+    return list(set(receivers))
 
 
 def get_dealer_profile(user) -> DealerProfile | None:
