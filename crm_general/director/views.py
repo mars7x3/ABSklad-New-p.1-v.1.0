@@ -77,16 +77,9 @@ class StaffCRUDView(viewsets.ModelViewSet):
 
         if is_active:
             kwargs['is_active'] = bool(int(is_active))
-        print(kwargs)
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
-
-    @action(methods=['GET'], detail=False, url_path='rop-list')
-    def get_active_rop_list(self, request, *args, **kwargs):
-        active_rops = MyUser.objects.filter(is_active=True, status='rop')
-        serializer = UserListSerializer(active_rops, many=True).data
-        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class ROPChangeView(APIView):
@@ -131,22 +124,27 @@ class WareHouseChangeView(APIView):
             return Response({'detail:', 'deactivate_wh_id required!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        profile = WarehouseProfile.objects.filter(user=deactivate_wh)
-        stock = Stock.objects.filter(warehouse_profiles__user__id=deactivate_wh)
-        if stock.warehouse_profiles.filter(user__is_active=True) == 1:
+        inactive_wh = MyUser.objects.get(id=deactivate_wh)
+
+        profile = WarehouseProfile.objects.filter(user=deactivate_wh).first()
+        stock = profile.stock
+        wh_count = stock.warehouse_profiles.filter(user__is_active=True).count()
+        if wh_count < 2:
             with transaction.atomic():
-                if deactivate_wh:
-                    inactive_wh = MyUser.objects.get(id=deactivate_wh)
+                if new_wh:
                     inactive_wh.is_active = False
                     inactive_wh.save()
-                    active_wh = MyUser.objects.get(id=new_wh)
-                    wh_profile = WarehouseProfile.objects.get(active_wh)
+                    active_wh = MyUser.objects.get(id=1965)
+                    wh_profile = WarehouseProfile.objects.get(user__id=active_wh.id)
                     wh_profile.stock = stock
                     wh_profile.save()
 
                     return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
-                return Response({'detail', 'deactivate_rop_id required!'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
+                return Response({'detail', 'new_wh_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            inactive_wh.is_active = False
+            inactive_wh.save()
+            return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
 
 
 class BalanceListView(mixins.ListModelMixin, GenericViewSet):
@@ -882,6 +880,19 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=False, url_path='rop-list')
+    def get_active_rop_list(self, request, *args, **kwargs):
+        active_rops = MyUser.objects.filter(is_active=True, status='rop')
+        serializer = UserListSerializer(active_rops, many=True).data
+        return Response(serializer, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=False, url_path='wh-list')
+    def get_active_wh_list(self, request, *args, **kwargs):
+        active_whouses = MyUser.objects.filter(is_active=True, status='warehouse',
+                                               warehouse_profile__stock__isnull=True)
+        serializer = UserListSerializer(active_whouses, many=True).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class DirectorKPICRUDView(mixins.CreateModelMixin,
