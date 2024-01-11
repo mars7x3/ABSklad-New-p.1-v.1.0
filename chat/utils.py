@@ -34,16 +34,9 @@ def get_chat_receivers(chat):
     receivers = [slugify(dealer.username)]
 
     profile = get_dealer_profile(dealer)
-    if not profile or not profile.city:
+    if not profile:
         return receivers
-
-    manager_usernames = list(
-        get_user_model().objects.filter(
-            status='manager',
-            manager_profile__city=profile.city
-        ).values_list("username", flat=True)
-    )
-    receivers += list(map(lambda username: slugify(username), manager_usernames))
+    receivers += list(map(lambda username: slugify(username), profile.managers.values_list("name", flat=True)))
     return receivers
 
 
