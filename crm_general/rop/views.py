@@ -269,11 +269,9 @@ class ProductPriceListAPIView(BaseRopMixin, generics.ListAPIView):
     search_fields = ("product__name",)
     filter_by_fields = {
         "is_active": {"by": "product__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
-        "category_slug": {"by": "product__category__slug", "type": "string"}
+        "category_slug": {"by": "product__category__slug", "type": "string"},
+        "city_id": {"by": "city_id", "type": "number"}
     }
-
-    def get_queryset(self):
-        return super().get_queryset().filter(city__in=self.rop_profile.cities.all())
 
 
 class ProductRetrieveAPIView(BaseRopMixin, generics.RetrieveAPIView):
