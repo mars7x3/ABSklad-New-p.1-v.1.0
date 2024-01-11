@@ -145,12 +145,17 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
             await self.send_success_message(message_type, data=data)
             return
 
+        processed_receivers = set()
         for receiver in receivers or []:
+            if not receiver or receiver in processed_receivers:
+                continue
+
             await self.send_success_message(
                 receiver=receiver,
                 message_type="new_message",
                 data=data
             )
+            processed_receivers.add(receiver)
 
     async def read_message_command(self, message_type, req_data):
         msg_id = req_data.get('msg_id')
