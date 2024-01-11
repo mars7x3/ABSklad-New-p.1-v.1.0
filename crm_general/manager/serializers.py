@@ -30,11 +30,13 @@ from .utils import (
 class ShortOrderSerializer(serializers.ModelSerializer):
     dealer_city = serializers.SerializerMethodField(read_only=True)
     stock_city = serializers.SerializerMethodField(read_only=True)
+    stock_name = serializers.SerializerMethodField(read_only=True)
+    stock_address = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyOrder
         fields = ("id", "name", "dealer_city", "stock_city", "price", "type_status",
-                  "created_at", "paid_at", "released_at", "is_active", "status")
+                  "created_at", "paid_at", "released_at", "is_active", "status", "stock_name", "stock_address")
 
     def get_dealer_city(self, instance):
         if instance.author:
@@ -43,6 +45,14 @@ class ShortOrderSerializer(serializers.ModelSerializer):
     def get_stock_city(self, instance):
         if instance.stock:
             return instance.stock.city.title
+
+    def get_stock_name(self, instance):
+        if instance.stock:
+            return instance.stock.title
+
+    def get_stock_address(self, instance):
+        if instance.stock:
+            return instance.stock.address
 
 
 class OrderReceiptSerializer(serializers.ModelSerializer):
@@ -323,10 +333,13 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
     discount = serializers.SerializerMethodField(read_only=True)
     stock_count = serializers.SerializerMethodField(read_only=True)
     stock_city = serializers.SerializerMethodField(read_only=True)
+    stock_name = serializers.SerializerMethodField(read_only=True)
+    stock_address = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = CartProduct
-        fields = ("id", "product_name", "count", "amount", "discount", "stock_city", "stock_count")
+        fields = ("id", "product_name", "count", "amount", "discount", "stock_city", "stock_count",
+                  "stock_name", "stock_address")
         extra_kwargs = {"id": {"read_only": True, "source": "cart_id"}}
 
     def get_product_name(self, instance) -> str:
@@ -361,6 +374,12 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
     def get_stock_count(self, instance) -> int:
         stock_count = instance.cart.stock.counts.filter(product=instance.product).first()
         return stock_count.count_crm if stock_count else 0
+
+    def get_stock_name(self, instance):
+        return instance.cart.stock.title
+
+    def get_stock_address(self, instance):
+        return instance.stock.address
 
 
 # ----------------------------------------------- PRODUCT
@@ -517,11 +536,14 @@ class ReturnOrderListSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField(read_only=True)
     email = serializers.SerializerMethodField(read_only=True)
     stock_city = serializers.SerializerMethodField(read_only=True)
+    stock_name = serializers.SerializerMethodField(read_only=True)
+    stock_address = serializers.SerializerMethodField(read_only=True)
     moderated = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ReturnOrder
-        fields = ("id", "name", "city", "phone", "email", "stock_city", "price", "moderated", "moder_comment")
+        fields = ("id", "name", "city", "phone", "email", "stock_city", "price", "moderated", "moder_comment",
+                  "stock_name", "stock_address")
 
     def get_name(self, instance) -> str:
         return instance.order.name
@@ -542,6 +564,14 @@ class ReturnOrderListSerializer(serializers.ModelSerializer):
     def get_stock_city(self, instance) -> str | None:
         if instance.order.stock:
             return instance.order.stock.city.title
+
+    def get_stock_name(self, instance) -> str | None:
+        if instance.order.stock:
+            return instance.order.stock.title
+
+    def get_stock_address(self, instance) -> str | None:
+        if instance.order.stock:
+            return instance.order.stock.address
 
     def get_moderated(self, instance) -> bool:
         return instance.status != "Новый"
