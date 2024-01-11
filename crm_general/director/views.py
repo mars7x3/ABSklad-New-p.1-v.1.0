@@ -856,9 +856,17 @@ class DirectorTaskTotalInfoView(APIView):
 
 
 class PriceTypeCRUDView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [IsAuthenticated, IsDirector]
     queryset = PriceType.objects.all()
     serializer_class = PriceTypeCRUDSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        for d in instance.dealer_profiles.all():
+            d.price_type.delete()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
 
 
 class DirFreeMainWarehouseListView(APIView):

@@ -984,6 +984,16 @@ class PriceTypeCRUDSerializer(serializers.ModelSerializer):
         create_product_prices(price_type.id)
         return price_type
 
+    def update(self, instance, validated_data):
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+
+        if instance.is_active is False:
+            for d in instance.dealer_profiles.all():
+                d.price_type.delete()
+        return instance
+
 
 class WarehouseListSerializer(serializers.ModelSerializer):
     class Meta:
