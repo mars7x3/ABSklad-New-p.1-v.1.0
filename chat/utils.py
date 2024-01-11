@@ -4,7 +4,6 @@ from urllib.parse import urljoin
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
@@ -36,8 +35,8 @@ def get_chat_receivers(chat):
     profile = get_dealer_profile(dealer)
     if not profile:
         return receivers
-    receivers += list(map(lambda username: slugify(username), profile.managers.values_list("name", flat=True)))
-    return list(set(receivers))
+    receivers += list(map(lambda username: slugify(username), profile.managers.values_list("username", flat=True)))
+    return receivers
 
 
 def get_dealer_profile(user) -> DealerProfile | None:

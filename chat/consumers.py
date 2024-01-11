@@ -32,8 +32,8 @@ class AsyncBaseChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4004)
             return
 
-        valid_user = await self.validate_user()
-        if not valid_user:
+        is_valid_user = await self.validate_user()
+        if not is_valid_user:
             await self.close(code=4004)
         else:
             await self.channel_layer.group_add(self.room, self.channel_name)
@@ -66,10 +66,12 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
         return self.BASE_COMMANDS
 
     async def validate_user(self) -> bool:
+        valid = False
         for validator in self.user_validators or []:
-            if validator(self._user) is False:
-                return False
-        return True
+            valid = await validator(self._user)
+            if valid is False:
+                break
+        return valid
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
