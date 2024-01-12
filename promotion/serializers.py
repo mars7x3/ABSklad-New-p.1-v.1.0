@@ -37,7 +37,7 @@ class StoryProductSerializer(serializers.ModelSerializer):
         if not prices:
             prices = instance.prices.filter(city=user.dealer_profile.price_city,
                                             d_status=user.dealer_profile.dealer_status)
-        rep['price_info'] = StoryProductPriceSerializer(prices, context=self.context).data
+        rep['price_info'] = StoryProductPriceSerializer(prices.first(), context=self.context).data
         return rep
 
 
