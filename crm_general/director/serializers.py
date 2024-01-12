@@ -713,8 +713,9 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         files = self.context['request'].FILES.getlist('files')
         executors = validated_data.pop('executors')
-        validated_data['executors'] = MyUser.objects.filter(id__in=executors)
         task = CRMTask.objects.create(**validated_data)
+        task.executors.set(executors)
+        task.save()
         files_list = []
         for f in files:
             files_list.append(CRMTaskFile(file=f, task=task))
@@ -726,7 +727,7 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
         files = self.context['request'].FILES.getlist('files')
         delete_files = self.context['request'].data.getlist('delete_files')
         executors = validated_data.pop('executors')
-        executors = MyUser.objects.filter(id__in=executors)
+        executors = executors
 
         for key, value in validated_data.items():
             setattr(instance, key, value)
