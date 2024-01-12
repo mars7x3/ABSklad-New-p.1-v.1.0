@@ -78,10 +78,12 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_only_wh_in_stock(obj):
-        profile = WarehouseProfile.objects.filter(user=obj).first()
-        stock = profile.stock
-        count = stock.warehouse_profiles.filter(user__is_active=True).count()
-        return True if count < 2 else False
+        if obj.status == 'warehouse':
+            profile = WarehouseProfile.objects.filter(user=obj).first()
+            stock = profile.stock
+            count = stock.warehouse_profiles.filter(user__is_active=True).count()
+            return True if count < 2 else False
+        return ''
 
 
 class WarehouseProfileSerializer(serializers.ModelSerializer):
