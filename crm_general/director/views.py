@@ -653,30 +653,34 @@ class DirectorPriceTypeCreateView(APIView):
 
     def post(self, request):
         data = request.data.get('data')
+        d_statuses = DealerStatus.objects.all()
+
+        prod_ids = [i['id'] for i in data]
+        cost_update_data = []
+        cost_create_data = []
         price_data = []
+
         for d in data:
-            product_id = d.get('id')
             c_price = d.get('cost_price')
             prices = d.get('prices')
-            product = AsiaProduct.objects.filter(id=product_id).first()
-            cost_price = product.cost_prices.filter(is_active=True).first()
+            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True)
             if cost_price.price != c_price:
                 cost_price.is_active = False
-                cost_price.save()
-                ProductCostPrice.objects.create(product=product, price=c_price)
-
-            d_statuses = DealerStatus.objects.all()
+                cost_update_data.append(cost_price)
+                cost_create_data.append(ProductCostPrice(product_id=d.get('id'), price=c_price))
 
             for p in prices:
-                price_type = PriceType.objects.get(id=p['price_type'])
                 for s in d_statuses:
                     price_data.append(ProductPrice(
-                        product=product,
-                        price_type=price_type,
+                        product_id=d.get('id'),
+                        price_type_id=p['price_type'],
                         d_status=s,
                         price=p['price']
                     ))
-            product.prices.all().delete()
+
+        ProductCostPrice.objects.bulk_update(cost_update_data, ['is_active'])
+        ProductCostPrice.objects.bulk_create(cost_create_data)
+        ProductPrice.objects.filter(product_id__in=prod_ids, price_type__isnull=False).delete()
         ProductPrice.objects.bulk_create(price_data)
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
@@ -686,30 +690,34 @@ class DirectorPriceCityCreateView(APIView):
 
     def post(self, request):
         data = request.data.get('data')
+        d_statuses = DealerStatus.objects.all()
+
+        prod_ids = [i['id'] for i in data]
+        cost_update_data = []
+        cost_create_data = []
         price_data = []
+
         for d in data:
-            product_id = d.get('id')
             c_price = d.get('cost_price')
             prices = d.get('prices')
-            product = AsiaProduct.objects.filter(id=product_id).first()
-            cost_price = product.cost_prices.filter(is_active=True).first()
+            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True)
             if cost_price.price != c_price:
                 cost_price.is_active = False
-                cost_price.save()
-                ProductCostPrice.objects.create(product=product, price=c_price)
-
-            d_statuses = DealerStatus.objects.all()
+                cost_update_data.append(cost_price)
+                cost_create_data.append(ProductCostPrice(product_id=d.get('id'), price=c_price))
 
             for p in prices:
-                price_city = City.objects.get(id=p['city'])
                 for s in d_statuses:
                     price_data.append(ProductPrice(
-                        product=product,
-                        city=price_city,
+                        product_id=d.get('id'),
+                        city_id=p['city'],
                         d_status=s,
                         price=p['price']
                     ))
-            product.prices.all().delete()
+
+        ProductCostPrice.objects.bulk_update(cost_update_data, ['is_active'])
+        ProductCostPrice.objects.bulk_create(cost_create_data)
+        ProductPrice.objects.filter(product_id__in=prod_ids, city__isnull=False).delete()
         ProductPrice.objects.bulk_create(price_data)
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
