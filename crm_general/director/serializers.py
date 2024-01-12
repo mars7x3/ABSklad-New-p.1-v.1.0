@@ -412,8 +412,12 @@ class DirDealerCartProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        price = instance.product.prices.filter(city=instance.cart.dealer.price_city,
+        price = instance.product.prices.filter(price_type=instance.cart.dealer.price_type,
                                                d_status=instance.cart.dealer.dealer_status).first()
+        if not price:
+            price = instance.product.prices.filter(city=instance.cart.dealer.price_city,
+                                                   d_status=instance.cart.dealer.dealer_status).first()
+
         count = instance.product.counts.filter(stock=instance.cart.stock).first()
         rep['prod_title'] = instance.product.title
         rep['prod_category'] = instance.product.category.title
