@@ -25,7 +25,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'username', 'status', 'phone', 'pwd', 'email', 'is_active', 'date_joined', 'image',
-                  'updated_at', 'password', 'name')
+                  'updated_at', 'password', 'name', 'only_wh_in_stock')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
