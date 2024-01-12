@@ -35,8 +35,9 @@ class HRStaffMagazineSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         magazine = StaffMagazine.objects.filter(user=validated_data['user'], is_active=True).first()
-        magazine.is_active = False
-        magazine.save()
+        if magazine:
+            magazine.is_active = False
+            magazine.save()
         magazine = StaffMagazine.objects.create(**validated_data)
 
         return magazine
