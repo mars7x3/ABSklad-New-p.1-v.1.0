@@ -85,7 +85,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
                 count = stock.warehouse_profiles.filter(user__is_active=True).count()
                 return True if count < 2 else False
             except AttributeError:
-                return None
+                return False
         return None
 
 
