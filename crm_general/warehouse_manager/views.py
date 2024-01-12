@@ -17,10 +17,10 @@ from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
-    WareHouseProductSerializer, WareHouseCRMTaskResponseSerializer, WareHouseInventorySerializer, \
+    WareHouseProductSerializer, WareHouseInventorySerializer, \
     InventoryProductListSerializer
 from .mixins import WareHouseManagerMixin
-from ..models import CRMTaskResponse, Inventory
+from ..models import Inventory
 
 
 class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
@@ -248,9 +248,7 @@ class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
 class WareHouseTaskView(ListModelMixin,
                         RetrieveModelMixin,
                         GenericViewSet):
-    queryset = CRMTaskResponse.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    serializer_class = WareHouseCRMTaskResponseSerializer
     pagination_class = GeneralPurposePagination
 
     def get_queryset(self):

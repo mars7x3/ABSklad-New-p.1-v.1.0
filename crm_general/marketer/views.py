@@ -16,8 +16,7 @@ from promotion.models import Banner, Story, Motivation, Discount
 from .serializers import MarketerProductSerializer, MarketerProductListSerializer, MarketerCollectionSerializer, \
     MarketerCategorySerializer, BannerSerializer, BannerListSerializer, DealerStatusSerializer, StoryListSerializer, \
     StoryDetailSerializer, ShortProductSerializer, CRMNotificationSerializer, MotivationSerializer, \
-    DiscountSerializer, MarketerCRMTaskResponseSerializer
-from ..models import CRMTaskResponse
+    DiscountSerializer
 from ..paginations import ProductPagination, GeneralPurposePagination
 from product.models import AsiaProduct, Collection, Category, ProductSize
 from .permissions import IsMarketer
@@ -233,27 +232,4 @@ class CRMNotificationView(ListModelMixin,
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class MarketerTaskView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
-    queryset = CRMTaskResponse.objects.all()
-    permission_classes = [IsAuthenticated, IsMarketer]
-    serializer_class = MarketerCRMTaskResponseSerializer
-    pagination_class = GeneralPurposePagination
 
-    def get_queryset(self):
-        return self.queryset.filter(task__is_active=True, executor=self.request.user.id)
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        is_done = self.request.query_params.get('is_done')
-        search = self.request.query_params.get('search')
-        if is_done == 'true':
-            queryset = queryset.filter(is_done=True)
-        if is_done == 'false':
-            queryset = queryset.filter(is_done=False)
-
-        if search:
-            queryset = queryset.filter(task__title__icontains=search)
-        paginator = GeneralPurposePagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)

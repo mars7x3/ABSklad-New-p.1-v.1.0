@@ -33,7 +33,6 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
         kwargs = {}
-        print(request.query_params.get('is_active'))
 
         name = request.query_params.get('name')
         if name:

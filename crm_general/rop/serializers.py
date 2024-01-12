@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
-from crm_general.models import CRMTask, CRMTaskResponse
+
 from crm_general.serializers import BaseProfileSerializer
 from crm_general.utils import get_motivation_done
 from general_service.models import City, PriceType
@@ -410,21 +410,3 @@ class WalletListSerializer(serializers.ModelSerializer):
             return last_replenishment.created_at
 
 
-# --------------------------------------- TASKS
-class ShortTaskSerializer(serializers.ModelSerializer):
-    provider = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = CRMTask
-        fields = ("id", "created_at", "title", "end_date", "provider", "status")
-
-    def get_provider(self, obj):
-        return obj.creator.name
-
-
-class RopTaskListSerializer(serializers.ModelSerializer):
-    task = ShortTaskSerializer(many=False, read_only=True)
-
-    class Meta:
-        model = CRMTaskResponse
-        fields = ("id", "task", "grade", "is_done")
