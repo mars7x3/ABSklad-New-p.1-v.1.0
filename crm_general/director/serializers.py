@@ -238,6 +238,8 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        cost_prices = instance.cost_prices.filter(is_active=True).first()
+        rep['cost_price'] = cost_prices.price
         rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
         rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
         return rep
