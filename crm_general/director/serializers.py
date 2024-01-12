@@ -232,17 +232,65 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
 
 
 class DirectorProductCRUDSerializer(serializers.ModelSerializer):
+    stocks = serializers.SerializerMethodField()
+
     class Meta:
         model = AsiaProduct
         fields = '__all__'
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        cost_prices = instance.cost_prices.filter(is_active=True).first()
-        rep['cost_price'] = cost_prices.price
+        request = self.context['request']
+        cost_prices = instance.cost_prices.filter(product__is_active=True).first()
+        rep['cost_price'] = cost_prices.price if cost_prices else '---'
         rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
         rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
+        price_type = request.query_params.get('price_type')
+        price_city = request.query_params.get('price_city')
+
+        if price_type:
+            rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                      price_type__isnull=False),
+                                                               many=True, context=self.context).data
+        if price_city:
+            rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                      city__isnull=False),
+                                                               many=True, context=self.context).data
+
         return rep
+
+    @staticmethod
+    def get_stocks(instance):
+        counts_instances = instance.counts.all()
+        stocks_data = []
+
+        for count_norm_instance in counts_instances:
+            stock_instance = count_norm_instance.stock
+            if stock_instance:
+                stocks_data.append({
+                    'stock_id': stock_instance.id,
+                    'stock_title': stock_instance.title,
+                    'count_norm': count_norm_instance.count_norm
+                })
+        return stocks_data
+
+    def update(self, instance, validated_data):
+        request = self.context['request']
+        count_norm = request.data.get('count_norm')
+        stock_id = request.data.get('stock')
+        product_price_data = request.data.get('product_price_data')
+
+        if count_norm:
+            product_count = ProductCount.objects.get(product=instance, stock=stock_id)
+            product_count.count_norm = count_norm
+            product_count.save()
+
+        if product_price_data:
+            for price in product_price_data:
+                product_price = ProductPrice.objects.get(id=price.get('id'))
+                product_price.price = price.get('price')
+                product_price.save()
+        return super().update(instance, validated_data)
 
 
 class DirectorProductSizeSerializer(serializers.ModelSerializer):
@@ -629,7 +677,7 @@ class DirectorPriceListSerializer(serializers.ModelSerializer):
 class DirectorProductPriceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductPrice
-        fields = ('price', 'price_type', 'city')
+        fields = ('id', 'price', 'price_type', 'city')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -847,7 +895,7 @@ class StockProductListSerializer(serializers.ModelSerializer):
         price = instance.prices.filter(city=stock.city).first()
         rep['prod_amount_crm'] = instance.total_count * price.price
         rep['prod_count_crm'] = instance.total_count
-        rep['norm_count'] = instance.total_count - instance.norm_count
+        rep['norm_count'] = instance.norm_count
         return rep
 
 
@@ -1014,5 +1062,3 @@ class WarehouseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('name', 'id')
-
-
