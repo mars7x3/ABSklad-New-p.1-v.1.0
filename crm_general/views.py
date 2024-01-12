@@ -12,7 +12,7 @@ from account.models import MyUser, DealerStatus, DealerProfile
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
-    CRMTaskResponseSerializer, CityCRUDSerializer, PriceTypeListSerializer, DealerProfileSerializer, \
+    CityCRUDSerializer, PriceTypeListSerializer, DealerProfileSerializer, \
     ShortProductSerializer
 from general_service.models import City, Stock, PriceType
 from order.db_request import query_debugger
@@ -131,22 +131,6 @@ class UserImageCDView(APIView):
         user.save()
         image_url = request.build_absolute_uri(user.image.url)
         return Response({"url": image_url}, status=status.HTTP_200_OK)
-
-
-class CRMTaskUpdateAPIView(generics.UpdateAPIView):
-    permission_classes = (IsAuthenticated, IsStaff)
-    serializer_class = CRMTaskResponseSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "response_task_id"
-
-    def get_queryset(self):
-        return (
-            self.request.user.task_responses
-            .select_related("task")
-            .prefetch_related("response_files")
-            .only("id", "task", "grade", "is_done")
-            .all()
-        )
 
 
 class CityCRUDView(viewsets.ModelViewSet):

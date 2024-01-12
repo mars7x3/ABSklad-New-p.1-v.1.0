@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from crm_general.models import CRMTaskResponse, CRMTask, CRMTaskFile, CRMTaskResponseFile, Inventory, InventoryProduct
+from crm_general.models import CRMTask, CRMTaskFile, Inventory, InventoryProduct
 from crm_general.serializers import VerboseChoiceField
 from order.models import MyOrder, OrderProduct
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
@@ -123,21 +123,6 @@ class WareHouseTaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CRMTask
-        fields = '__all__'
-
-
-class WareHouseCRMTaskResponseFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CRMTaskResponseFile
-        fields = '__all__'
-
-
-class WareHouseCRMTaskResponseSerializer(serializers.ModelSerializer):
-    task = WareHouseTaskSerializer(read_only=True)
-    files = WareHouseCRMTaskResponseFileSerializer(many=True, read_only=True, source='response_files')
-
-    class Meta:
-        model = CRMTaskResponse
         fields = '__all__'
 
 

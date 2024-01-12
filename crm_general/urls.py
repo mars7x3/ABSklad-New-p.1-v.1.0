@@ -28,7 +28,6 @@ from .manager.views import (
     ReturnRetrieveAPIView as ManagerReturnRetrieveAPIView,
     ReturnUpdateAPIView as ManagerReturnUpdateAPIView,
     BalancePlusManagerView as ManagerBalancePlusManagerView,
-    ManagerTaskListAPIView, ManagerTaskRetrieveAPIView,
 )
 
 from .rop.views import (
@@ -54,7 +53,6 @@ from .rop.views import (
     ProductPriceListAPIView as RopProductPriceListAPIView,
     ProductRetrieveAPIView as RopProductRetrieveAPIView,
     BalanceViewSet as BalanceViewSet,
-    RopTaskListAPIView, RopTaskRetrieveAPIView
 )
 
 from .director.views import *
@@ -65,7 +63,6 @@ from .views import *
 from .marketer.views import (
     MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeView,
     MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView,
-    MarketerTaskView,
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
@@ -105,7 +102,6 @@ director_router.register("director/discount/product/list", DirectorDiscountAsiaP
 director_router.register("director/price/list", DirectorPriceListView)
 director_router.register("director/task/crud", DirectorTaskCRUDView)
 director_router.register("director/task/list", DirectorTaskListView)
-director_router.register("director/grade/crud", DirectorGradeCRUDView)
 director_router.register("director/staff/list", DirectorStaffListView)
 director_router.register("director/stock/crud", DirectorStockCRUDView)
 director_router.register("director/stock/list", DirectorStockListView)
@@ -130,7 +126,6 @@ director_urlpatterns = [
     path('director/dealer/total-amounts/', DirectorTotalAmountView.as_view()),
     path('director/price-type/create/', DirectorPriceTypeCreateView.as_view()),
     path('director/price-city/create/', DirectorPriceCityCreateView.as_view()),
-    path('director/task/grade/', DirectorGradeView.as_view()),
     path('director/task/total-info/', DirectorTaskTotalInfoView.as_view()),
     path('director/free/warehouses/list/', DirFreeMainWarehouseListView.as_view()),
     path('director/warehouses/add-to-stock/', DirJoinWarehouseToStockListView.as_view()),
@@ -157,11 +152,6 @@ accountant_urlpatterns = [
     path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
     path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
     path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
-    path("accountant/task-responses/", AccountantTaskListAPIView.as_view(),
-         name="crm_general-accountant-task-responses-list"),
-    re_path(r"^accountant/task-responses/(?P<response_task_id>.+)/detail/$", AccountantTaskRetrieveAPIView.as_view(),
-            name="crm_general-accountant-task-responses-detail"),
-
 
 
     path('', include(accountant_router.urls)),
@@ -210,10 +200,6 @@ manager_urlpatterns = [
             name="crm_general-manager-returns-detail"),
     re_path("^manager/returns/(?P<return_id>.+)/update/$", ManagerReturnUpdateAPIView.as_view(),
             name="crm_general-manager-returns-update"),
-    # Tasks
-    path("manager/task-responses/", ManagerTaskListAPIView.as_view(), name="crm_general-manager-task-responses-list"),
-    re_path(r"^manager/task-responses/(?P<response_task_id>.+)/detail/$", ManagerTaskRetrieveAPIView.as_view(),
-            name="crm_general-manager-task-responses-detail"),
 
     # Balances and Other
     path("manager/balance/plus/", ManagerBalancePlusManagerView.as_view(),
@@ -273,9 +259,6 @@ rop_urlpatterns = [
             name="crm_general-rop-product-detail"),
 
     # Tasks
-    path("rop/task-responses/", RopTaskListAPIView.as_view(), name="crm_general-rop-task-responses-list"),
-    re_path(r"^rop/task-responses/(?P<response_task_id>.+)/detail/$", RopTaskRetrieveAPIView.as_view(),
-            name="crm_general-rop-task-responses-detail"),
     path("rop/", include(rop_router.urls)),
 ]
 # --------------------------- MARKETER
@@ -288,7 +271,6 @@ marketer_router.register('banner', MarketerBannerModelViewSet)
 marketer_router.register('story', MarketerStoryViewSet)
 marketer_router.register('crm-notification', CRMNotificationView)
 marketer_router.register('product-size', ProductSizeView)
-marketer_router.register('task', MarketerTaskView)
 
 marketer_urlpatterns = [
     path('marketer/dealer-status/list/', MarketerDealerStatusListView.as_view({'get': 'list'})),
@@ -328,8 +310,6 @@ crm_urlpatterns = [
 
     path("crm/user/image/cd", UserImageCDView.as_view()),
 
-    re_path(r"^crm/task-response/(?P<response_task_id>.+)/complete/$", CRMTaskUpdateAPIView.as_view(),
-            name="crm_general-task-responses-complete"),
     path("crm/staff/me-info/", StaffMeInfoView.as_view()),
     path('crm/dealers/filter/', DealersFilterAPIView.as_view()),
     path('crm/products/filter/discount/', FilterProductByDiscountAPIView.as_view()),

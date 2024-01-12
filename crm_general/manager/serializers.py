@@ -12,7 +12,7 @@ from account.models import (
     MyUser, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory,
     BalancePlus, BalancePlusFile
 )
-from crm_general.models import CRMTask, CRMTaskResponse
+from crm_general.models import CRMTask
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
 from crm_general.utils import get_motivation_done
 from general_service.models import Stock, PriceType
@@ -683,12 +683,7 @@ class ShortTaskSerializer(serializers.ModelSerializer):
         return obj.creator.name
 
 
-class ManagerTaskListSerializer(serializers.ModelSerializer):
-    task = ShortTaskSerializer(many=False, read_only=True)
 
-    class Meta:
-        model = CRMTaskResponse
-        fields = ("id", "task", "grade", "is_done")
 
 
 
