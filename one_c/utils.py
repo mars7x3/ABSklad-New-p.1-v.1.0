@@ -176,7 +176,7 @@ def sync_dealer():
             dealer_data.append(
                 DealerProfile(
                     user=user,
-                    city=city,
+                    village__city=city,
                     dealer_status=dealer_status,
                     price_type=price_type
                 )

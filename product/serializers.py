@@ -71,21 +71,17 @@ class ProductListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
-        price_list_type = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
-        price_list_city = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+        prices = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+        if not prices:
+            prices = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
 
-        if price_list_type:
+        if prices:
             rep['price_info'] = ProductPriceListSerializer(
-                instance=price_list_type,
+                instance=prices,
                 many=False,
                 context=self.context
             ).data
-        elif price_list_city:
-            rep['price_info'] = ProductPriceListSerializer(
-                instance=price_list_city,
-                many=False,
-                context=self.context
-            ).data
+
         else:
             rep['price_info'] = {
                 'price': 0.0,
@@ -139,21 +135,23 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         rep['category'] = instance.category.title if instance.category else '---'
         rep['collection'] = instance.collection.title if instance.collection else '---'
 
-        price_list_type = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
-        price_list_city = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+        prices = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+        if not prices:
+            prices = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
 
-        if price_list_type:
+        if prices:
             rep['price_info'] = ProductPriceListSerializer(
-                instance=price_list_type,
+                instance=prices,
                 many=False,
                 context=self.context
             ).data
-        elif price_list_city:
-            rep['price_info'] = ProductPriceListSerializer(
-                instance=price_list_city,
-                many=False,
-                context=self.context
-            ).data
+        else:
+            rep['price_info'] = {
+                'price': 0.0,
+                'old_price': 0.0,
+                'discount': 0.0,
+                'discount_status': "Per"
+            }
 
         return rep
 

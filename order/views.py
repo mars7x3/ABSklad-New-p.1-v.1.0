@@ -119,7 +119,6 @@ class CartAddView(generics.GenericAPIView):
 
             for c in carts:
                 cart, _ = Cart.objects.get_or_create(dealer=dealer, stock_id=c.get('stock'))
-                print(cart)
                 cart.cart_products.all().delete()
                 cart_product_list = [CartProduct(cart=cart, product_id=p.get('id'), count=p.get('count')) for p in
                                      c.get('products')]

@@ -20,9 +20,15 @@ def get_product_list(products):
 
 @query_debugger
 def order_total_price(product_list, products, dealer):
+    price_type = dealer.price_type
+    if price_type:
+        prices = ProductPrice.objects.filter(product_id__in=product_list, price_type=price_type,
+                                             d_status=dealer.dealer_status).only("product_id", "price")
+    else:
+        prices = ProductPrice.objects.filter(product_id__in=product_list, city=dealer.price_city,
+                                             d_status=dealer.dealer_status).only("product_id", "price")
     amount = 0
-    prices = ProductPrice.objects.filter(product_id__in=product_list, city_id=1,
-                                         d_status_id=1).only("product_id", "price")
+
     for price_data in prices:
         product_id = price_data.product_id
         price = price_data.price
@@ -46,11 +52,9 @@ def generate_order_products(product_list, products, dealer):
     result_data = []
     for p in product_list:
 
-        prod_price_type = p.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+        prod_price = p.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
 
-        if prod_price_type:
-            prod_price = prod_price_type
-        else:
+        if not prod_price:
             prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
 
         total_price = prod_price.price * products[str(p.id)]

@@ -58,7 +58,6 @@ from .rop.views import (
 )
 
 from .director.views import *
-from .main_director.views import *
 from .accountant.views import *
 
 from .views import *

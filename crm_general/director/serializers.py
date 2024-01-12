@@ -150,12 +150,12 @@ class BalanceHistoryListSerializer(serializers.ModelSerializer):
 class BalanceDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('dealer_status', 'city')
+        fields = ('dealer_status', 'village')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
-        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['city_title'] = instance.village.city.title if instance.village else '---'
         rep['name'] = instance.user.name
         rep['user_id'] = instance.user.id
         last_transaction = instance.balance_histories.filter(is_active=True, amount__gte=0).last()
@@ -292,7 +292,7 @@ class DirectorDiscountDealerStatusSerializer(serializers.ModelSerializer):
 class DirectorDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('city',)
+        fields = ('village',)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -300,7 +300,7 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         rep['id'] = instance.user.id
         rep['is_active'] = instance.user.is_active
         rep['name'] = instance.user.name
-        rep['city'] = instance.city.title if instance.city else '---'
+        rep['city'] = instance.village.city.title if instance.village else '---'
         rep['status'] = True if instance.wallet.amount_crm > 50000 else False
         last_order = instance.orders.filter(is_active=True, status__in=['success', 'sent', 'paid',
                                                                         'wait']).last()
@@ -354,7 +354,7 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['city_title'] = instance.village.city.title if instance.village else '---'
         rep['price_city_title'] = instance.price_city.title if instance.price_city else '---'
         rep['dealer_status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
         rep['balance_crm'] = instance.wallet.amount_crm

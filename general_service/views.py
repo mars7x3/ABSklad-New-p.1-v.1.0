@@ -24,7 +24,7 @@ class RequisiteListView(APIView):
 
     def get(self, request):
         category = request.query_params.get('category')
-        city = request.user.dealer_profile.city
+        city = request.user.dealer_profile.village.city
 
         requisite = Requisite.objects.filter(requisite_cities__city=city, category_id=category, is_active=True).first()
         response = RequisiteListSerializer(requisite, context=self.get_renderer_context()).data

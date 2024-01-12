@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
 from general_service.compress import WEBPField, user_image_folder, notification_image_folder
-from general_service.models import City, Stock, PriceType
+from general_service.models import City, Stock, PriceType, Village
 
 
 class DealerStatus(models.Model):
@@ -101,7 +101,8 @@ class WarehouseProfile(models.Model):
 
 class DealerProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='dealer_profile')
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True, related_name='dealer_profiles')
+    village = models.ForeignKey(Village, on_delete=models.SET_NULL, blank=True, null=True,
+                                related_name='dealer_profiles')
     address = models.CharField(max_length=300, blank=True, null=True)
     dealer_status = models.ForeignKey(DealerStatus, on_delete=models.SET_NULL, blank=True, null=True,
                                       related_name='dealer_profiles')
