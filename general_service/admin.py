@@ -45,4 +45,5 @@ class RequisiteAdmin(admin.ModelAdmin):
 admin.site.register(RequisiteCategory)
 admin.site.register(PriceType)
 admin.site.register(CashBox)
+admin.site.register(Village)
 
