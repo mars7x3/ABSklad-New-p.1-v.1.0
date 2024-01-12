@@ -864,8 +864,6 @@ class PriceTypeCRUDView(viewsets.ModelViewSet):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-
-
 class DirFreeMainWarehouseListView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
