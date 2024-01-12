@@ -45,7 +45,14 @@ def order_cost_price(product_list, products):
 def generate_order_products(product_list, products, dealer):
     result_data = []
     for p in product_list:
-        prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+
+        prod_price_type = p.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+
+        if prod_price_type:
+            prod_price = prod_price_type
+        else:
+            prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+
         total_price = prod_price.price * products[str(p.id)]
         if prod_price.discount > 0:
             discount = products[str(p.id)] * (prod_price.old_price - prod_price.price)
