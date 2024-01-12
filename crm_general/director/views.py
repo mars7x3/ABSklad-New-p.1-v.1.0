@@ -663,7 +663,7 @@ class DirectorPriceTypeCreateView(APIView):
         for d in data:
             c_price = d.get('cost_price')
             prices = d.get('prices')
-            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True)
+            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True).first()
             if cost_price.price != c_price:
                 cost_price.is_active = False
                 cost_update_data.append(cost_price)
@@ -700,7 +700,7 @@ class DirectorPriceCityCreateView(APIView):
         for d in data:
             c_price = d.get('cost_price')
             prices = d.get('prices')
-            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True)
+            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True).first()
             if cost_price.price != c_price:
                 cost_price.is_active = False
                 cost_update_data.append(cost_price)
