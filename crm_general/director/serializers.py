@@ -20,6 +20,8 @@ from promotion.models import Discount, Motivation, MotivationPresent, Motivation
 
 
 class StaffCRUDSerializer(serializers.ModelSerializer):
+    only_wh_in_stock = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = MyUser
         fields = ('id', 'username', 'status', 'phone', 'pwd', 'email', 'is_active', 'date_joined', 'image',
@@ -73,6 +75,13 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
                 warehouse_profile.save()
 
             return instance
+
+    @staticmethod
+    def get_only_wh_in_stock(obj):
+        profile = WarehouseProfile.objects.filter(user=obj).first()
+        stock = profile.stock
+        count = stock.warehouse_profiles.filter(user__is_active=True).count()
+        return True if count < 2 else False
 
 
 class WarehouseProfileSerializer(serializers.ModelSerializer):
@@ -839,18 +848,9 @@ class DirectorDealerListSerializer(serializers.ModelSerializer):
 
 
 class DirectorStaffListSerializer(serializers.ModelSerializer):
-    only_wh_in_stock = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = MyUser
         fields = ('status', 'name', 'id')
-
-    @staticmethod
-    def get_only_wh_in_stock(obj):
-        profile = WarehouseProfile.objects.filter(user=obj).first()
-        stock = profile.stock
-        count = stock.warehouse_profiles.filter(user__is_active=True).count()
-        return True if count < 2 else False
 
 
 class DirectorKPIStaffListSerializer(serializers.ModelSerializer):
