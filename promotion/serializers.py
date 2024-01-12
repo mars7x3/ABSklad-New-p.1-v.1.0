@@ -32,9 +32,12 @@ class StoryProductSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         rep = super().to_representation(instance)
         rep['images'] = StoryProductImageSerializer([instance.images.first()], many=True, context=self.context).data
-        rep['price_info'] = StoryProductPriceSerializer(instance.prices.filter(price_type=user.dealer_profile.price_type,
-                                                   d_status=user.dealer_profile.dealer_status).first(),
-                                                   context=self.context).data
+        prices = instance.prices.filter(price_type=user.dealer_profile.price_type,
+                                        d_status=user.dealer_profile.dealer_status)
+        if not prices:
+            prices = instance.prices.filter(city=user.dealer_profile.price_city,
+                                            d_status=user.dealer_profile.dealer_status)
+        rep['price_info'] = StoryProductPriceSerializer(prices, context=self.context).data
         return rep
 
 

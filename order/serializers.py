@@ -148,6 +148,8 @@ class CartAsiaProductSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
         price = instance.prices.filter(d_status=dealer.dealer_status, price_type=dealer.price_type).first()
+        if not price:
+            price = instance.prices.filter(d_status=dealer.dealer_status, city=dealer.price_city).first()
         rep['image'] = self.context['request'].build_absolute_uri(instance.images.first().image.url)
         rep['price_info'] = CartAsiaProductPriceSerializer(price, context=self.context).data
         rep['counts'] = CartProductCountSerializer(instance.counts.all(), many=True, context=self.context).data

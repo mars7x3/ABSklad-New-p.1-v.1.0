@@ -130,7 +130,7 @@ class BalanceHistoryListSerializer(serializers.ModelSerializer):
 class BalanceDealerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        fields = ('dealer_status', 'city')
+        fields = ('dealer_status', 'village')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
