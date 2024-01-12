@@ -957,7 +957,7 @@ class DirJoinWarehouseToStockListView(APIView):
         user_ids = request.data['users']
         stock = Stock.objects.filter(id=stock_id).first()
         if user_ids:
-            user_ids = request.data.getlist('users')
+            user_ids = request.data.get('users')
         users = MyUser.objects.filter(id__in=user_ids)
         if users and stock:
             for u in users:
