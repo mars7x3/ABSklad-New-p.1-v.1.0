@@ -931,6 +931,7 @@ class PriceTypeCRUDView(viewsets.ModelViewSet):
         instance = self.get_object()
         for d in instance.dealer_profiles.all():
             d.price_type.delete()
+        instance.delete()
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 

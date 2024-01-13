@@ -176,7 +176,7 @@ def sync_dealer():
             dealer_data.append(
                 DealerProfile(
                     user=user,
-                    village__city=city,
+                    village=city.first(),
                     dealer_status=dealer_status,
                     price_type=price_type
                 )
@@ -306,5 +306,3 @@ def sync_pay_doc_histories():
             update_data.append(money_doc)
 
     MoneyDoc.objects.bulk_update(update_data, ['created_at'])
-
-
