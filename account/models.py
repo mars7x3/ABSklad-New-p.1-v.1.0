@@ -100,6 +100,10 @@ class WarehouseProfile(models.Model):
 
 
 class DealerProfile(models.Model):
+    STATUS = (
+        ('online', 'online'),
+        ('offline', 'offline'),
+    )
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='dealer_profile')
     village = models.ForeignKey(Village, on_delete=models.SET_NULL, blank=True, null=True,
                                 related_name='dealer_profiles')
@@ -113,6 +117,7 @@ class DealerProfile(models.Model):
     price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, blank=True, null=True,
                                    related_name='dealer_profiles')
     managers = models.ManyToManyField(MyUser, related_name='dealer_profiles', blank=True)
+    client_type = models.CharField(max_length=20, choices=STATUS, default='offline')
 
     def __str__(self):
         return f'{self.id} - {self.user.name}'
