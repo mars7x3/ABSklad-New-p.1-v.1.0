@@ -42,7 +42,8 @@ class DealerMeInfoSerializer(serializers.ModelSerializer):
 class DealerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
-        exclude = ['user', 'price_city', 'dealer_status', 'liability', 'id', 'managers', 'village', 'price_type']
+        exclude = ['user', 'price_city', 'dealer_status', 'liability', 'id', 'managers', 'village', 'price_type',
+                   'client_type']
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
