@@ -365,11 +365,6 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         rep['is_active'] = instance.user.is_active
         rep['name'] = instance.user.name
         rep['city'] = instance.village.city.title if instance.village else '---'
-        rep['status'] = True if instance.wallet.amount_crm > 50000 else False
-        last_order = instance.orders.filter(is_active=True, status__in=['success', 'sent', 'paid',
-                                                                        'wait']).last()
-        rep['last_date'] = str(last_order.paid_at) if last_order else '---'
-
         return rep
 
 
