@@ -252,7 +252,7 @@ class TaskResponseView(APIView):
         task_id = request.data['id']
         files = request.FILES.getlist('files')
         response_text = request.data['response_text']
-        delete_files = request.data.get('delete_files')
+        delete_files = request.data.getlist('delete_files')
         task = CRMTask.objects.get(id=task_id)
         if request.user in task.executors.all():
             task.response_text = response_text
