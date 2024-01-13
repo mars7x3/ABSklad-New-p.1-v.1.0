@@ -273,7 +273,8 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         request = self.context['request']
         stocks = request.data.get('stocks')
-        product_price_data = request.data.get('product_price_data')
+        type_prices = request.data.get('type_prices')
+        city_prices = request.data.get('city_prices')
         is_active = validated_data.get('is_active', True)
         if not is_active:
             discounts = Discount.objects.filter(is_active=True)
@@ -290,8 +291,13 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                 product_count.count_norm = s['count_norm']
                 product_count.save()
 
-        if product_price_data:
-            for price in product_price_data:
+        if city_prices:
+            for price in city_prices:
+                product_price = ProductPrice.objects.get(id=price.get('id'))
+                product_price.price = price.get('price')
+                product_price.save()
+        if type_prices:
+            for price in type_prices:
                 product_price = ProductPrice.objects.get(id=price.get('id'))
                 product_price.price = price.get('price')
                 product_price.save()
