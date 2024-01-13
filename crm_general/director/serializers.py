@@ -674,11 +674,11 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
         files = self.context['request'].FILES.getlist('files')
         delete_files = self.context['request'].data.getlist('delete_files')
         executors = validated_data.pop('executors')
-        executors = executors
 
         for key, value in validated_data.items():
             setattr(instance, key, value)
-        instance.executors.set(executors)
+        if executors:
+            instance.executors.set(executors)
         instance.save()
 
         if delete_files:
