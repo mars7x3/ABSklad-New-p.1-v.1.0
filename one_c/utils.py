@@ -254,7 +254,7 @@ def sync_order_histories_1c_to_crm():
                         'order': order,
                         'category': p.category,
                         'title': p.title,
-                        'total_price': d.get('sum') if d.get('sum') else 0 ,
+                        'total_price': d.get('total_price') if d.get('total_price') else 0,
                         'count': d.get('count') if d.get('count') else 0,
                         'price': d.get('price') if d.get('price') else 0,
                         'ab_product': p,
