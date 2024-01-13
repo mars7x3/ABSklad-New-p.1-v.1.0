@@ -253,7 +253,7 @@ class TaskResponseView(APIView):
         files = request.FILES.getlist('files')
         response_text = request.data['response_text']
         task = CRMTask.objects.get(id=task_id)
-        if request.user in task.executors:
+        if request.user in task.executors.all():
             task.response_text = response_text
             task.status = 'waiting'
             task.save()
