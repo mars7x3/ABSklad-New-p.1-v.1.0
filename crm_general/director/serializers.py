@@ -279,6 +279,15 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
         count_norm = request.data.get('count_norm')
         stock_id = request.data.get('stock')
         product_price_data = request.data.get('product_price_data')
+        is_active = validated_data.get('is_active', True)
+        if not is_active:
+            discounts = Discount.objects.filter(is_active=True)
+            for discount in discounts:
+                products = discount.products.all()
+                if instance in products:
+                    raise serializers.ValidationError(
+                        'Cannot deactivate a product that is in an active Discount'
+                    )
 
         if count_norm:
             product_count = ProductCount.objects.get(product=instance, stock=stock_id)
@@ -322,6 +331,12 @@ class DirectorDiscountSerializer(serializers.ModelSerializer):
         rep['dealer_profiles'] = dealer_profiles_list
 
         return rep
+
+    def update(self, instance, validated_data):
+        products = validated_data.get('products', [])
+        if instance.is_active and products:
+            raise serializers.ValidationError({'detail': 'Cannot delete products from an active Discount'})
+        return super().update(instance, validated_data)
 
 
 class DirectorDiscountProductSerializer(serializers.ModelSerializer):

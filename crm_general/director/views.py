@@ -357,12 +357,6 @@ class DirectorProductCRUDView(mixins.RetrieveModelMixin,
     queryset = AsiaProduct.objects.all()
     serializer_class = DirectorProductCRUDSerializer
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
-
 
 class DirectorDiscountCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
@@ -966,20 +960,22 @@ class DirJoinWarehouseToStockListView(APIView):
     def post(self, request):
         stock_id = request.data['stock']
         user_ids = request.data['users']
-        stock = Stock.objects.filter(id=stock_id).first()
-        if user_ids:
-            user_ids = request.data.get('users')
+        stock = Stock.objects.get(id=stock_id)
         users = MyUser.objects.filter(id__in=user_ids)
-        if users and stock:
-            for u in users:
-                profile = u.warehouse_profile
-                if profile.stock is not None:
-                    return Response({'detail': 'Warehouse is already has stock'},
-                                    status=status.HTTP_400_BAD_REQUEST)
-                profile.stock = stock
-                profile.save()
-            return Response({"text": "Success!"}, status=status.HTTP_200_OK)
-        return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        warehouses = WarehouseProfile.objects.filter(stock=stock)
+        with transaction.atomic():
+            for wh in warehouses:
+                wh.stock = None
+                wh.save()
+
+            if users and stock:
+                for user in users:
+                    profile = user.warehouse_profile
+                    profile.stock = stock
+                    profile.save()
+                return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+            return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class StockListView(mixins.ListModelMixin, GenericViewSet):
