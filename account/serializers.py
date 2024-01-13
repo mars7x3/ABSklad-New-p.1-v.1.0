@@ -46,7 +46,9 @@ class DealerProfileSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation['city_title'] = instance.village.city.title if instance.village else None
+        village = instance.village
+        representation['city_title'] = village.city.title if village else None
+        representation['city'] = village.city.id if village else None
         return representation
 
 
