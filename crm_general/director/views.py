@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Case, When
+from django.db.models import Case, When, Q
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins, generics, filters
 from rest_framework.decorators import action
@@ -400,7 +400,18 @@ class DirectorDiscountAsiaProductView(mixins.ListModelMixin, GenericViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        discounts = Discount.objects.filter(
+            Q(start_date__lte=end_date, end_date__gte=start_date) |
+            Q(start_date__gte=start_date, end_date__lte=end_date) |
+            Q(start_date__lte=start_date, end_date__gte=end_date))
+
         queryset = self.get_queryset()
+        for discount in discounts:
+            d_products = discount.products.all()
+            queryset = queryset.exclude(id__in=d_products)
+
         kwargs = {}
 
         category = request.query_params.get('category')
