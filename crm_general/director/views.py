@@ -727,11 +727,7 @@ class DirectorPriceCityCreateView(APIView):
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class DirectorTaskCRUDView(mixins.CreateModelMixin,
-                           mixins.RetrieveModelMixin,
-                           mixins.UpdateModelMixin,
-                           mixins.DestroyModelMixin,
-                           GenericViewSet):
+class DirectorTaskCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = CRMTask.objects.all()
     serializer_class = DirectorTaskCRUDSerializer

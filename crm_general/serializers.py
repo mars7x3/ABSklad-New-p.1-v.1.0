@@ -9,7 +9,7 @@ from rest_framework import serializers
 from transliterate import translit
 
 from account.models import MyUser, DealerStatus, DealerProfile
-from crm_general.models import CRMTaskFile
+from crm_general.models import CRMTaskFile, CRMTask
 from general_service.models import Stock, City, PriceType
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
@@ -322,3 +322,32 @@ class ShortProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
         fields = ('id', 'title')
+
+
+class CRMTaskCRUDSerializer(serializers.ModelSerializer):
+    creator = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = CRMTask
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['creator'] = CRMTaskUserSerializer(instance.creator, context=self.context).data
+        rep['executors'] = CRMTaskUserSerializer(instance.executors, many=True, context=self.context).data
+        rep['files'] = CRMTaskFileSerializer(instance.files, many=True, context=self.context).data
+
+        return rep
+
+
+class CRMTaskUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'status')
+
+
+class CRMTaskFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskFile
+        fields = '__all__'
+
