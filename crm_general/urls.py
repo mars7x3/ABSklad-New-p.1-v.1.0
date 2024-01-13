@@ -297,15 +297,20 @@ crm_router = SimpleRouter()
 crm_router.register("crm/collection/crud", CollectionCRUDView)
 crm_router.register("crm/category/crud", CategoryCRUDView)
 crm_router.register("crm/city/crud", CityCRUDView)
+crm_router.register("crm/staff/task/list", CRMTaskListView)
+
 
 crm_router.register("crm/dealer-status/list", DealerStatusListView)
 
 crm_urlpatterns = [
+
     path("crm/product/images/create/", ProductImagesCreate.as_view()),
     path("crm/city/list/", CityListView.as_view()),
     path("crm/stock/list/", StockListView.as_view()),
     path("crm/category/list/", CategoryListView.as_view()),
     path("crm/price-type/list/", PriceTypeListView.as_view()),
+    path("crm/staff/task/response/", TaskResponseView.as_view()),
+
 
 
     path("crm/user/image/cd", UserImageCDView.as_view()),
