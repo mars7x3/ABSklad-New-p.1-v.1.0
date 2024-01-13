@@ -240,22 +240,18 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        request = self.context['request']
         cost_prices = instance.cost_prices.filter(product__is_active=True).first()
         rep['cost_price'] = cost_prices.price if cost_prices else '---'
         rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
         rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
-        price_type = request.query_params.get('price_type')
-        price_city = request.query_params.get('price_city')
 
-        if price_type:
-            rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
-                                                                                      price_type__isnull=False),
-                                                               many=True, context=self.context).data
-        if price_city:
-            rep['prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
-                                                                                      city__isnull=False),
-                                                               many=True, context=self.context).data
+        rep['city_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                       city__isnull=False),
+                                                                many=True, context=self.context).data
+
+        rep['type_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                       price_type__isnull=False),
+                                                                many=True, context=self.context).data
 
         return rep
 
@@ -276,8 +272,7 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         request = self.context['request']
-        count_norm = request.data.get('count_norm')
-        stock_id = request.data.get('stock')
+        stocks = request.data.get('stocks')
         product_price_data = request.data.get('product_price_data')
         is_active = validated_data.get('is_active', True)
         if not is_active:
@@ -289,10 +284,11 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                         'Cannot deactivate a product that is in an active Discount'
                     )
 
-        if count_norm:
-            product_count = ProductCount.objects.get(product=instance, stock=stock_id)
-            product_count.count_norm = count_norm
-            product_count.save()
+        if stocks:
+            for s in stocks:
+                product_count = ProductCount.objects.get(product=instance, stock=s['stock_id'])
+                product_count.count_norm = s['count_norm']
+                product_count.save()
 
         if product_price_data:
             for price in product_price_data:
