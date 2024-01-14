@@ -109,6 +109,7 @@ director_router.register("director/stock/product/list", DStockProductListView)
 # director_router.register("director/kpi/crud", DirectorKPICRUDView)
 # director_router.register("director/kpi/list", DirectorKPIListView)
 director_router.register("director/price-type/crud", PriceTypeCRUDView)
+director_router.register("director/dealer-status/crud", DealerStatusModelViewSet)
 
 
 director_urlpatterns = [

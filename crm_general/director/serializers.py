@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
@@ -1049,3 +1050,41 @@ class WarehouseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('name', 'id')
+
+
+class DirectorDealerStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerStatus
+        fields = '__all__'
+
+    def validate(self, attrs):
+        discount = attrs['discount']
+        zero_discount = DealerStatus.objects.filter(discount=0).first()
+        if discount == 0:
+            if zero_discount:
+                raise serializers.ValidationError({'detail': 'Dealer status with discount 0 already exists'})
+        return attrs
+
+    def create(self, validated_data):
+        cities = City.objects.all()
+
+        dealer_status = super().create(validated_data)
+        discount_amount = Decimal(dealer_status.discount)
+
+        for city in cities:
+            for product in AsiaProduct.objects.all():
+                product_base_price = ProductPrice.objects.filter(product=product, d_status__discount=0).first()
+                base_price = Decimal(product_base_price.price)
+
+                discounted_price = base_price - (base_price * (discount_amount / 100))
+
+                ProductPrice.objects.create(
+                    product=product,
+                    city=city,
+                    d_status=dealer_status,
+                    price=discounted_price,
+                    old_price=base_price,
+                    price_type=None
+                )
+
+        return dealer_status
