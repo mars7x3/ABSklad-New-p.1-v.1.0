@@ -22,7 +22,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorTaskListSerializer, DirectorMotivationListSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
     DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, \
-    RopProfileSerializer, UserListSerializer
+    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
 
@@ -984,4 +984,12 @@ class StockListView(mixins.ListModelMixin, GenericViewSet):
     queryset = Stock.objects.all().prefetch_related('counts')
     permission_classes = [IsAuthenticated, IsDirector]
     serializer_class = StockListSerializer
+
+
+class DealerStatusModelViewSet(viewsets.ModelViewSet):
+    queryset = DealerStatus.objects.all()
+    permission_classes = [IsAuthenticated, IsDirector]
+    serializer_class = DirectorDealerStatusSerializer
+
+
 
