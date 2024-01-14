@@ -739,7 +739,9 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         files = self.context['request'].FILES.getlist('files')
         delete_files = self.context['request'].data.get('delete_files')
-        executors = validated_data.pop('executors')
+        executors = validated_data.get('executors')
+        if executors:
+            executors = validated_data.pop('executors')
 
         for key, value in validated_data.items():
             setattr(instance, key, value)
