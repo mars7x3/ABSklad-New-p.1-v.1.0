@@ -1,8 +1,8 @@
 from django.urls import path
 
-from .views import StockGroupedStatsAPIView
+from .views import StockGroupAPIView
 
 
 urlpatterns = [
-    path("stocks/", StockGroupedStatsAPIView.as_view()),
+    path("stocks/", StockGroupAPIView.as_view()),
 ]

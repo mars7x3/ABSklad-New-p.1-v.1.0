@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from account.models import MyUser
 from general_service.models import City, Stock
@@ -80,3 +81,34 @@ class PurchaseStat(BaseStatistics):  # required
     count = models.PositiveIntegerField()
     purchases_count = models.PositiveIntegerField(default=0)
     avg_check = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+
+class StockGroupStat(BaseStatistics):
+    class StatType(models.TextChoices):
+        month = "month", _("Month")
+        week = "week", _("Week")
+        day = "day", _("Day")
+
+    stat_type = models.CharField(max_length=10, choices=StatType.choices)
+    stock_stat = models.ForeignKey(StockStat, on_delete=models.CASCADE, related_name="group_stats")
+
+    incoming_bank_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+    incoming_cash_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+
+    sales_products_count = models.IntegerField(default=0)
+    sales_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+    sales_count = models.IntegerField(default=0)
+    sales_users_count = models.IntegerField(default=0)
+    sales_avg_check = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+
+    dealers_incoming_funds = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+    dealers_products_count = models.IntegerField(default=0)
+    dealers_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    dealers_avg_check = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+    products_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    products_user_count = models.IntegerField(default=0)
+    products_avg_check = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+    class Meta:
+        unique_together = ["stat_type", "stock_stat", "date"]

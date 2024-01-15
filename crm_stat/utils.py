@@ -1,7 +1,11 @@
+from datetime import datetime
 from typing import Iterable, Any, Callable
 
-from django.db.models import Model, QuerySet
+from django.db import models
+from django.db.models import functions
 from django.utils import timezone
+
+from crm_stat.models import StockGroupStat, PurchaseStat, UserTransactionsStat
 
 
 class Builder:
@@ -11,7 +15,7 @@ class Builder:
         fields_map: dict[str, str],
         default_map: dict[str, Callable | str | int | float] = None
     ):
-        assert issubclass(model, Model)
+        assert issubclass(model, models.Model)
         self.model = model
         self.fields_map = fields_map
         self.default_map = default_map or {}
@@ -87,7 +91,7 @@ class Builder:
 
 
 def stat_create_or_update(
-    queryset: QuerySet,
+    queryset: models.QuerySet,
     builder: Builder,
     match_field: str,
     match_field_y: str,
@@ -155,3 +159,108 @@ def stat_create_or_update(
             builder.model.objects.bulk_update(to_update, fields=update_fields)
             processed_objs.extend(to_update)
     return processed_objs
+
+
+def get_stock_grouped_stats(
+    stat_type: str,
+    start_date: datetime = None,
+    end_date: datetime = None,
+    months: list[datetime] = None
+):
+    date_filters_args, date_filters_kwargs = [], {}
+    tx_date_filters_args, tx_date_filters_kwargs = [], {}
+
+    if stat_type == StockGroupStat.StatType.month:
+        assert months, months
+        month_conditions = models.Q()
+        for month_datetime in months:
+            month_conditions |= models.Q(date__year=month_datetime.year, date__month=month_datetime.month)
+
+        tx_date_filters_kwargs["date__month"] = models.OuterRef("month")
+        tx_date_filters_kwargs["date__year"] = models.OuterRef("year")
+        date_filters_args.append(month_conditions)
+        date_trunc = functions.TruncMonth
+    else:
+        date_filters_kwargs["date__gte"] = start_date
+        date_filters_kwargs["date__lte"] = end_date
+        date_trunc = functions.TruncWeek if stat_type == StockGroupStat.StatType.week else functions.TruncDate
+        tx_date_filters_kwargs["date"] = models.OuterRef("date")
+
+    return (
+        PurchaseStat.objects.filter(*date_filters_args, **date_filters_kwargs)
+        .values(
+            "stock_stat_id",
+            stat_date=date_trunc("date"),
+        )
+        .annotate(
+            month=functions.ExtractMonth('date'),
+            year=functions.ExtractYear('date'),
+            stat_type=models.Value(stat_type)
+        )
+        .annotate(
+            bank_amount=models.Subquery(
+                UserTransactionsStat.objects.filter(
+                    stock_stat_id=models.OuterRef("stock_stat_id")
+                )
+                .values("bank_income")
+                .annotate(stat_date=date_trunc("date"))
+                .filter(stat_date=models.OuterRef("stat_date"))
+                .annotate(bank_amount=models.Sum("bank_income"))
+                .values("bank_amount")[:1]
+            ),
+            cash_amount=models.Subquery(
+                UserTransactionsStat.objects.filter(
+                    stock_stat_id=models.OuterRef("stock_stat_id")
+                )
+                .values("cash_income")
+                .values("bank_income")
+                .annotate(stat_date=date_trunc("date"))
+                .filter(stat_date=models.OuterRef("stat_date"))
+                .annotate(cash_amount=models.Sum("cash_income"))
+                .values("cash_amount")[:1]
+            )
+        )
+        .annotate(
+            incoming_bank_amount=models.Case(
+                models.When(bank_amount__isnull=True, then=models.Value(0.0)),
+                default=models.F("bank_amount"),
+                output_field=models.DecimalField()
+            ),
+            incoming_cash_amount=models.Case(
+                models.When(cash_amount__isnull=True, then=models.Value(0.0)),
+                default=models.F("cash_amount"),
+                output_field=models.DecimalField()
+            )
+        )
+        # sales
+        .annotate(
+            sales_products_count=models.Count(
+                "product_stat__product_id",
+                distinct=True
+            ),
+            sales_amount=models.Sum(
+                "spent_amount",
+                default=models.Value(0.0)
+            ),
+            sales_count=models.Count("id"),
+            sales_users_count=models.Count("user_stat__user_id", distinct=True)
+        )
+        .annotate(
+            sales_avg_check=models.Case(
+                models.When(sales_amount__gt=0, sales_count__gt=0,
+                            then=models.F("sales_amount") / models.F("sales_count")),
+                default=models.Value(0.0),
+                output_field=models.DecimalField()
+            ),
+        )
+        # dealers and products
+        .annotate(
+            dealers_incoming_funds=models.F("incoming_bank_amount") + models.F("incoming_cash_amount"),
+            dealers_products_count=models.F("sales_products_count"),
+            dealers_amount=models.F("sales_amount"),
+            dealers_avg_check=models.F("sales_avg_check"),
+            products_amount=models.F("sales_amount"),
+            products_user_count=models.F("sales_users_count"),
+            products_avg_check=models.F("sales_avg_check")
+        )
+    )

@@ -8,3 +8,9 @@ admin.site.register(UserStat)
 admin.site.register(UserTransactionsStat)
 admin.site.register(ProductStat)
 admin.site.register(PurchaseStat)
+# admin.site.register(StockGroupStat)
+
+
+@admin.register(StockGroupStat)
+class StockGroupStatAdmin(admin.ModelAdmin):
+    list_display = ('id', 'date', 'stock_stat')
