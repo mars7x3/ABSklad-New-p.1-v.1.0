@@ -471,10 +471,10 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
 
 
 class DirectorDealerCRUDView(mixins.CreateModelMixin,
-                               mixins.RetrieveModelMixin,
-                               mixins.UpdateModelMixin,
-                               mixins.DestroyModelMixin,
-                               GenericViewSet):
+                             mixins.RetrieveModelMixin,
+                             mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = MyUser.objects.all()
     serializer_class = DirectorDealerCRUDSerializer
@@ -503,7 +503,8 @@ class DirectorBalanceHistoryListView(APIView):
         user = MyUser.objects.filter(id=user_id).first()
         balance_histories = user.dealer_profile.balance_histories.filter(created_at__gte=start_date,
                                                                          created_at__lte=end_date)
-        response_data = DirBalanceHistorySerializer(balance_histories, many=True, context=self.get_renderer_context()).data
+        response_data = DirBalanceHistorySerializer(balance_histories, many=True,
+                                                    context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -562,7 +563,8 @@ class DirectorTotalAmountView(APIView):
                                                           created_at__lte=end_date, dealer_id__in=dealer_ids)
         response_data = {}
         response_data['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
-        response_data['shipment_amount'] = sum(balance_histories.filter(status='order').values_list('amount', flat=True))
+        response_data['shipment_amount'] = sum(
+            balance_histories.filter(status='order').values_list('amount', flat=True))
         response_data['balance'] = balance_histories.last().balance if balance_histories else 0
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -890,7 +892,8 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
 
     @action(methods=['GET'], detail=False, url_path='rop-list')
     def get_active_rop_list(self, request, *args, **kwargs):
-        active_rops = MyUser.objects.filter(is_active=True, status='rop')
+        rop_id = self.request.query_params.get('rod_id')
+        active_rops = MyUser.objects.filter(is_active=True, status='rop').exclude(id=rop_id)
         serializer = UserListSerializer(active_rops, many=True).data
         return Response(serializer, status=status.HTTP_200_OK)
 
@@ -951,7 +954,9 @@ class DirFreeMainWarehouseListView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
-        users = MyUser.objects.filter(status='warehouse', is_active=True, warehouse_profile__stock__isnull=True)
+        wh_id = self.request.query_params.get('wh_id')
+        users = MyUser.objects.filter(status='warehouse', is_active=True,
+                                      warehouse_profile__stock__isnull=True).exclude(id=wh_id)
         response_data = UserListSerializer(users, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -990,6 +995,3 @@ class DealerStatusModelViewSet(viewsets.ModelViewSet):
     queryset = DealerStatus.objects.all()
     permission_classes = [IsAuthenticated, IsDirector]
     serializer_class = DirectorDealerStatusSerializer
-
-
-
