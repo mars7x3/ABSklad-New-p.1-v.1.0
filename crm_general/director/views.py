@@ -892,7 +892,7 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
 
     @action(methods=['GET'], detail=False, url_path='rop-list')
     def get_active_rop_list(self, request, *args, **kwargs):
-        rop_id = self.request.query_params.get('rod_id')
+        rop_id = self.request.query_params.get('rop_id')
         active_rops = MyUser.objects.filter(is_active=True, status='rop').exclude(id=rop_id)
         serializer = UserListSerializer(active_rops, many=True).data
         return Response(serializer, status=status.HTTP_200_OK)

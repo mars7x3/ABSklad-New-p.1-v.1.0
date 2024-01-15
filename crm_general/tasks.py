@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from django.conf import settings
@@ -201,42 +202,78 @@ def calculate_discount(price: int, discount: int):
 
 
 @app.task()
-def calculate_discount_product_price(discount_id):
-    discount = Discount.objects.get(id=discount_id)
-    amount = discount.amount
-    discount_type = discount.status
-    dealers = discount.dealer_profiles.all()
-    unique_dealers = dealers.order_by('dealer_status').distinct(
-        'dealer_status', 'village__city', 'price_type'
-    )
-    products = discount.products.all()
-    for product in products:
-        for dealer in unique_dealers:
-            base_product_price = ProductPrice.objects.filter(product=product,
-                                                             city=dealer.village.city,
-                                                             d_status__discount=0).first()
-            base_price = base_product_price.price
-            if dealer.price_type:
-                product_prices = ProductPrice.objects.filter(product=product,
-                                                             price_type=dealer.price_type,
-                                                             d_status=dealer.dealer_status)
-            else:
-                product_prices = ProductPrice.objects.filter(product=product,
-                                                             city=dealer.city,
-                                                             d_status=dealer.dealer_status)
-            if discount_type == 'Per':
-                for product_price in product_prices:
-                    dealer_discount_amount = int(dealer.dealer_status.discount)
-                    total_discount_percent = amount + dealer_discount_amount
-                    final_price = calculate_discount(int(base_price), total_discount_percent)
-                    product_price.old_price = base_price
-                    product_price.price = final_price
-                    product_price.save()
+def calculate_discount_product_price():
+    crn_date = datetime.date.today()
+    its_time_discounts = Discount.objects.filter(start_date=crn_date)
 
-            if discount_type == 'Sum':
+    for discount in its_time_discounts:
+        amount = discount.amount
+        discount_type = discount.status
+        dealers = discount.dealer_profiles.all()
+        unique_dealers = dealers.order_by('dealer_status').distinct(
+            'dealer_status', 'village__city', 'price_type'
+        )
+        products = discount.products.all()
+        for product in products:
+            for dealer in unique_dealers:
+                base_product_price = ProductPrice.objects.filter(product=product,
+                                                                 city=dealer.village.city,
+                                                                 d_status__discount=0).first()
+                base_price = base_product_price.price
+                if dealer.price_type:
+                    product_prices = ProductPrice.objects.filter(product=product,
+                                                                 price_type=dealer.price_type,
+                                                                 d_status=dealer.dealer_status)
+                else:
+                    product_prices = ProductPrice.objects.filter(product=product,
+                                                                 city=dealer.village.city,
+                                                                 d_status=dealer.dealer_status)
+                if discount_type == 'Per':
+                    for product_price in product_prices:
+                        dealer_discount_amount = int(dealer.dealer_status.discount)
+                        total_discount_percent = amount + dealer_discount_amount
+                        final_price = calculate_discount(int(base_price), total_discount_percent)
+                        product_price.old_price = base_price
+                        product_price.price = final_price
+                        product_price.save()
+
+                if discount_type == 'Sum':
+                    for product_price in product_prices:
+                        amount_without_abc = base_price - amount
+                        product_price.old_price = base_price
+                        final_price = calculate_discount(int(amount_without_abc), int(dealer.dealer_status.discount))
+                        product_price.price = final_price
+                        product_price.save()
+
+
+@app.task()
+def update_product_prices_after_ended_discount():
+    crn_date = datetime.date.today()
+    ended_discounts = Discount.objects.filter(end_date__lte=crn_date)
+
+    for discount in ended_discounts:
+        dealers = discount.dealer_profiles.all()
+        unique_dealers = dealers.order_by('dealer_status').distinct(
+            'dealer_status', 'village__city', 'price_type'
+        )
+        products = discount.products.all()
+        for product in products:
+            for dealer in unique_dealers:
+                base_product_price = ProductPrice.objects.filter(product=product,
+                                                                 city=dealer.village.city,
+                                                                 d_status__discount=0).first()
+                base_price = base_product_price.price
+                if dealer.price_type:
+                    product_prices = ProductPrice.objects.filter(product=product,
+                                                                 price_type=dealer.price_type,
+                                                                 d_status=dealer.dealer_status)
+                else:
+                    product_prices = ProductPrice.objects.filter(product=product,
+                                                                 city=dealer.village.city,
+                                                                 d_status=dealer.dealer_status)
                 for product_price in product_prices:
-                    amount_without_abc = base_price - amount
-                    product_price.old_price = base_price
-                    final_price = calculate_discount(int(amount_without_abc), int(dealer.dealer_status.discount))
+                    dealer_discount_percent = int(dealer.dealer_status.discount)
+                    final_price = calculate_discount(int(base_price), dealer_discount_percent)
+                    product_price.old_price = 0
                     product_price.price = final_price
                     product_price.save()
