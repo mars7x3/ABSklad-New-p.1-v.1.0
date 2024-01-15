@@ -14,13 +14,17 @@ def today_on_true(field_value):
     return timezone.now().date() if field_value and field_value == 'true' else None
 
 
-def string_date_to_date(date_string: str, date_format: str = "%Y-%m-%d"):
+def string_datetime_datetime(datetime_string: str, datetime_format: str = "%Y-%m-%d %H:%M:%S"):
     try:
-        date = timezone.datetime.strptime(date_string, date_format)
-        return timezone.make_aware(date).date()
+        date = timezone.datetime.strptime(datetime_string, datetime_format)
+        return timezone.make_aware(date)
     except Exception as e:
         logging.error(e)
-        raise ValidationError(detail="Wrong format of date %s " % date_string)
+        raise ValidationError(detail="Wrong format of date %s " % datetime_string)
+
+
+def string_date_to_date(date_string: str, date_format: str = "%Y-%m-%d"):
+    return string_datetime_datetime(date_string, date_format).date()
 
 
 def list_of_date_stings(date_format: str = "%Y-%m-%d", cast: Callable = None):

@@ -87,6 +87,7 @@ stock_group_builder = Builder(
         "stock_stat_id": "stock_stat_id",
         "incoming_bank_amount": "incoming_bank_amount",
         "incoming_cash_amount": "incoming_cash_amount",
+        "incoming_users_count": "incoming_users_count",
         "sales_products_count": "sales_products_count",
         "sales_amount": "sales_amount",
         "sales_count": "sales_count",

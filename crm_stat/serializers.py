@@ -15,4 +15,4 @@ class StockGroupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StockGroupStat
-        exclude = ("stat_type",)
+        exclude = ("id", "stat_type",)
