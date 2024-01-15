@@ -32,15 +32,20 @@ class ShortOrderSerializer(serializers.ModelSerializer):
     stock_city = serializers.SerializerMethodField(read_only=True)
     stock_name = serializers.SerializerMethodField(read_only=True)
     stock_address = serializers.SerializerMethodField(read_only=True)
+    name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyOrder
-        fields = ("id", "name", "dealer_city", "stock_city", "price", "type_status",
+        fields = ("id", 'name', "dealer_city", "stock_city", "price", "type_status",
                   "created_at", "paid_at", "released_at", "is_active", "status", "stock_name", "stock_address")
+
+    def get_name(self, instance):
+        if instance.author:
+            return instance.author.user.name
 
     def get_dealer_city(self, instance):
         if instance.author:
-            return instance.author.city.title
+            return instance.author.village.city.title
 
     def get_stock_city(self, instance):
         if instance.stock:
@@ -92,10 +97,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyOrder
-        fields = ("id", "name", "gmail", "phone", "address", "stock", "price", "status", "type_status", "comment",
+        fields = ("id", "stock", "price", "status", "type_status", "comment",
                   "created_at", "released_at", "paid_at", "receipts", "products",
                   "stock_id", "user_id", "product_counts")
-        read_only_fields = ("id", "name", "gmail", "price", "stock", "status", "created_at",
+        read_only_fields = ("id", "stock", "status", "created_at",
                             "released_at", "paid_at")
 
     def validate(self, attrs):
@@ -103,8 +108,6 @@ class OrderSerializer(serializers.ModelSerializer):
         if user:
             dealer = user.dealer_profile
             attrs["author"] = dealer
-            attrs["name"] = user.name
-            attrs["gmail"] = user.email
         else:
             dealer = self.instance.author
 
@@ -153,7 +156,7 @@ class OrderSerializer(serializers.ModelSerializer):
             except ObjectDoesNotExist:
                 raise serializers.ValidationError({"detail": "Попробуйте позже!"})
 
-        if attrs.get("type_status", "") == "cash":
+        if attrs.get("type_status", "") == "wallet":
             attrs["status"] = "paid"
 
             price = attrs.get("price") or self.instance.price
@@ -161,9 +164,6 @@ class OrderSerializer(serializers.ModelSerializer):
             if price > wallet.amount_crm:
                 raise serializers.ValidationError({"detail": "Недостаточно средств на балансе!"})
 
-        address = attrs.get("address")
-        if not address:
-            attrs["address"] = dealer.address
         return attrs
 
     def create(self, validated_data):
@@ -185,54 +185,60 @@ class DealerStatusSerializer(serializers.ModelSerializer):
 
 class DealerProfileListSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
-    city = CitySerializer(many=False, read_only=True)
-    incoming_funds = serializers.SerializerMethodField(read_only=True)
-    shipment_amount = serializers.SerializerMethodField(read_only=True)
-    last_order_date = serializers.SerializerMethodField(read_only=True)
+    # incoming_funds = serializers.SerializerMethodField(read_only=True)
+    # shipment_amount = serializers.SerializerMethodField(read_only=True)
+    # last_order_date = serializers.SerializerMethodField(read_only=True)
     balance_amount = serializers.SerializerMethodField(read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
-    status = serializers.SerializerMethodField(read_only=True)
+    # status = serializers.SerializerMethodField(read_only=True)
     is_active = serializers.SerializerMethodField(read_only=True)
-    motivations = serializers.SerializerMethodField(read_only=True)
+    village = serializers.SerializerMethodField(read_only=True)
+    city = serializers.SerializerMethodField(read_only=True)
+    # motivations = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
-        fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount", "status", "is_active", "motivations")
+        fields = ("id", 'name', "village", "dealer_status", "balance_amount", "is_active", 'city')
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance):
         return instance.user.name
+
+    def get_city(self, instance):
+        return instance.village.city.title
+
+    def get_village(self, instance):
+        return instance.village.title
 
     def get_balance_amount(self, instance) -> Decimal:
         try:
             return instance.wallet.amount_crm
         except ObjectDoesNotExist:
             return 0.0
-
-    def get_incoming_funds(self, instance) -> Decimal:
-        return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
-            incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-        )["incoming_funds"]
-
-    def get_shipment_amount(self, instance) -> Decimal:
-        return instance.balance_histories.only("amount").filter(status="order").aggregate(
-            shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-        )["shipment_amount"]
-
-    def get_last_order_date(self, instance) -> date | None:
-        last_order = instance.orders.only("created_at").order_by("-created_at").first()
-        if last_order:
-            return last_order.created_at.date()
-
-    def get_status(self, instance) -> bool:
-        return instance.wallet.amount_crm > 50000
+    #
+    # def get_incoming_funds(self, instance) -> Decimal:
+    #     return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
+    #         incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
+    #     )["incoming_funds"]
+    #
+    # def get_shipment_amount(self, instance) -> Decimal:
+    #     return instance.balance_histories.only("amount").filter(status="order").aggregate(
+    #         shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
+    #     )["shipment_amount"]
+    #
+    # def get_last_order_date(self, instance) -> date | None:
+    #     last_order = instance.orders.only("created_at").order_by("-created_at").first()
+    #     if last_order:
+    #         return last_order.created_at.date()
+    #
+    # def get_status(self, instance) -> bool:
+    #     return instance.wallet.amount_crm > 50000
 
     def get_is_active(self, instance) -> bool:
         return instance.user.is_active
-
-    def get_motivations(self, instance):
-        return get_motivation_done(instance)
+    #
+    # def get_motivations(self, instance):
+    #     return get_motivation_done(instance)
 
 
 class DealerBirthdaySerializer(serializers.ModelSerializer):

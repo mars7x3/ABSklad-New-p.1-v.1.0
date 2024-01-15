@@ -8,12 +8,12 @@ def order_total_price(product_counts, dealer_status, city=None, price_type=None)
     assert city or price_type
     filters = dict(product_id__in=list(product_counts), d_status_id=dealer_status)
     if price_type:
-        filters['price_type'] = price_type
+        filters['price_type_id'] = price_type
     else:
-        filters['city'] = city
+        filters['city_id'] = city
     prices = (
         ProductPrice.objects.only("product_id", "price")
-        .filter()
+        .filter(**filters)
     )
     return sum([price_obj.price * product_counts[str(price_obj.product_id)] for price_obj in prices])
 

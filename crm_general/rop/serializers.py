@@ -48,7 +48,6 @@ class DealerStatusSerializer(serializers.ModelSerializer):
 
 class DealerProfileListSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
-    city = CitySerializer(many=False, read_only=True)
     incoming_funds = serializers.SerializerMethodField(read_only=True)
     shipment_amount = serializers.SerializerMethodField(read_only=True)
     last_order_date = serializers.SerializerMethodField(read_only=True)
@@ -58,9 +57,14 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DealerProfile
-        fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount", "status")
+        fields = ("id", "name", "incoming_funds", "shipment_amount", "dealer_status", "last_order_date",
+                  "balance_amount", "status", 'village')
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['village__title'] = instance.village.title if instance.village else None
+        return rep
 
     def get_name(self, instance):
         return instance.user.name

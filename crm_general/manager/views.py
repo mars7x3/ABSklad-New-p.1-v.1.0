@@ -25,15 +25,15 @@ from .serializers import (
 # ---------------------------------------------------- ORDERS
 class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
     queryset = (
-        MyOrder.objects.select_related("author__city", "stock__city")
-                       .only("author__city", "stock__city", "id", "name", "price", "type_status",
+        MyOrder.objects.select_related("author__village__city", "stock__city")
+                       .only("author__village__city", "stock__city", "id", "price", "type_status",
                              "created_at", "paid_at", "released_at", "is_active")
                        .all()
     )
     serializer_class = ShortOrderSerializer
     pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, filters.OrderingFilter, FilterByFields)
-    search_fields = ("name", "id")
+    search_fields = ("author__user__name", "id")
     ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
     filter_by_fields = {
         "is_active": {"by": "is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
@@ -51,7 +51,7 @@ class OrderRetrieveAPIView(BaseOrderMixin, generics.RetrieveAPIView):
     queryset = (
         MyOrder.objects.select_related("stock")
                        .prefetch_related("order_receipts", "order_products")
-                       .only("id", "name", "gmail", "phone", "address", "stock", "price", "status", "type_status",
+                       .only("id", "stock", "price", "status", "type_status",
                              "comment", "created_at", "released_at", "paid_at")
                        .all()
     )
@@ -89,9 +89,9 @@ class OrderCreateAPIView(BaseOrderMixin, generics.CreateAPIView):
 # -------------------------------------------------------- DEALERS
 class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
-        DealerProfile.objects.select_related("user", "city", "dealer_status")
+        DealerProfile.objects.select_related("user", "village__city", "dealer_status")
                              .prefetch_related("balance_histories", "orders")
-                             .only("user_id", "birthday", "city", "dealer_status")
+                             .only("user_id", "birthday", "village__city", "dealer_status")
                              .all()
     )
     serializer_class = DealerProfileListSerializer
@@ -103,7 +103,7 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date},
         "status": {"by": "user__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
         "dealer_status": {"by": "dealer_status_id", "type": "number"},
-        "city_id": {"by": "city_id", "type": "number"}
+        "village__city_id": {"by": "city_id", "type": "number"}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
@@ -115,39 +115,29 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
         """
         queryset = self.filter_queryset(self.get_queryset())
         amounts = queryset.aggregate(
-            incoming_funds=Sum(
-                "balance_histories__amount",
-                filter=Q(balance_histories__status="wallet"),
-                output_field=FloatField()
-            ),
-            shipment_amount=Sum(
-                "balance_histories__amount",
-                filter=Q(balance_histories__status="order"),
-                output_field=FloatField()
-            ),
             balance=Sum("wallet__amount_crm", output_field=FloatField())
         )
         return Response(amounts)
 
-    @decorators.action(["GET"], detail=True, url_path="saved-amount")
-    def get_saved_amount(self, request, user_id):
-        start_date = request.query_params.get("start_date")
-        end_date = request.query_params.get("end_date")
-
-        if not start_date or not end_date:
-            return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
-
-        dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
-        saved_amount = MyOrder.objects.filter(
-            author=dealer_profile,
-            is_active=True,
-            status__in=("paid", "success", "sent"),
-            paid_at__date__gte=string_date_to_date(start_date),
-            paid_at__date__lte=string_date_to_date(end_date)
-        ).aggregate(saved_amount=Sum("order_products__discount"))
-        data = dict(saved_amount)
-        data["current_balance_amount"] = dealer_profile.wallet.amount_crm
-        return Response(data)
+    # @decorators.action(["GET"], detail=True, url_path="saved-amount")
+    # def get_saved_amount(self, request, user_id):
+    #     start_date = request.query_params.get("start_date")
+    #     end_date = request.query_params.get("end_date")
+    #
+    #     if not start_date or not end_date:
+    #         return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
+    #
+    #     dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
+    #     saved_amount = MyOrder.objects.filter(
+    #         author=dealer_profile,
+    #         is_active=True,
+    #         status__in=("paid", "success", "sent"),
+    #         paid_at__date__gte=string_date_to_date(start_date),
+    #         paid_at__date__lte=string_date_to_date(end_date)
+    #     ).aggregate(saved_amount=Sum("order_products__discount"))
+    #     data = dict(saved_amount)
+    #     data["current_balance_amount"] = dealer_profile.wallet.amount_crm
+    #     return Response(data)
 
 
 class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
