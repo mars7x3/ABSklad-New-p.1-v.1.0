@@ -100,13 +100,17 @@ class Banner(models.Model):
 class DealerKPI(models.Model):
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='kpis')
     is_confirmed = models.BooleanField(default=False)
-    pds = models.DecimalField(decimal_places=2, max_digits=100)
+    pds = models.DecimalField(decimal_places=2, max_digits=100, default=0)
+    fact_pds = models.DecimalField(decimal_places=2, max_digits=100, default=0)
     month = models.DateField()
+    per_cent_pds = models.PositiveIntegerField(default=0)
+    per_cent_tmz = models.PositiveIntegerField(default=0)
 
 
 class DealerKPIProduct(models.Model):
     kpi = models.ForeignKey(DealerKPI, on_delete=models.CASCADE, related_name='kpi_products')
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='kpi_products')
     count = models.PositiveIntegerField()
+    fact_count = models.PositiveIntegerField(default=0)
 
 
