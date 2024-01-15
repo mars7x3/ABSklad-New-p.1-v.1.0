@@ -90,7 +90,8 @@ def get_motivation_data(dealer):
 def get_kpi_info(user):
     kpi = user.kpis.filter(month__month=datetime.datetime.now().month).first()
     tmz = sum(kpi.kpi_products.all().values_list('count', flat=True))
-    return {'pds': kpi.pds, 'tmz': tmz}
+    fact_tmz = sum(kpi.kpi_products.all().values_list('fact_count', flat=True))
+    return {'pds': kpi.pds, 'tmz': tmz, 'fact_pds': kpi.fact_pds, 'fact_tmz': fact_tmz}
 
 
 def get_kpi_products(user):
@@ -102,7 +103,8 @@ def get_kpi_products(user):
             {
                 'title': p.product.title,
                 'id': p.product.id,
-                'count': p.count
+                'count': p.count,
+                'fact_count': p.fact_count
             }
         )
     return prods_data
