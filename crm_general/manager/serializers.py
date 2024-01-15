@@ -100,9 +100,9 @@ class OrderSerializer(serializers.ModelSerializer):
         model = MyOrder
         fields = ("id", "stock", "price", "status", "type_status", "comment",
                   "created_at", "released_at", "paid_at", "receipts", "products",
-                  "stock_id", "user_id", "product_counts")
+                  "stock_id", "user_id", "product_counts", 'name')
         read_only_fields = ("id", "stock", "status", "created_at",
-                            "released_at", "paid_at")
+                            "released_at", "paid_at", 'name')
 
     def get_name(self, instance):
         if instance.author:
