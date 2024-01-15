@@ -1073,7 +1073,9 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
 
         for city in cities:
             for product in AsiaProduct.objects.all():
-                product_base_price = ProductPrice.objects.filter(product=product, d_status__discount=0).first()
+                product_base_price = ProductPrice.objects.filter(product=product,
+                                                                 city=city,
+                                                                 d_status__discount=0).first()
                 base_price = Decimal(product_base_price.price)
 
                 discounted_price = base_price - (base_price * (discount_amount / 100))
@@ -1089,3 +1091,23 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
 
         return dealer_status
 
+    def update(self, instance, validated_data):
+        product_prices = instance.prices.all()
+        new_discount_amount = validated_data['discount']
+        new_discount_amount = Decimal(new_discount_amount)
+        update_prices = []
+        for product_price in product_prices:
+            product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
+                                                             city=product_price.city,
+                                                             d_status__discount=0).first()
+            base_price = Decimal(product_base_price.price)
+
+            discounted_price = base_price - (base_price * (new_discount_amount / 100))
+            update_prices.append(
+                ProductPrice(
+                    price=discounted_price,
+                    old_price=base_price,
+                )
+            )
+        ProductPrice.objects.bulk_update(update_prices)
+        return super().update(instance, validated_data)
