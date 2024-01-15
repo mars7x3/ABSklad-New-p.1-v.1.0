@@ -19,6 +19,8 @@ urlpatterns = [
 
     path('dealer/notification/u/', NotificationReadView.as_view()),  # notification is_read
     path('dealer/notification/info/', NotificationCountView.as_view()),  # notification info
+    path('dealer/notification/list/', NotificationListView.as_view()),  # notification info
+
 
     path('dealer/send-code/', ForgotPwdView.as_view()),  # forgot pwd
     path('dealer/pwd/verify-code/', VerifyCodeView.as_view()),  # verify code

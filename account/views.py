@@ -15,8 +15,9 @@ from account.main_functions import notifications_info
 from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile, BalanceHistory, MyUser
 from account.permissions import IsAuthor, IsUserAuthor
 from account.serializers import DealerMeInfoSerializer, NotificationSerializer, AccountStockSerializer, \
-    DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer, DealerProfileUpdateSerializer
-from account.utils import random_code
+    DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer, DealerProfileUpdateSerializer, \
+    UserNotificationSerializer
+from account.utils import random_code, send_code_to_phone
 
 
 class DealerMeInfoView(APIView):
@@ -74,6 +75,15 @@ class NotificationCountView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
+class NotificationListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        response_data = UserNotificationSerializer(
+            request.user.notifications.all(), many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
 class ForgotPwdView(APIView):
     """
     email
@@ -87,9 +97,9 @@ class ForgotPwdView(APIView):
             user = request.user
 
         if user:
-            # user.verify_codes.all().delete()
-            # verify_code = VerifyCode.objects.create(user=user, code=random_code())
-            # send_code_to_phone(user.phone, verify_code.code)
+            user.verify_codes.all().delete()
+            verify_code = VerifyCode.objects.create(user=user, code=random_code())
+            send_code_to_phone(user.phone, verify_code.code)
 
             return Response({'text': 'Код отправлен на телефон!'}, status=status.HTTP_200_OK)
         return Response({'text': 'Пользователь не найден!'}, status=status.HTTP_400_BAD_REQUEST)
