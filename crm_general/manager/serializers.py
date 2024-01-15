@@ -19,7 +19,7 @@ from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
 from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, ReturnOrder, ReturnOrderProduct
 from order.tasks import create_order_notification
-from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage
+from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage, ProductCount
 
 from .utils import (
     check_to_unavailable_products, order_total_price, calculate_order_cost_price, build_order_products_data
@@ -689,8 +689,28 @@ class ShortTaskSerializer(serializers.ModelSerializer):
         return obj.creator.name
 
 
+class ProductListForOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ("id", "title")
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        user_id = self.context.get('request').query_params.get('user_id')
+        dealer = MyUser.objects.get(id=user_id).dealer_profile
+        price = instance.prices.only('price').filter(price_type=dealer.price_type,
+                                                     d_status=dealer.dealer_status).first()
+        if not price:
+            price = instance.prices.only('price').filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+        rep['price'] = price.price
+        rep['count'] = ProductCountForOrderSerializer(instance.counts, many=True, context=self.context).data
+
+        return rep
 
 
-
+class ProductCountForOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductCount
+        fields = ("stock", "count_crm")
 
 

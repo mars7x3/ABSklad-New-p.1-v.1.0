@@ -1,6 +1,8 @@
 from django.db.models import Sum, Q, FloatField
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
@@ -18,7 +20,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ProductListForOrderSerializer
 )
 
 
@@ -401,3 +403,11 @@ class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
     def get_queryset(self):
         return super().get_queryset().filter(order__author__managers=self.request.user.id)
 
+
+class ProdListForOrderView(APIView):
+    permission_classes = [IsAuthenticated, IsManager]
+
+    def get(self, request):
+        serializer = ProductListForOrderSerializer(AsiaProduct.objects.filter(is_active=True),
+                                                   many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
