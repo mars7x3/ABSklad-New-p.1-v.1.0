@@ -127,3 +127,10 @@ class DealerProfileUpdateSerializer(serializers.ModelSerializer):
             instance.set_password(validated_data.get('pwd'))
         instance.save()
         return instance
+
+
+class UserNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'status', 'image', 'is_read', 'title', 'description', 'link_id', 'created_at']
+
