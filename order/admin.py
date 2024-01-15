@@ -19,9 +19,15 @@ class OrderProductInline(admin.TabularInline):
     extra = 0
 
 
+class OrderReceiptInline(admin.TabularInline):
+    model = OrderReceipt
+    max_num = 100
+    extra = 0
+
+
 @admin.register(MyOrder)
 class MyOrderAdmin(admin.ModelAdmin):
-    inlines = [OrderProductInline]
+    inlines = [OrderProductInline, OrderReceiptInline]
 
 
 class ReturnOrderProductInline(admin.StackedInline):
