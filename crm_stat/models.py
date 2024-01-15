@@ -86,7 +86,6 @@ class PurchaseStat(BaseStatistics):  # required
 class StockGroupStat(BaseStatistics):
     class StatType(models.TextChoices):
         month = "month", _("Month")
-        week = "week", _("Week")
         day = "day", _("Day")
 
     stat_type = models.CharField(max_length=10, choices=StatType.choices)
@@ -94,6 +93,7 @@ class StockGroupStat(BaseStatistics):
 
     incoming_bank_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)
     incoming_cash_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+    incoming_users_count = models.IntegerField(default=0)
 
     sales_products_count = models.IntegerField(default=0)
     sales_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)

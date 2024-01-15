@@ -1,13 +1,12 @@
 from datetime import datetime
 
-from django.db.models.functions import TruncDate, TruncWeek
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from absklad_commerce.celery import app
 from order.models import MyOrder
 
-from .collectors import collects_stats_for_date, save_stock_group_for_day, \
-    save_stock_group_for_month, save_stock_group_for_week
+from .collectors import collects_stats_for_date, save_stock_group_for_day, save_stock_group_for_month
 from .models import PurchaseStat
 
 
@@ -28,7 +27,7 @@ def collect_for_all_dates():
 def collect_today_stock_groups():
     today = timezone.now().date()
     save_stock_group_for_day(today)
-    save_stock_group_for_week(today)
+    # save_stock_group_for_week(today)
     save_stock_group_for_month(today)
 
 
@@ -43,8 +42,3 @@ def collect_stock_groups_for_all():
             processed_months.add((date.month, date.year))
 
         save_stock_group_for_day(date)
-
-    weeks = set(PurchaseStat.objects.annotate(week=TruncWeek("date")).values_list("week", flat=True))
-
-    for week in weeks:
-        save_stock_group_for_week(week)

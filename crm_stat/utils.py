@@ -218,6 +218,15 @@ def get_stock_grouped_stats(
                 .filter(stat_date=models.OuterRef("stat_date"))
                 .annotate(cash_amount=models.Sum("cash_income"))
                 .values("cash_amount")[:1]
+            ),
+            incoming_users_count=models.Subquery(
+                UserTransactionsStat.objects.filter(
+                    stock_stat_id=models.OuterRef("stock_stat_id")
+                )
+                .values(stat_date=date_trunc("date"))
+                .filter(stat_date=models.OuterRef("stat_date"))
+                .annotate(users_count=models.Count("user_stat__user_id", distinct=True))
+                .values("users_count")[:1]
             )
         )
         .annotate(
