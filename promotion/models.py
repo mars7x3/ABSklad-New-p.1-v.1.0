@@ -95,3 +95,18 @@ class Banner(models.Model):
     show_date = models.BooleanField(default=False)
     products = models.ManyToManyField(AsiaProduct, related_name='banners', blank=True)
     dealer_profiles = models.ManyToManyField(DealerProfile, related_name='banners', blank=True)
+
+
+class DealerKPI(models.Model):
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='kpis')
+    is_confirmed = models.BooleanField(default=False)
+    pds = models.DecimalField(decimal_places=2, max_digits=100)
+    month = models.DateField()
+
+
+class DealerKPIProduct(models.Model):
+    kpi = models.ForeignKey(DealerKPI, on_delete=models.CASCADE, related_name='kpi_products')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='kpi_products')
+    count = models.PositiveIntegerField()
+
+

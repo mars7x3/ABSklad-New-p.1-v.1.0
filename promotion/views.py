@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from promotion.models import Story, Motivation, Banner
 from promotion.serializers import StoryListSerializer, StoryDetailSerializer, MotivationSerializer, \
     BannerListSerializer, BannerSerializer
-from promotion.utils import get_motivation_data
+from promotion.utils import get_motivation_data, get_kpi_info, get_kpi_products
 
 
 class StoriesListView(viewsets.ReadOnlyModelViewSet):
@@ -47,3 +47,17 @@ class BannerListView(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
+class KPIInfoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = get_kpi_info(request.user)
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class KPIProductsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = get_kpi_products(request.user)
+        return Response(data, status=status.HTTP_200_OK)

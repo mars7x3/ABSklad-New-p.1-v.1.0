@@ -121,3 +121,6 @@ class BannerSerializer(serializers.ModelSerializer):
         rep['products'] = StoryProductSerializer(instance.products.all(),
                                                  many=True, context=self.context).data
         return rep
+
+
+

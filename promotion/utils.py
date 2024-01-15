@@ -1,3 +1,4 @@
+import datetime
 
 
 def get_motivation_data(dealer):
@@ -84,5 +85,26 @@ def get_motivation_data(dealer):
         motivations_data.append(motivation_data)
 
     return motivations_data
+
+
+def get_kpi_info(user):
+    kpi = user.kpis.filter(month__month=datetime.datetime.now().month).first()
+    tmz = sum(kpi.kpi_products.all().values_list('count', flat=True))
+    return {'pds': kpi.pds, 'tmz': tmz}
+
+
+def get_kpi_products(user):
+    kpi = user.kpis.filter(month__month=datetime.datetime.now().month).first()
+    prods = kpi.kpi_products.all().select_related('product')
+    prods_data = []
+    for p in prods:
+        prods_data.append(
+            {
+                'title': p.product.title,
+                'id': p.product.id,
+                'count': p.count
+            }
+        )
+    return prods_data
 
 
