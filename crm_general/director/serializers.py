@@ -338,7 +338,10 @@ class DirectorDiscountSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         products = validated_data.get('products', [])
         if instance.is_active and products:
-            raise serializers.ValidationError({'detail': 'Cannot delete products from an active Discount'})
+            crn_products = instance.products.all()
+            for product in crn_products:
+                if product not in products:
+                    raise serializers.ValidationError({'detail': 'Cannot delete products from an active Discount'})
         return super().update(instance, validated_data)
 
 
@@ -738,7 +741,7 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         files = self.context['request'].FILES.getlist('files')
-        delete_files = self.context['request'].data.get('delete_files')
+        delete_files = self.context['request'].data.getlist('delete_files')
         executors = validated_data.get('executors')
         if executors:
             executors = validated_data.pop('executors')
@@ -1085,3 +1088,4 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
                 )
 
         return dealer_status
+
