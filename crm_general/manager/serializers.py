@@ -76,6 +76,7 @@ class OrderSerializer(serializers.ModelSerializer):
     stock = CRMStockSerializer(many=False, read_only=True)
     receipts = OrderReceiptSerializer(many=True, read_only=True, source="order_receipts")
     products = OrderProductSerializer(many=True, read_only=True, source="order_products")
+    name = serializers.SerializerMethodField(read_only=True)
 
     stock_id = serializers.PrimaryKeyRelatedField(
         queryset=Stock.objects.all(),
@@ -102,6 +103,10 @@ class OrderSerializer(serializers.ModelSerializer):
                   "stock_id", "user_id", "product_counts")
         read_only_fields = ("id", "stock", "status", "created_at",
                             "released_at", "paid_at")
+
+    def get_name(self, instance):
+        if instance.author:
+            return instance.author.user.name
 
     def validate(self, attrs):
         user = attrs.pop("user_id", None)
