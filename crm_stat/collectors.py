@@ -440,20 +440,6 @@ def save_stock_group_for_month(date):
     )
 
 
-def save_stock_group_for_week(date):
-    day_of_week = date.weekday()
-
-    start_of_week = date - timezone.timedelta(days=day_of_week)
-    end_of_week = date + timezone.timedelta(days=6 - day_of_week)
-
-    save_stock_group_stats(
-        filter_type=StockGroupStat.StatType.week,
-        start=start_of_week,
-        end=end_of_week,
-        date=start_of_week
-    )
-
-
 def save_stock_group_for_day(date):
     save_stock_group_stats(
         filter_type=StockGroupStat.StatType.day,

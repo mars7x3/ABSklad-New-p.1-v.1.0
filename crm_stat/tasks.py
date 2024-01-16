@@ -27,7 +27,6 @@ def collect_for_all_dates():
 def collect_today_stock_groups():
     today = timezone.now().date()
     save_stock_group_for_day(today)
-    # save_stock_group_for_week(today)
     save_stock_group_for_month(today)
 
 

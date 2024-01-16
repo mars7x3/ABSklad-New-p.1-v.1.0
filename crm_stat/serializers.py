@@ -6,7 +6,7 @@ from .models import StockGroupStat, StockStat
 class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = StockStat
-        fields = ("id", "title", "address", "is_active")
+        fields = ("id", "title")
         extra_kwargs = {"id": {"source": "stock_id"}}
 
 
