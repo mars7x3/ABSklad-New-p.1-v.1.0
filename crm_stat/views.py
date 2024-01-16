@@ -1,4 +1,5 @@
-from django.db.models import Sum
+from django.db.models import F, Sum
+from django.db.models.functions import JSONObject
 from django.utils import timezone
 from rest_framework import views, generics, filters, permissions, exceptions, response
 
@@ -46,29 +47,41 @@ class StockGroupByWeekAPIView(views.APIView):
 
         collected_dates = []
         for week_num in range(1, weeks_count + 1):
-            data = StockGroupStat.objects.filter(
-                stat_type=StockGroupStat.StatType.day,
-                date__gte=start,
-                date__lte=end_date
-            ).aggregate(
-                **{field: Sum(source) for field, source in sum_fields_map.items()}
+            data = (
+                StockGroupStat.objects.filter(
+                    stat_type=StockGroupStat.StatType.day,
+                    date__gte=start, date__lte=end_date
+                )
+                .values("stock_stat_id")
+                .annotate(
+                    stock=JSONObject(
+                        id=F("stock_stat__stock_id"),
+                        title=F("stock_stat__title"),
+                        address=F("stock_stat__address"),
+                        is_active=F("stock_stat__is_active")
+                    )
+                )
+                .annotate(**{field: Sum(source) for field, source in sum_fields_map.items()})
             )
 
-            collected_data = {}
+            for item in data:
+                collected_data = {}
 
-            for field, value in data.items():
-                source = sum_fields_map.get(field)
-                if not source:
-                    collected_data[field] = value
+                item.pop("stock_stat_id", None)
+                for field, value in item.items():
+                    source = sum_fields_map.get(field)
+                    if not source:
+                        collected_data[field] = value
+                        continue
+
+                    collected_data[source] = value
+
+                if all(value is None for value in data.values()):
                     continue
 
-                collected_data[source] = value
+                collected_data["date"] = start.date()
+                collected_dates.append(collected_data)
 
-            if all(value is None for value in data.values()):
-                continue
-
-            collected_data["date"] = start.date()
-            collected_dates.append(collected_data)
             start += delta
             end_date += delta
 
