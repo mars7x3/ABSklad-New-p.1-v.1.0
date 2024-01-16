@@ -6,7 +6,7 @@ from .models import *
 
 @admin.register(MyUser)
 class MyUserAdmin(UserAdmin):
-    list_display = ("id", "email", "username", "name", "phone", "is_active", "status")
+    list_display = ("username", "email", "id", "name", "phone", "is_active", "status")
     list_filter = ("is_staff", "is_superuser", "is_active", "status", "groups")
     search_fields = ("email", "username", "id")
     add_fieldsets = (
@@ -27,7 +27,7 @@ class MyUserAdmin(UserAdmin):
     )
     fieldsets = (
         (_("Personal info"), {"fields": ("email", "username", "password", "pwd", "status", "uid",
-                                         "name", "phone", "image")}),
+                                         "name", "phone", "image", 'firebase_token')}),
         (
             _("Permissions"),
             {

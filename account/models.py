@@ -192,7 +192,7 @@ class Notification(models.Model):
 
 class VerifyCode(models.Model):
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='verify_codes')
-    code = models.CharField(max_length=4)
+    code = models.CharField(max_length=10)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
