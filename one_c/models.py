@@ -19,6 +19,7 @@ class MoneyDoc(models.Model):
     uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    order = models.ForeignKey(MyOrder, on_delete=models.SET_NULL, blank=True, null=True, related_name='money_docs')
 
 
 class MovementProduct1C(models.Model):

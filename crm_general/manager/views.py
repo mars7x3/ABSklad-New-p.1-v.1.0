@@ -411,3 +411,20 @@ class ProdListForOrderView(APIView):
         serializer = ProductListForOrderSerializer(AsiaProduct.objects.filter(is_active=True),
                                                    many=True, context=self.get_renderer_context()).data
         return Response(serializer, status=status.HTTP_200_OK)
+
+
+class ManagerDeleteOrderView(APIView):
+    permission_classes = [IsAuthenticated, IsManager]
+
+    def post(self, request):
+        order_id = request.data.get('order_id')
+        order = MyOrder.objects.get(id=order_id)
+        manager = request.user
+        if manager in order.author.managers.all():
+            if order.status == 'created':
+                order.delete()
+            elif order.status == 'paid' and order.type_status == 'wallet':
+                order.delete()
+
+            return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+        return Response({'text': 'Permission denied!'}, status=status.HTTP_400_BAD_REQUEST)

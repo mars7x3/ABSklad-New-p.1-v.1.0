@@ -27,7 +27,7 @@ from .manager.views import (
     ReturnListAPIView as ManagerReturnListAPIView,
     ReturnRetrieveAPIView as ManagerReturnRetrieveAPIView,
     ReturnUpdateAPIView as ManagerReturnUpdateAPIView,
-    BalancePlusManagerView as ManagerBalancePlusManagerView, ProdListForOrderView,
+    BalancePlusManagerView as ManagerBalancePlusManagerView, ProdListForOrderView, ManagerDeleteOrderView,
 )
 
 from .rop.views import (
@@ -207,6 +207,7 @@ manager_urlpatterns = [
     path("manager/balance/plus/", ManagerBalancePlusManagerView.as_view(),
          name="crm_general-manager-balance-plus-create"),
     path("manager/product/list/for-order/", ProdListForOrderView.as_view()),
+    path("manager/order/delete", ManagerDeleteOrderView.as_view()),
 
     path("manager/", include(manager_router.urls)),
 ]
