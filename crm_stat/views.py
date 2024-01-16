@@ -429,7 +429,7 @@ class ProductView(views.APIView):
                 query["date"] = date
 
         data = []
-        for item in (
+        queryset = (
             PurchaseStat.objects.filter(stock_stat__stock_id=stock_id, product_stat__product_id=product_id, **query)
             .values("product_stat_id")
             .annotate_funds(stock_stat_id=stock_id)
@@ -448,7 +448,13 @@ class ProductView(views.APIView):
                     output_field=DecimalField()
                 )
             )
-        ):
+        )
+
+        include_users = request.query_params.get('include_users', "")
+        if include_users == "true":
+            queryset = queryset.annotate(products_user_count=Count("user_stat__user_id", distinct=True))
+
+        for item in queryset:
             item.pop("bank_amount", None)
             item.pop("cash_amount", None)
             item.pop("incoming_users_count", None)
