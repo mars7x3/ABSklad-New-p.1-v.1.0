@@ -10,10 +10,10 @@ from crm_stat.models import StockGroupStat, PurchaseStat, UserTransactionsStat
 
 class Builder:
     def __init__(
-        self,
-        model,
-        fields_map: dict[str, str],
-        default_map: dict[str, Callable | str | int | float] = None
+            self,
+            model,
+            fields_map: dict[str, str],
+            default_map: dict[str, Callable | str | int | float] = None
     ):
         assert issubclass(model, models.Model)
         self.model = model
@@ -59,11 +59,11 @@ class Builder:
         return tuple([item[field] for field in match_field])
 
     def build_model_by_list(
-        self,
-        items: Iterable[dict[str, Any]],
-        match_field: str | tuple[str],
-        from_keys: Iterable[str] = None,
-        relations: dict[str, dict[str | int, str | int]] = None
+            self,
+            items: Iterable[dict[str, Any]],
+            match_field: str | tuple[str],
+            from_keys: Iterable[str] = None,
+            relations: dict[str, dict[str | int, str | int]] = None
     ):
         new = []
         processed = set()
@@ -91,14 +91,14 @@ class Builder:
 
 
 def stat_create_or_update(
-    queryset: models.QuerySet,
-    builder: Builder,
-    match_field: str,
-    match_field_y: str,
-    update_ignore_fields: list[str],
-    relations=None,
-    on_create: Callable = None,
-    on_update: Callable = None
+        queryset: models.QuerySet,
+        builder: Builder,
+        match_field: str,
+        match_field_y: str,
+        update_ignore_fields: list[str],
+        relations=None,
+        on_create: Callable = None,
+        on_update: Callable = None
 ) -> list[int | str]:
     if not queryset.exists():
         raise ValueError("Not found any objects!")
@@ -161,14 +161,13 @@ def stat_create_or_update(
     return processed_objs
 
 
-def get_stock_grouped_stats(
-    stat_type: str,
-    start_date: datetime = None,
-    end_date: datetime = None,
-    months: list[datetime] = None
-):
-    date_filters_args, date_filters_kwargs = [], {}
-    tx_date_filters_args, tx_date_filters_kwargs = [], {}
+def stock_date_filters(
+        stat_type: str,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        months: list[datetime] = None
+) -> tuple[Callable, list, dict]:
+    args, kwargs = [], {}
 
     if stat_type == StockGroupStat.StatType.month:
         assert months, months
@@ -176,94 +175,35 @@ def get_stock_grouped_stats(
         for month_datetime in months:
             month_conditions |= models.Q(date__year=month_datetime.year, date__month=month_datetime.month)
 
-        tx_date_filters_kwargs["date__month"] = models.OuterRef("month")
-        tx_date_filters_kwargs["date__year"] = models.OuterRef("year")
-        date_filters_args.append(month_conditions)
+        args.append(month_conditions)
         date_trunc = functions.TruncMonth
     else:
-        date_filters_kwargs["date__gte"] = start_date
-        date_filters_kwargs["date__lte"] = end_date
-        date_trunc = functions.TruncWeek if stat_type == StockGroupStat.StatType.week else functions.TruncDate
-        tx_date_filters_kwargs["date"] = models.OuterRef("date")
+        kwargs["date__gte"] = start_date
+        kwargs["date__lte"] = end_date
+        date_trunc = functions.TruncWeek if stat_type == "week" else functions.TruncDate
+    return date_trunc, args, kwargs
 
+
+def get_stock_grouped_stats(
+        stat_type: str,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        months: list[datetime] = None
+):
+    date_trunc, args, kwargs = stock_date_filters(
+        stat_type=stat_type,
+        start_date=start_date,
+        end_date=end_date,
+        months=months
+    )
     return (
-        PurchaseStat.objects.filter(*date_filters_args, **date_filters_kwargs)
-        .values(
-            "stock_stat_id",
-            stat_date=date_trunc("date"),
-        )
+        PurchaseStat.objects.filter(*args, **kwargs)
+        .group_by_date("stock_stat_id", date_trunc=date_trunc)
+        .annotate_month_and_year()
+        .annotate_funds(date_trunc=date_trunc, stock_stat_id=models.OuterRef("stock_stat_id"))
+        .annotate_sales()
         .annotate(
-            month=functions.ExtractMonth('date'),
-            year=functions.ExtractYear('date'),
-            stat_type=models.Value(stat_type)
-        )
-        .annotate(
-            bank_amount=models.Subquery(
-                UserTransactionsStat.objects.filter(
-                    stock_stat_id=models.OuterRef("stock_stat_id")
-                )
-                .values("bank_income")
-                .annotate(stat_date=date_trunc("date"))
-                .filter(stat_date=models.OuterRef("stat_date"))
-                .annotate(bank_amount=models.Sum("bank_income"))
-                .values("bank_amount")[:1]
-            ),
-            cash_amount=models.Subquery(
-                UserTransactionsStat.objects.filter(
-                    stock_stat_id=models.OuterRef("stock_stat_id")
-                )
-                .values("cash_income")
-                .values("bank_income")
-                .annotate(stat_date=date_trunc("date"))
-                .filter(stat_date=models.OuterRef("stat_date"))
-                .annotate(cash_amount=models.Sum("cash_income"))
-                .values("cash_amount")[:1]
-            ),
-            incoming_users_count=models.Subquery(
-                UserTransactionsStat.objects.filter(
-                    stock_stat_id=models.OuterRef("stock_stat_id")
-                )
-                .values(stat_date=date_trunc("date"))
-                .filter(stat_date=models.OuterRef("stat_date"))
-                .annotate(users_count=models.Count("user_stat__user_id", distinct=True))
-                .values("users_count")[:1]
-            )
-        )
-        .annotate(
-            incoming_bank_amount=models.Case(
-                models.When(bank_amount__isnull=True, then=models.Value(0.0)),
-                default=models.F("bank_amount"),
-                output_field=models.DecimalField()
-            ),
-            incoming_cash_amount=models.Case(
-                models.When(cash_amount__isnull=True, then=models.Value(0.0)),
-                default=models.F("cash_amount"),
-                output_field=models.DecimalField()
-            )
-        )
-        # sales
-        .annotate(
-            sales_products_count=models.Count(
-                "product_stat__product_id",
-                distinct=True
-            ),
-            sales_amount=models.Sum(
-                "spent_amount",
-                default=models.Value(0.0)
-            ),
-            sales_count=models.Count("id"),
-            sales_users_count=models.Count("user_stat__user_id", distinct=True)
-        )
-        .annotate(
-            sales_avg_check=models.Case(
-                models.When(sales_amount__gt=0, sales_count__gt=0,
-                            then=models.F("sales_amount") / models.F("sales_count")),
-                default=models.Value(0.0),
-                output_field=models.DecimalField()
-            ),
-        )
-        # dealers and products
-        .annotate(
+            stat_type=models.Value(stat_type),
             dealers_incoming_funds=models.F("incoming_bank_amount") + models.F("incoming_cash_amount"),
             dealers_products_count=models.F("sales_products_count"),
             dealers_amount=models.F("sales_amount"),
@@ -273,3 +213,61 @@ def get_stock_grouped_stats(
             products_avg_check=models.F("sales_avg_check")
         )
     )
+
+
+def get_grouped_user_funds(
+        stat_type: str,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        months: list[datetime] = None,
+        **filters
+):
+    date_trunc, args, kwargs = stock_date_filters(
+        stat_type=stat_type,
+        start_date=start_date,
+        end_date=end_date,
+        months=months
+    )
+    for data in (
+        PurchaseStat.objects.filter(*args, **kwargs)
+        .group_by_date("user_stat__user_id", date_trunc=date_trunc)
+        .annotate(
+            user=functions.JSONObject(
+                id=models.F("user_stat__user_id"),
+                name=models.F("user_stat__name")
+            )
+        )
+        .annotate_funds(date_trunc=date_trunc, user_stat_id=models.OuterRef("user_stat_id"), **filters)
+    ):
+        data.pop("user_stat__user_id", None)
+        data.pop("bank_amount", None)
+        data.pop("cash_amount", None)
+        data.pop("incoming_users_count", None)
+        yield data
+
+
+def divide_into_weeks(start, end):
+    weeks_count = round(end.day / 7)
+    delta = timezone.timedelta(days=7)
+    end_date = start + delta
+    for week_num in range(1, weeks_count + 1):
+        yield start, end_date
+        start += delta
+        end_date += delta
+
+
+def sum_and_collect_by_map(queryset, fields_map):
+    data = queryset.annotate(**{field: models.Sum(source) for field, source in fields_map.items()})
+
+    for item in data:
+        collected_data = {}
+
+        for field, value in item.items():
+            source = fields_map.get(field)
+            if not source:
+                collected_data[field] = value
+                continue
+
+            collected_data[source] = value
+
+        yield collected_data
