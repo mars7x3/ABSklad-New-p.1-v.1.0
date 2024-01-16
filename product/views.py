@@ -50,6 +50,19 @@ class CollectionListView(viewsets.ReadOnlyModelViewSet):
     serializer_class = CollectionListSerializer
 
 
+class HitProductListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = AsiaProduct.objects.filter(is_active=True, is_show=True, is_hit=True)
+    serializer_class = ProductListSerializer
+    pagination_class = AppProductPaginationClass
+
+    def get_serializer_class(self):
+        if self.kwargs.get('pk'):
+            return ProductDetailSerializer
+        else:
+            return ProductListSerializer
+
+
 class ProductListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = AsiaProduct.objects.filter(is_active=True, is_show=True)
