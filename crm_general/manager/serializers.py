@@ -718,4 +718,9 @@ class ProductCountForOrderSerializer(serializers.ModelSerializer):
         model = ProductCount
         fields = ("stock", "count_crm")
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['stock_title'] = instance.stock.title
+        return rep
+
 
