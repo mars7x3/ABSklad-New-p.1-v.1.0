@@ -28,6 +28,7 @@ from crm_general.models import CRMTask, KPI
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
+from one_c.models import MoneyDoc
 from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
 from product.models import ProductPrice, AsiaProduct, Collection, Category, ProductCostPrice
@@ -991,7 +992,30 @@ class StockListView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = StockListSerializer
 
 
+
+class MaxatTestView(APIView):
+    def get(self, request):
+        month = request.query_params.get('month')
+        month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+
+        queryset = MoneyDoc.objects.filter(is_active=True,
+                                           created_at__month=month.month).select_related('user__dealer_profile')
+
+        data = []
+        for i in queryset:
+            data.append(
+                {
+                    'money_id': i.id,
+                    'name': i.user.name,
+                    'created_at': i.created_at,
+                    'amount': i.amount
+                }
+            )
+        return Response({'result': data}, status=status.HTTP_200_OK)
+
+      
 class DealerStatusModelViewSet(viewsets.ModelViewSet):
     queryset = DealerStatus.objects.all()
     permission_classes = [IsAuthenticated, IsDirector]
     serializer_class = DirectorDealerStatusSerializer
+
