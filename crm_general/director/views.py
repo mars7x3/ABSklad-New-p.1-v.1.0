@@ -1006,7 +1006,7 @@ class MaxatTestView(APIView):
             data.append(
                 {
                     'money_id': i.id,
-                    'name': i.user.name,
+                    'name': i.user.name if i.user else 'Нет имени',
                     'created_at': i.created_at,
                     'amount': i.amount
                 }
