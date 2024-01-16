@@ -132,6 +132,9 @@ director_urlpatterns = [
     path('director/rop/deactivate/', ROPChangeView.as_view()),
     path('director/warehouse/deactivate/', WareHouseChangeView.as_view()),
 
+    path('max-test/', MaxatTestView.as_view()),
+
+
     path('', include(director_router.urls)),
 ]
 
