@@ -182,7 +182,7 @@ class DealersFilterAPIView(APIView):
         base_query = Q(user__is_active=True)
 
         if cities:
-            base_query &= Q(city__in=cities)
+            base_query &= Q(village__city__in=cities)
 
         if categories:
             base_query &= Q(dealer_status__in=categories)

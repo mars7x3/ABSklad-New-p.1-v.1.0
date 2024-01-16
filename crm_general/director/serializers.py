@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
@@ -79,11 +80,14 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_only_wh_in_stock(obj):
         if obj.status == 'warehouse':
-            profile = WarehouseProfile.objects.filter(user=obj).first()
-            stock = profile.stock
-            count = stock.warehouse_profiles.filter(user__is_active=True).count()
-            return True if count < 2 else False
-        return ''
+            try:
+                profile = WarehouseProfile.objects.filter(user=obj).first()
+                stock = profile.stock
+                count = stock.warehouse_profiles.filter(user__is_active=True).count()
+                return True if count < 2 else False
+            except AttributeError:
+                return False
+        return None
 
 
 class WarehouseProfileSerializer(serializers.ModelSerializer):
@@ -229,15 +233,76 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
 
 
 class DirectorProductCRUDSerializer(serializers.ModelSerializer):
+    stocks = serializers.SerializerMethodField()
+
     class Meta:
         model = AsiaProduct
         fields = '__all__'
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        cost_prices = instance.cost_prices.filter(product__is_active=True).first()
+        rep['cost_price'] = cost_prices.price if cost_prices else '---'
         rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
         rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
+
+        rep['city_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                       city__isnull=False),
+                                                                many=True, context=self.context).data
+
+        rep['type_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
+                                                                                       price_type__isnull=False),
+                                                                many=True, context=self.context).data
+
         return rep
+
+    @staticmethod
+    def get_stocks(instance):
+        counts_instances = instance.counts.all()
+        stocks_data = []
+
+        for count_norm_instance in counts_instances:
+            stock_instance = count_norm_instance.stock
+            if stock_instance:
+                stocks_data.append({
+                    'stock_id': stock_instance.id,
+                    'stock_title': stock_instance.title,
+                    'count_norm': count_norm_instance.count_norm
+                })
+        return stocks_data
+
+    def update(self, instance, validated_data):
+        request = self.context['request']
+        stocks = request.data.get('stocks')
+        type_prices = request.data.get('type_prices')
+        city_prices = request.data.get('city_prices')
+        is_active = validated_data.get('is_active', True)
+        if not is_active:
+            discounts = Discount.objects.filter(is_active=True)
+            for discount in discounts:
+                products = discount.products.all()
+                if instance in products:
+                    raise serializers.ValidationError(
+                        'Cannot deactivate a product that is in an active Discount'
+                    )
+
+        if stocks:
+            for s in stocks:
+                product_count = ProductCount.objects.get(product=instance, stock=s['stock_id'])
+                product_count.count_norm = s['count_norm']
+                product_count.save()
+
+        if city_prices:
+            for price in city_prices:
+                product_price = ProductPrice.objects.get(id=price.get('id'))
+                product_price.price = price.get('price')
+                product_price.save()
+        if type_prices:
+            for price in type_prices:
+                product_price = ProductPrice.objects.get(id=price.get('id'))
+                product_price.price = price.get('price')
+                product_price.save()
+        return super().update(instance, validated_data)
 
 
 class DirectorProductSizeSerializer(serializers.ModelSerializer):
@@ -269,6 +334,15 @@ class DirectorDiscountSerializer(serializers.ModelSerializer):
         rep['dealer_profiles'] = dealer_profiles_list
 
         return rep
+
+    def update(self, instance, validated_data):
+        products = validated_data.get('products', [])
+        if instance.is_active and products:
+            crn_products = instance.products.all()
+            for product in crn_products:
+                if product not in products:
+                    raise serializers.ValidationError({'detail': 'Cannot delete products from an active Discount'})
+        return super().update(instance, validated_data)
 
 
 class DirectorDiscountProductSerializer(serializers.ModelSerializer):
@@ -623,7 +697,7 @@ class DirectorPriceListSerializer(serializers.ModelSerializer):
 class DirectorProductPriceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductPrice
-        fields = ('price', 'price_type', 'city')
+        fields = ('id', 'price', 'price_type', 'city')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -667,7 +741,7 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         files = self.context['request'].FILES.getlist('files')
-        delete_files = self.context['request'].data.get('delete_files')
+        delete_files = self.context['request'].data.getlist('delete_files')
         executors = validated_data.get('executors')
         if executors:
             executors = validated_data.pop('executors')
@@ -809,7 +883,7 @@ class StockProductListSerializer(serializers.ModelSerializer):
         price = instance.prices.filter(city=stock.city).first()
         rep['prod_amount_crm'] = instance.total_count * price.price
         rep['prod_count_crm'] = instance.total_count
-        rep['norm_count'] = instance.total_count - instance.norm_count
+        rep['norm_count'] = instance.norm_count
         return rep
 
 
@@ -978,3 +1052,62 @@ class WarehouseListSerializer(serializers.ModelSerializer):
         fields = ('name', 'id')
 
 
+class DirectorDealerStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerStatus
+        fields = '__all__'
+
+    def validate(self, attrs):
+        discount = attrs['discount']
+        zero_discount = DealerStatus.objects.filter(discount=0).first()
+        if discount == 0:
+            if zero_discount:
+                raise serializers.ValidationError({'detail': 'Dealer status with discount 0 already exists'})
+        return attrs
+
+    def create(self, validated_data):
+        cities = City.objects.all()
+
+        dealer_status = super().create(validated_data)
+        discount_amount = Decimal(dealer_status.discount)
+
+        for city in cities:
+            for product in AsiaProduct.objects.all():
+                product_base_price = ProductPrice.objects.filter(product=product,
+                                                                 city=city,
+                                                                 d_status__discount=0).first()
+                base_price = Decimal(product_base_price.price)
+
+                discounted_price = base_price - (base_price * (discount_amount / 100))
+
+                ProductPrice.objects.create(
+                    product=product,
+                    city=city,
+                    d_status=dealer_status,
+                    price=discounted_price,
+                    old_price=base_price,
+                    price_type=None
+                )
+
+        return dealer_status
+
+    def update(self, instance, validated_data):
+        product_prices = instance.prices.all()
+        new_discount_amount = validated_data['discount']
+        new_discount_amount = Decimal(new_discount_amount)
+        update_prices = []
+        for product_price in product_prices:
+            product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
+                                                             city=product_price.city,
+                                                             d_status__discount=0).first()
+            base_price = Decimal(product_base_price.price)
+
+            discounted_price = base_price - (base_price * (new_discount_amount / 100))
+            update_prices.append(
+                ProductPrice(
+                    price=discounted_price,
+                    old_price=base_price,
+                )
+            )
+        ProductPrice.objects.bulk_update(update_prices)
+        return super().update(instance, validated_data)

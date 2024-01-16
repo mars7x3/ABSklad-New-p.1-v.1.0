@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Case, When
+from django.db.models import Case, When, Q
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins, generics, filters
 from rest_framework.decorators import action
@@ -22,7 +22,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorTaskListSerializer, DirectorMotivationListSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
     DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, \
-    RopProfileSerializer, UserListSerializer
+    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
 
@@ -366,12 +366,6 @@ class DirectorProductCRUDView(mixins.RetrieveModelMixin,
     queryset = AsiaProduct.objects.all()
     serializer_class = DirectorProductCRUDSerializer
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
-
 
 class DirectorDiscountCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
@@ -409,7 +403,18 @@ class DirectorDiscountAsiaProductView(mixins.ListModelMixin, GenericViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        discounts = Discount.objects.filter(
+            Q(start_date__lte=end_date, end_date__gte=start_date) |
+            Q(start_date__gte=start_date, end_date__lte=end_date) |
+            Q(start_date__lte=start_date, end_date__gte=end_date))
+
         queryset = self.get_queryset()
+        for discount in discounts:
+            d_products = discount.products.all()
+            queryset = queryset.exclude(id__in=d_products)
+
         kwargs = {}
 
         category = request.query_params.get('category')
@@ -467,10 +472,10 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
 
 
 class DirectorDealerCRUDView(mixins.CreateModelMixin,
-                               mixins.RetrieveModelMixin,
-                               mixins.UpdateModelMixin,
-                               mixins.DestroyModelMixin,
-                               GenericViewSet):
+                             mixins.RetrieveModelMixin,
+                             mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = MyUser.objects.all()
     serializer_class = DirectorDealerCRUDSerializer
@@ -499,7 +504,8 @@ class DirectorBalanceHistoryListView(APIView):
         user = MyUser.objects.filter(id=user_id).first()
         balance_histories = user.dealer_profile.balance_histories.filter(created_at__gte=start_date,
                                                                          created_at__lte=end_date)
-        response_data = DirBalanceHistorySerializer(balance_histories, many=True, context=self.get_renderer_context()).data
+        response_data = DirBalanceHistorySerializer(balance_histories, many=True,
+                                                    context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -558,7 +564,8 @@ class DirectorTotalAmountView(APIView):
                                                           created_at__lte=end_date, dealer_id__in=dealer_ids)
         response_data = {}
         response_data['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
-        response_data['shipment_amount'] = sum(balance_histories.filter(status='order').values_list('amount', flat=True))
+        response_data['shipment_amount'] = sum(
+            balance_histories.filter(status='order').values_list('amount', flat=True))
         response_data['balance'] = balance_histories.last().balance if balance_histories else 0
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -886,7 +893,8 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
 
     @action(methods=['GET'], detail=False, url_path='rop-list')
     def get_active_rop_list(self, request, *args, **kwargs):
-        active_rops = MyUser.objects.filter(is_active=True, status='rop')
+        rop_id = self.request.query_params.get('rop_id')
+        active_rops = MyUser.objects.filter(is_active=True, status='rop').exclude(id=rop_id)
         serializer = UserListSerializer(active_rops, many=True).data
         return Response(serializer, status=status.HTTP_200_OK)
 
@@ -947,7 +955,9 @@ class DirFreeMainWarehouseListView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
-        users = MyUser.objects.filter(status='warehouse', is_active=True, warehouse_profile__stock__isnull=True)
+        wh_id = self.request.query_params.get('wh_id')
+        users = MyUser.objects.filter(status='warehouse', is_active=True,
+                                      warehouse_profile__stock__isnull=True).exclude(id=wh_id)
         response_data = UserListSerializer(users, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -958,26 +968,29 @@ class DirJoinWarehouseToStockListView(APIView):
     def post(self, request):
         stock_id = request.data['stock']
         user_ids = request.data['users']
-        stock = Stock.objects.filter(id=stock_id).first()
-        if user_ids:
-            user_ids = request.data.getlist('users')
+        stock = Stock.objects.get(id=stock_id)
         users = MyUser.objects.filter(id__in=user_ids)
-        if users and stock:
-            for u in users:
-                profile = u.warehouse_profile
-                if profile.stock is not None:
-                    return Response({'detail': 'Warehouse is already has stock'},
-                                    status=status.HTTP_400_BAD_REQUEST)
-                profile.stock = stock
-                profile.save()
-            return Response({"text": "Success!"}, status=status.HTTP_200_OK)
-        return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        warehouses = WarehouseProfile.objects.filter(stock=stock)
+        with transaction.atomic():
+            for wh in warehouses:
+                wh.stock = None
+                wh.save()
+
+            if users and stock:
+                for user in users:
+                    profile = user.warehouse_profile
+                    profile.stock = stock
+                    profile.save()
+                return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+            return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class StockListView(mixins.ListModelMixin, GenericViewSet):
     queryset = Stock.objects.all().prefetch_related('counts')
     permission_classes = [IsAuthenticated, IsDirector]
     serializer_class = StockListSerializer
+
 
 
 class MaxatTestView(APIView):
@@ -999,3 +1012,10 @@ class MaxatTestView(APIView):
                 }
             )
         return Response({'result': data}, status=status.HTTP_200_OK)
+
+      
+class DealerStatusModelViewSet(viewsets.ModelViewSet):
+    queryset = DealerStatus.objects.all()
+    permission_classes = [IsAuthenticated, IsDirector]
+    serializer_class = DirectorDealerStatusSerializer
+

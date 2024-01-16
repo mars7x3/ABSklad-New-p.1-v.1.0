@@ -1,5 +1,6 @@
 import math
 import logging
+from typing import Callable
 
 from dateutil.relativedelta import relativedelta
 from django.db.models import F, Q, Count, Value, Case, When, Sum, FloatField, ExpressionWrapper, DecimalField
@@ -13,13 +14,35 @@ def today_on_true(field_value):
     return timezone.now().date() if field_value and field_value == 'true' else None
 
 
-def string_date_to_date(date_string: str):
+def string_datetime_datetime(datetime_string: str, datetime_format: str = "%Y-%m-%d %H:%M:%S"):
     try:
-        date = timezone.datetime.strptime(date_string, "%Y-%m-%d")
-        return timezone.make_aware(date).date()
+        date = timezone.datetime.strptime(datetime_string, datetime_format)
+        return timezone.make_aware(date)
     except Exception as e:
         logging.error(e)
-        raise ValidationError(detail="Wrong format of date %s " % date_string)
+        raise ValidationError(detail="Wrong format of date %s " % datetime_string)
+
+
+def string_date_to_date(date_string: str, date_format: str = "%Y-%m-%d"):
+    return string_datetime_datetime(date_string, date_format).date()
+
+
+def list_of_date_stings(date_format: str = "%Y-%m-%d", cast: Callable = None):
+    def format_dates(dates_string):
+        collected = []
+        for query in dates_string.split(','):
+            date_str = query.strip()
+            if not date_str:
+                continue
+
+            date = string_date_to_date(date_str, date_format)
+            if cast:
+                date = cast(date)
+
+            collected.append(date)
+
+        return collected
+    return format_dates
 
 
 def convert_bool_string_to_bool(bool_str: str) -> bool:
