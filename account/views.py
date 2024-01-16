@@ -1,4 +1,5 @@
 import datetime
+from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
@@ -6,6 +7,7 @@ from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, mixins, viewsets, generics
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +20,23 @@ from account.serializers import DealerMeInfoSerializer, NotificationSerializer, 
     DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer, DealerProfileUpdateSerializer, \
     UserNotificationSerializer
 from account.utils import random_code, send_code_to_phone
+
+
+class AppNotificationPaginationClass(PageNumberPagination):
+    page_size = 1
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response(OrderedDict([
+            ('total_pages', self.page.paginator.num_pages),
+            ('page', self.page.number),
+            ('next', self.get_next_link()),
+            ('previous', self.get_previous_link()),
+            ('results', data),
+            ('results_count', len(data)),
+            ('total_results', self.page.paginator.count),
+        ]))
 
 
 class DealerMeInfoView(APIView):
@@ -75,13 +94,14 @@ class NotificationCountView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class NotificationListView(APIView):
+class NotificationListView(APIView, AppNotificationPaginationClass):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        response_data = UserNotificationSerializer(
-            request.user.notifications.all(), many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        notifs = request.user.notifications.all()
+        page = self.paginate_queryset(notifs, request)
+        serializer = UserNotificationSerializer(page, many=True, context=self.get_renderer_context())
+        return self.get_paginated_response(serializer.data)
 
 
 class ForgotPwdView(APIView):
