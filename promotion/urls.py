@@ -12,6 +12,8 @@ urlpatterns = [
     path('dealer/kpi/info/', KPIInfoView.as_view()),
     path('dealer/kpi/products/', KPIProductsView.as_view()),
 
+    path('kpi/tmz/count/', ManagerKPITMZView.as_view()),
+
     path('', include(router.urls)),
 ]
 

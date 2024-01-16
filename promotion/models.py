@@ -114,3 +114,11 @@ class DealerKPIProduct(models.Model):
     fact_count = models.PositiveIntegerField(default=0)
 
 
+class ManagerKPITMZInfo(models.Model):
+    per_cent = models.PositiveIntegerField(default=0)
+    bonus = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+
+
+class ManagerKPIPDSInfo(models.Model):
+    per_cent = models.PositiveIntegerField(default=0)
+    bonus = models.DecimalField(max_digits=100, decimal_places=2, default=0)

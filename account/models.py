@@ -92,6 +92,7 @@ class RopProfile(models.Model):
 
 class ManagerProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='manager_profile')
+    is_main = models.BooleanField(default=False)
     city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, related_name='manager_profiles')
 
 

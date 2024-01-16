@@ -117,11 +117,11 @@ def get_kpi_products(user):
     return prods_data
 
 
-def get_tmz_of_user_for_kpi(check_months):
+def get_tmz_of_user_for_kpi(check_months, user_id):
     start_date = timezone.now() - relativedelta(months=check_months)
 
     user_order_products = MyOrder.objects.filter(
-        author__isnull=False,
+        author__user__id=user_id,
         created_at__gte=start_date,
         status__in=['paid', 'sent', 'success', 'wait']
     ).values(
