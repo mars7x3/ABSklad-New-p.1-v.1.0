@@ -11,7 +11,7 @@ from .serializers import StockGroupSerializer
 
 
 class StockGroupByWeekAPIView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated, IsStaff)
+    # permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request):
         start = request.query_params.get("start_date")
@@ -54,7 +54,7 @@ class StockGroupByWeekAPIView(views.APIView):
                 **{field: Sum(source) for field, source in sum_fields_map.items()}
             )
 
-            collected_data = {"date": start.date()}
+            collected_data = {}
 
             for field, value in data.items():
                 source = sum_fields_map.get(field)
@@ -64,6 +64,10 @@ class StockGroupByWeekAPIView(views.APIView):
 
                 collected_data[source] = value
 
+            if all(value is None for value in data.values()):
+                continue
+
+            collected_data["date"] = start.date()
             collected_dates.append(collected_data)
             start += delta
             end_date += delta
