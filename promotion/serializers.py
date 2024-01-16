@@ -123,4 +123,7 @@ class BannerSerializer(serializers.ModelSerializer):
         return rep
 
 
-
+class DealerKPISerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerKPI
+        fields = '__all__'

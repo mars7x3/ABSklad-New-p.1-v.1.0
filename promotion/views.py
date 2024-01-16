@@ -5,9 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from account.models import ManagerProfile, MyUser
-from promotion.models import Story, Motivation, Banner, DealerKPIProduct
+from promotion.models import Story, Motivation, Banner, DealerKPIProduct, DealerKPI
 from promotion.serializers import StoryListSerializer, StoryDetailSerializer, MotivationSerializer, \
-    BannerListSerializer, BannerSerializer
+    BannerListSerializer, BannerSerializer, DealerKPISerializer
 from promotion.utils import get_motivation_data, get_kpi_info, get_kpi_products
 
 
@@ -108,4 +108,13 @@ class ManagerKPITMZDetailView(APIView):
     def get(self, request, *args, **kwargs):
         manager_id = self.request.query_params.get('manager_id')
         pass
+
+
+class DealerKPIView(viewsets.ModelViewSet):
+    queryset = DealerKPI.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = DealerKPISerializer
+
+
+
 
