@@ -257,7 +257,6 @@ class CategoryListAPIView(BaseManagerMixin, generics.ListAPIView):
                         .all().distinct()
     )
     serializer_class = ShortCategorySerializer
-    pagination_class = AppPaginationClass
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("title",)
     filter_by_fields = {
