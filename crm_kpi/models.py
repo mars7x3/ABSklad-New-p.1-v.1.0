@@ -19,6 +19,8 @@ class DealerKPIProduct(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='kpi_products')
     count = models.PositiveIntegerField()
     fact_count = models.PositiveIntegerField(default=0)
+    fact_sum = models.DecimalField(decimal_places=2, max_digits=100, default=0)
+    sum = models.DecimalField(decimal_places=2, max_digits=100, default=0)
 
 
 class ManagerKPITMZInfo(models.Model):

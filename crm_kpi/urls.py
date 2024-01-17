@@ -10,6 +10,9 @@ router.register('crm-kpi/pds/bonus/crud', ManagerPDSBonusModelViewSet)
 
 
 urlpatterns = [
+
+    path('crm/kpi/total/info/', KPITotalView.as_view()),
+
     path('crm-kpi/tmz/list/', ManagerKPITMZView.as_view()),
     path('crm-kpi/tmz/detail/', ManagerKPITMZDetailView.as_view()),
     path('crm-kpi/pds/list/', ManagerKPIPDSListView.as_view()),
