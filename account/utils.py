@@ -16,7 +16,7 @@ def send_code_to_email(email):
 def send_code_to_phone(phone, text):
     api_key = 'kz4dff49ea3b3dd2237043ca1aae22a095664e726e025a8c34e822da61458c0d2620b3'
     api_url = 'https://api.mobizon.kz/service/message/sendsmsmessage'
-    text = 'ASIA BRAND: ' + text
+    text = 'Ваш код для ASIABRAND: ' + text
     params = {
         'recipient': phone,
         'from': 'ASIABRAND',
