@@ -20,7 +20,8 @@ from .serializers import OrderListSerializer, OrderDetailSerializer, WareHousePr
     WareHouseProductSerializer, WareHouseInventorySerializer, \
     InventoryProductListSerializer
 from .mixins import WareHouseManagerMixin
-from ..models import Inventory
+from ..models import Inventory, CRMTask
+from ..tasks import minus_quantity
 
 
 class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
@@ -84,6 +85,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             if order.status == 'paid':
                 order.status = 'sent'
                 order.save()
+                minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
                 return Response({'detail': 'Order status successfully changed to "sent"'},
                                 status=status.HTTP_200_OK)
             return Response({'detail': 'Order status must be "paid" to change to "sent"'},
@@ -243,32 +245,6 @@ class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
             })
 
         return Response({'result': data})
-
-
-class WareHouseTaskView(ListModelMixin,
-                        RetrieveModelMixin,
-                        GenericViewSet):
-    permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = GeneralPurposePagination
-
-    def get_queryset(self):
-        return self.queryset.filter(task__is_active=True, executor=self.request.user.id)
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        is_done = self.request.query_params.get('is_done')
-        search = self.request.query_params.get('search')
-        if is_done == 'true':
-            queryset = queryset.filter(is_done=True)
-        if is_done == 'false':
-            queryset = queryset.filter(is_done=False)
-
-        if search:
-            queryset = queryset.filter(task__title__icontains=search)
-        paginator = GeneralPurposePagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
 
 
 class WareHouseInventoryView(ListModelMixin,

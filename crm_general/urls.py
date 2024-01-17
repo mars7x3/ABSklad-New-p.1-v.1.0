@@ -66,7 +66,7 @@ from .marketer.views import (
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
-    WareHouseSaleReportView, WareHouseTaskView, WareHouseInventoryView, WareHouseSaleReportDetailView
+    WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView
 )
 
 main_director_router = SimpleRouter()
@@ -290,7 +290,6 @@ warehouse_manager_router.register('order', WareHouseOrderView, basename='warehou
 warehouse_manager_router.register('product', WareHouseProductViewSet, basename='warehouse-product')
 warehouse_manager_router.register('category', WareHouseCategoryViewSet, basename='warehouse-category')
 warehouse_manager_router.register('collection', WareHouseCollectionViewSet, basename='warehouse-collection')
-warehouse_manager_router.register('task', WareHouseTaskView, basename='warehouse-task')
 warehouse_manager_router.register('inventory', WareHouseInventoryView, basename='warehouse-inventory')
 
 warehouse_manager_urlpatterns = [

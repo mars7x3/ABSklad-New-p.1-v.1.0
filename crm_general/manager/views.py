@@ -144,8 +144,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
 
 class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
     queryset = (
-        DealerProfile.objects.select_related("user", "city", "dealer_status")
-                             .only("user_id", "user", "birthday", "city", "dealer_status")
+        DealerProfile.objects.select_related("user", "village__city", "dealer_status")
+                             .only("user_id", "user", "birthday", "village__city", "dealer_status")
                              .all()
     )
     serializer_class = DealerBirthdaySerializer

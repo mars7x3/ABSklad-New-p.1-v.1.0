@@ -113,20 +113,6 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class WareHouseTaskFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CRMTaskFile
-        fields = ('id', 'file')
-
-
-class WareHouseTaskSerializer(serializers.ModelSerializer):
-    files = WareHouseTaskFileSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = CRMTask
-        fields = '__all__'
-
-
 class InventoryProductSerializer(serializers.ModelSerializer):
     product_title = serializers.SerializerMethodField(read_only=True)
     category_title = serializers.SerializerMethodField(read_only=True)
