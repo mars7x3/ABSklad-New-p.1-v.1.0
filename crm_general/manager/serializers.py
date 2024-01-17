@@ -147,7 +147,7 @@ class OrderSerializer(serializers.ModelSerializer):
             attrs["price"] = order_total_price(
                 product_counts=product_counts,
                 dealer_status=dealer.dealer_status,
-                city=dealer.city,
+                city=dealer.village.city,
                 price_type=price_type,
             )
             attrs["cost_price"] = calculate_order_cost_price(product_counts)
@@ -155,7 +155,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 attrs["products"] = build_order_products_data(
                     product_counts=product_counts,
                     dealer_status=dealer.dealer_status,
-                    city=dealer.city,
+                    city=dealer.village.city,
                     price_type=price_type
                 )
             except ObjectDoesNotExist:
