@@ -18,9 +18,10 @@ from .serializers import (
     ShortOrderSerializer, OrderSerializer,
     DealerProfileListSerializer, DealerBirthdaySerializer, DealerProfileDetailSerializer,
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
-    ProductPriceListSerializer, CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
+    CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ProductListForOrderSerializer
+    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ProductListForOrderSerializer,
+    ShortProductSerializer
 )
 
 
@@ -266,13 +267,10 @@ class CategoryListAPIView(BaseManagerMixin, generics.ListAPIView):
 
 class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
     queryset = (
-        ProductPrice.objects.select_related("product")
-                            .only("product", "price")
-                            .all()
+        AsiaProduct.objects.all()
     )
-    serializer_class = ProductPriceListSerializer
+    serializer_class = ShortProductSerializer
     filter_backends = (filters.SearchFilter, FilterByFields)
-    pagination_class = ProductPagination
     search_fields = ("product__name",)
     filter_by_fields = {
         "is_active": {"by": "product__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},

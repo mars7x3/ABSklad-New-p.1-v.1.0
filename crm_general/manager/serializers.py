@@ -425,13 +425,14 @@ class ShortCategorySerializer(serializers.ModelSerializer):
 class ShortProductSerializer(serializers.ModelSerializer):
     collection = serializers.SerializerMethodField(read_only=True)
     category = serializers.SerializerMethodField(read_only=True)
-    avg_receipt_amount = serializers.SerializerMethodField(read_only=True)
-    last_fifteen_days_ratio = serializers.SerializerMethodField(read_only=True)
+    # avg_receipt_amount = serializers.SerializerMethodField(read_only=True)
+    # last_fifteen_days_ratio = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AsiaProduct
         fields = ("id", "title", "vendor_code", "collection", "category", "is_discount", "is_active",
-                  "last_fifteen_days_ratio", "avg_receipt_amount", "created_at")
+                  "created_at", 'price')
 
     def get_collection(self, instance):
         return instance.collection.title if instance.collection else None
@@ -439,31 +440,35 @@ class ShortProductSerializer(serializers.ModelSerializer):
     def get_category(self, instance):
         return instance.category.title if instance.category else None
 
-    def get_last_fifteen_days_ratio(self, instance):
-        fifteen_days_ago = timezone.now() - timezone.timedelta(days=15)
-        return instance.order_products.aggregate(
-            last_fifteen_days_ratio=Round(
-                Sum(
-                    "count",
-                    filter=Q(
-                        order__is_active=True,
-                        order__created_at__gte=fifteen_days_ago,
-                        order__status__in=("paid", "success", "sent")
-                    ),
-                    output_field=FloatField()
-                ) / Value(15),
-                precision=2
-            )
-        )["last_fifteen_days_ratio"]
+    # def get_last_fifteen_days_ratio(self, instance):
+    #     fifteen_days_ago = timezone.now() - timezone.timedelta(days=15)
+    #     return instance.order_products.aggregate(
+    #         last_fifteen_days_ratio=Round(
+    #             Sum(
+    #                 "count",
+    #                 filter=Q(
+    #                     order__is_active=True,
+    #                     order__created_at__gte=fifteen_days_ago,
+    #                     order__status__in=("paid", "success", "sent")
+    #                 ),
+    #                 output_field=FloatField()
+    #             ) / Value(15),
+    #             precision=2
+    #         )
+    #     )["last_fifteen_days_ratio"]
+    #
+    # def get_avg_receipt_amount(self, instance):
+    #     return instance.order_products.aggregate(
+    #         avg_receipt_amount=Sum("total_price") / Sum("count")
+    #     )["avg_receipt_amount"]
 
-    def get_avg_receipt_amount(self, instance):
-        return instance.order_products.aggregate(
-            avg_receipt_amount=Sum("total_price") / Sum("count")
-        )["avg_receipt_amount"]
+    def get_price(self, instance):
+        user = self.context['request'].user
+        price = instance.prices.filter(city=user.manager_profile.city, d_status__discount=0).first()
+        return price.price
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):
-    product = ShortProductSerializer(read_only=True, many=False)
     stock_count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
