@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from account.models import MyUser
-from crm_kpi.models import DealerKPI, DealerKPIProduct, ManagerKPITMZInfo, ManagerKPIPDSInfo
+from crm_kpi.models import DealerKPI, DealerKPIProduct
 from product.models import AsiaProduct
 
 
@@ -87,13 +87,3 @@ class ProductListKPISerializer(serializers.ModelSerializer):
         fields = ('id', 'title')
 
 
-class ManagerKPITMZInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ManagerKPITMZInfo
-        fields = '__all__'
-
-
-class ManagerKPIPDSInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ManagerKPIPDSInfo
-        fields = '__all__'

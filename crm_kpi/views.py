@@ -11,12 +11,11 @@ from rest_framework.views import APIView
 
 from account.models import ManagerProfile, MyUser
 from crm_general.director.permissions import IsDirector
-from crm_kpi.models import DealerKPIProduct, DealerKPI, ManagerKPITMZInfo, ManagerKPIPDSInfo
+from crm_kpi.models import DealerKPIProduct, DealerKPI
 from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
-    DealerKPIDetailSerializer, DealerKPIProductSerializer, DealerKPITMZTotalSerializer, ManagerKPITMZInfoSerializer, \
-    ManagerKPIPDSInfoSerializer
-from crm_kpi.utils import kpi_total_info
+    DealerKPIDetailSerializer, DealerKPIProductSerializer, DealerKPITMZTotalSerializer
+from crm_kpi.utils import kpi_total_info, kpi_main_2lvl
 from product.models import AsiaProduct
 
 
@@ -148,67 +147,6 @@ class DealerKPIView(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class ManagerTMZBonusView(APIView):
-    def get(self, request, *args, **kwargs):
-        manager_id = self.request.query_params.get('manager_id')
-        today = timezone.now()
-        total_count = DealerKPIProduct.objects.filter(
-            kpi__user__dealer_profile__managers__manager_profile__user__id=manager_id,
-            month__month=today.month
-        ).aggregate(
-            total_count=Sum('count')
-        )
-        data = []
-        manager_tmz_info = ManagerKPITMZInfo.objects.all()
-        for info in manager_tmz_info:
-            per_cent = info.per_cent / 100
-            count_by_per_cent = per_cent * total_count['total_count']
-            data.append({
-                'id': info.id,
-                'per_cent': info.per_cent,
-                'count_by_per_cent': count_by_per_cent,
-                'bonus': info.bonus
-            })
-
-        return Response(data)
-
-
-class ManagerPDSBonusView(APIView):
-    def get(self, request, *args, **kwargs):
-        manager_id = self.request.query_params.get('manager_id')
-        today = timezone.now()
-        total_pds_amount = DealerKPI.objects.filter(
-            user__dealer_profile__managers__manager_profile__user__id=manager_id,
-            month__month=today.month
-        ).aggregate(
-            total_pds_amount=Sum('pds')
-        )
-        data = []
-        manager_pds_info = ManagerKPIPDSInfo.objects.all()
-        for info in manager_pds_info:
-            bonus = info.coefficient * total_pds_amount['total_pds_amount']
-            data.append({
-                'id': info.id,
-                'per_cent': info.per_cent,
-                'coefficient': info.coefficient,
-                'bonus': bonus
-            })
-
-        return Response(data)
-
-
-class ManagerTMZBonusModelViewSet(viewsets.ModelViewSet):
-    queryset = ManagerKPITMZInfo.objects.all()
-    permission_classes = [IsAuthenticated, IsDirector]
-    serializer_class = ManagerKPITMZInfoSerializer
-
-
-class ManagerPDSBonusModelViewSet(viewsets.ModelViewSet):
-    queryset = ManagerKPIPDSInfo.objects.all()
-    permission_classes = [IsAuthenticated, IsDirector]
-    serializer_class = ManagerKPIPDSInfoSerializer
-
-
 class KPITotalView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
@@ -217,3 +155,16 @@ class KPITotalView(APIView):
         month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y")).month
 
         return Response(kpi_total_info(month), status=status.HTTP_200_OK)
+
+
+class KPITotalMain2lvlView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request):
+        month = request.query_params.get('month')
+        stat_type = request.query_params.get('stat_type')
+
+        month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y")).month
+
+        return Response({'result': kpi_main_2lvl(month, stat_type)}, status=status.HTTP_200_OK)
+
