@@ -149,13 +149,11 @@ class AccountantProductSerializer(serializers.ModelSerializer):
         rep['collection_name'] = instance.collection.title if instance.collection else None
         rep['category_name'] = instance.category.title if instance.category else None
         stocks_count_crm = sum(instance.counts.all().values_list('count_crm', flat=True))
-        stock = sum(instance.counts.all().values_list('count_norm', flat=True))
         rep['stocks_count_crm'] = stocks_count_crm
         rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
         price = instance.prices.filter().first()
         rep['price'] = price.price if price else '---'
         rep['total_price'] = sum(instance.prices.all().values_list('price', flat=True))
-        rep['stock'] = stocks_count_crm - stock
         return rep
 
 

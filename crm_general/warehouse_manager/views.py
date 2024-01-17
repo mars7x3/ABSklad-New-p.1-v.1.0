@@ -93,7 +93,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
         return Response({'detail': 'Incorrect order status'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = AsiaProduct.objects.all()
     serializer_class = WareHouseProductListSerializer
     retrieve_serializer_class = WareHouseProductSerializer

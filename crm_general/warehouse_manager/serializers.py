@@ -61,8 +61,7 @@ class WareHouseCategoryListSerializer(serializers.ModelSerializer):
 class WareHouseProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'is_discount', 'vendor_code', 'created_at', 'category', 'collection')
-        read_only_fields = ('is_active',)
+        fields = ('id', 'title', 'is_discount', 'vendor_code', 'created_at', 'category', 'collection', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
