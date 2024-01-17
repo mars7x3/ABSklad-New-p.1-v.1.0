@@ -165,9 +165,8 @@ def save_user_stats(date, city_relations: dict):
 
 
 def save_product_stats(date):
-    date_from_ts = datetime.fromtimestamp(date).date()
     order_products = OrderProduct.objects.filter(
-        order__created_at__date=date_from_ts,
+        order__created_at__date=date,
         order__status__in=("success", "sent"),
         order__is_active=True,
         ab_product__isnull=False,
@@ -195,7 +194,7 @@ def save_product_stats(date):
         on_create=on_save_product,
         on_update=on_save_product
     )
-    logger.info(f"Successfully collected products for date {date_from_ts}")
+    logger.info(f"Successfully collected products for date {date}")
     return set(map(lambda obj: obj.id, processed_objs))
 
 

@@ -1,7 +1,7 @@
 from typing import Callable
 
 from django.db import models
-from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate, JSONObject
+from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate
 from django.utils.translation import gettext_lazy as _
 
 from account.models import MyUser
@@ -112,9 +112,9 @@ class PurchasesQuerySet(models.QuerySet):
         if date_trunc:
             tx_subquery = (
                 tx_base_query
-                .values("bank_income", "cash_income")
                 .annotate(stat_date=date_trunc("date"))
                 .filter(stat_date=models.OuterRef("stat_date"))
+                .values("stat_date")
             )
             incoming_users_query = (
                 tx_base_query
@@ -122,10 +122,7 @@ class PurchasesQuerySet(models.QuerySet):
                 .filter(stat_date=models.OuterRef("stat_date"))
             )
         else:
-            tx_subquery = (
-                tx_base_query
-                .values("bank_income", "cash_income")
-            )
+            tx_subquery = tx_base_query
             incoming_users_query = tx_base_query
 
         return (
@@ -140,7 +137,7 @@ class PurchasesQuerySet(models.QuerySet):
                     .annotate(cash_amount=models.Sum("cash_income"))
                     .values("cash_amount")[:1]
                 ),
-                incoming_users_count=models.Subquery(
+                users_count=models.Subquery(
                     incoming_users_query
                     .annotate(users_count=models.Count("user_stat__user_id", distinct=True))
                     .values("users_count")[:1]
@@ -156,6 +153,11 @@ class PurchasesQuerySet(models.QuerySet):
                     models.When(cash_amount__isnull=True, then=models.Value(0.0)),
                     default=models.F("cash_amount"),
                     output_field=models.DecimalField()
+                ),
+                incoming_users_count=models.Case(
+                    models.When(users_count__isnull=True, then=models.Value(0)),
+                    default=models.F("users_count"),
+                    output_field=models.IntegerField()
                 )
             )
         )
