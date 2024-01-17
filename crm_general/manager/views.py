@@ -160,9 +160,9 @@ class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
 
 class DealerRetrieveAPIView(BaseDealerViewMixin, generics.RetrieveAPIView):
     queryset = (
-        DealerProfile.objects.select_related("user", "city", "dealer_status")
+        DealerProfile.objects.select_related("user", "village__city", "dealer_status")
                              .prefetch_related("dealer_stores")
-                             .only("user", "birthday", "city", "dealer_status")
+                             .only("user", "birthday", "village__city", "dealer_status")
                              .all()
     )
     serializer_class = DealerProfileDetailSerializer

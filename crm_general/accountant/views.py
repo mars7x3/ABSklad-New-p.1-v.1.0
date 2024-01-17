@@ -141,7 +141,7 @@ class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
 
         city = request.query_params.get('city')
         if city:
-            kwargs['city__slug'] = city
+            kwargs['village__city__slug'] = city
 
         dealer_status = request.query_params.get('status')
         if dealer_status:
@@ -287,9 +287,9 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
         queryset = self.queryset
         pr_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
-        if pr_status == 'true':
+        if pr_status == 'active':
             queryset = queryset.filter(is_active=True)
-        elif pr_status == 'false':
+        elif pr_status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
         if search:

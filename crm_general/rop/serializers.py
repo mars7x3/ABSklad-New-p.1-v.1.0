@@ -403,7 +403,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         )["amount"]
 
     def get_city(self, instance):
-        return instance.dealer.city.title
+        return instance.dealer.village.city.title
 
     def get_status(self, instance):
         return instance.dealer.dealer_status.title
