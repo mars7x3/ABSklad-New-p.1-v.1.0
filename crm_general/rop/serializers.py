@@ -145,21 +145,17 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     class Meta:
         model = DealerProfile
         fields = ("user", "liability", "address", "birthday", "city", "dealer_status", "wallet", "stores",
-                  "price_type", "dealer_status_id", "city_id", "price_type_id", "motivations")
+                  "price_type", "dealer_status_id", "city_id", "price_type_id", "motivations", 'village')
         user_status = "dealer"
 
     def get_motivations(self, instance):
         return get_motivation_done(instance)
 
     def validate(self, attrs):
-        rop_profile = self.context['view'].rop_profile
-
-        city = attrs.pop("city_id", None)
-        if city and not rop_profile.cities.filter(id=city.id).exists():
-            raise serializers.ValidationError({"city_id": "Данный город не поддерживается или вам не доступен"})
-
-        if city:
-            attrs["city"] = city
+        # village = attrs.pop("village_id", None)
+        #
+        # if village:
+        #     attrs["village"] = village
 
         price_type = attrs.pop("price_type_id", None)
         if price_type:

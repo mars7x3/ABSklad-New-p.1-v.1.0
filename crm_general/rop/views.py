@@ -304,6 +304,7 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
                        "pipline": string_date_to_date},
         "end_date": {"by": "dealer__balance_histories__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
+        "status": {"by": "dealer__dealer_status_id", "type": "number"}
     }
 
     def get_queryset(self):

@@ -315,8 +315,7 @@ crm_urlpatterns = [
     path("crm/category/list/", CategoryListView.as_view()),
     path("crm/price-type/list/", PriceTypeListView.as_view()),
     path("crm/staff/task/response/", TaskResponseView.as_view()),
-
-
+    path("crm/villages/list/", VillageListView.as_view()),
 
     path("crm/user/image/cd", UserImageCDView.as_view()),
 

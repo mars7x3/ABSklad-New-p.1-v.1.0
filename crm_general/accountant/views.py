@@ -18,7 +18,6 @@ from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDet
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
     AccountantStockListSerializer, AccountantStockDetailSerializer, \
     DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer
-from crm_general.accountant.utils import check_reservation
 from crm_general.filters import FilterByFields
 
 from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
@@ -265,9 +264,8 @@ class AccountantOrderModerationView(APIView):
                     order.status = order_status
                     order.save()
                     if order.status == 'paid':
-                        minus_quantity(order.id, order.city_stock.slug)
+                        minus_quantity(order.id, order.stock.id)
                         #sync_order_pay_to_1C(order)
-                        check_reservation(order_id)
 
                     kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
                               'link_id': order.id, 'status': 'order'}

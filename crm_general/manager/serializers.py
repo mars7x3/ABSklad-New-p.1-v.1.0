@@ -465,7 +465,9 @@ class ShortProductSerializer(serializers.ModelSerializer):
     def get_price(self, instance):
         user = self.context['request'].user
         price = instance.prices.filter(city=user.manager_profile.city, d_status__discount=0).first()
-        return price.price
+        if price:
+            return price.price
+        return price
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):
