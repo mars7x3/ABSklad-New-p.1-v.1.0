@@ -1,7 +1,7 @@
 from typing import Callable
 
 from django.db import models
-from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate, JSONObject
+from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate
 from django.utils.translation import gettext_lazy as _
 
 from account.models import MyUser
@@ -112,9 +112,9 @@ class PurchasesQuerySet(models.QuerySet):
         if date_trunc:
             tx_subquery = (
                 tx_base_query
-                .values("bank_income", "cash_income")
                 .annotate(stat_date=date_trunc("date"))
                 .filter(stat_date=models.OuterRef("stat_date"))
+                .values("stat_date")
             )
             incoming_users_query = (
                 tx_base_query
