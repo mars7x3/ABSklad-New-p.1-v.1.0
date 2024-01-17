@@ -122,5 +122,3 @@ class BannerSerializer(serializers.ModelSerializer):
                                                  many=True, context=self.context).data
         return rep
 
-
-

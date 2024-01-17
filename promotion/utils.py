@@ -109,4 +109,3 @@ def get_kpi_products(user):
         )
     return prods_data
 
-

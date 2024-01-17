@@ -1,4 +1,3 @@
-
 from rest_framework import generics, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -61,3 +60,7 @@ class KPIProductsView(APIView):
     def get(self, request):
         data = get_kpi_products(request.user)
         return Response(data, status=status.HTTP_200_OK)
+
+
+
+
