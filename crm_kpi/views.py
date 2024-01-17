@@ -1,10 +1,10 @@
 import datetime
 
 from django.db.models import Sum, F
-from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,7 +15,7 @@ from crm_kpi.models import DealerKPIProduct, DealerKPI
 from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
     DealerKPIDetailSerializer, DealerKPIProductSerializer, DealerKPITMZTotalSerializer
-from crm_kpi.utils import kpi_total_info, kpi_main_2lvl
+from crm_kpi.utils import kpi_total_info, kpi_main_2lvl, kpi_main_3lvl
 from product.models import AsiaProduct
 
 
@@ -167,4 +167,21 @@ class KPITotalMain2lvlView(APIView):
         month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y")).month
 
         return Response({'result': kpi_main_2lvl(month, stat_type)}, status=status.HTTP_200_OK)
+
+
+class KPITotalMain3lvlView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request, manager_id):
+        month = request.query_params.get('month')
+        stat_type = request.query_params.get('stat_type')
+
+        if not month or not stat_type:
+            raise ValidationError({"detail": "month and stat_type is required params!"})
+
+        date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+        return Response(
+            {'result': kpi_main_3lvl(stat_type, manager_id, date)},
+            status=status.HTTP_200_OK
+        )
 

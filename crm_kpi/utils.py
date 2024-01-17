@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, F, IntegerField, Case, When, FloatField
+from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value
 from django.utils import timezone
 
 from account.models import MyUser
-from crm_kpi.models import DealerKPI
+from crm_kpi.models import DealerKPI, ManagerKPISVD
 from order.models import MyOrder, OrderProduct
 
 
@@ -226,4 +228,172 @@ def kpi_svd_2lvl(month):
     return managers_data
 
 
+def kpi_pds_3lvl(manager_id: int, date: datetime) -> list[dict]:
+    query = (
+        DealerKPI.objects
+        .filter(month__month=date.month, month__year=date.year, user__dealer_profile__managers__id=manager_id)
+        .values("user_id")
+        .annotate(
+            name=F("user__name"),
+            fact_total_pds=Sum("fact_pds", default=Value(0), output_field=IntegerField()),
+            total_pds=Sum("pds", default=Value(0), output_field=IntegerField()),
+        )
+        .annotate(
+            per_done_pds=Case(
+                When(
+                    total_pds__gt=0, fact_total_pds__gt=0,
+                    then=F("total_pds") / F("fact_total_pds") * Value(100),
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        )
+    )
+    collected = []
+    for item in query:
+        item["id"] = item.pop("user_id")
+        collected.append(item)
+    return collected
 
+
+def kpi_tmz_3lvl(manager_id: int, date: datetime) -> list[dict]:
+    query = (
+        DealerKPI.objects
+        .filter(month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager_id)
+        .values("user_id")
+        .annotate(
+            name=F("user__name"),
+            fact_total_tmz_count=Sum('kpi_products__fact_count', default=Value(0), output_field=IntegerField()),
+            fact_total_tmz_sum=Sum('kpi_products__fact_sum', default=Value(0), output_field=IntegerField()),
+            total_tmz_count=Sum('kpi_products__count', default=Value(0), output_field=IntegerField()),
+            total_tmz_sum=Sum('kpi_products__sum', default=Value(0), output_field=IntegerField()),
+        )
+        .annotate(
+            per_done_tmz_count=Case(
+                When(
+                    total_tmz_count__gt=0, fact_total_tmz_count__gt=0,
+                    then=F("total_tmz_count") / F("fact_total_tmz_count") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            ),
+            per_done_tmz_sum=Case(
+                When(
+                    total_tmz_sum__gt=0, fact_total_tmz_sum__gt=0,
+                    then=F("total_tmz_sum") / F("fact_total_tmz_sum") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        )
+    )
+    collected = []
+    for item in query:
+        item["id"] = item.pop("user_id")
+        collected.append(item)
+    return collected
+
+
+def kpi_sch_3lvl(manager_id: int, date: datetime) -> list[dict]:
+    query = (
+        DealerKPI.objects
+        .filter(month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager_id)
+        .values("user_id")
+        .annotate(
+            name=F("user__name"),
+            fact_avg_price=Sum(
+                F('kpi_products__fact_sum') / F('kpi_products__fact_count'),
+                output_field=FloatField(),
+                default=Value(0.0)
+            ),
+            avg_price=Sum(
+                F('kpi_products__sum') / F('kpi_products__count'),
+                output_field=FloatField(),
+                default=Value(0.0)
+            )
+        )
+        .annotate(
+            per_done_avg_price=Case(
+                When(
+                    fact_avg_price__gt=0, avg_price__gt=0,
+                    then=F("avg_price") / F("fact_avg_price") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        )
+    )
+    collected = []
+    for item in query:
+        item["id"] = item.pop("user_id")
+        item["avg_price"] = round(item["avg_price"])
+        item["fact_avg_price"] = round(item["fact_avg_price"])
+        collected.append(item)
+    return collected
+
+
+def kpi_akb_3lvl(manager_id: int, date: datetime) -> list[dict]:
+    return MyUser.objects.filter(
+        dealer_profile__managers=manager_id,
+        is_active=True,
+        status='dealer',
+        dealer_profile__orders__created_at__month=date.month,
+        dealer_profile__orders__created_at__year=date.year,
+        dealer_profile__orders__is_active=True,
+        dealer_profile__orders__status__in=['sent', 'success']
+    ).values("id", "name").order_by("id").distinct("id")
+
+
+def kpi_svd_3lvl(manager_id: int, date: datetime):
+    after_query = OrderProduct.objects.filter(
+        order__author__managers=manager_id,
+        order__is_active=True,
+        order__released_at__month=date.month,
+        order__released_at__year=date.year,
+        order__status__in=('success', 'sent')
+    )
+    after_products = after_query.values_list("ab_product_id", "count")
+    after_product_ids = list(map(lambda x: x[0], after_products))
+    after_amount = after_query.aggregate(count_sum=Sum("count"))["count_sum"]
+
+    before_query = ManagerKPISVD.objects.filter(
+        manager_kpi__manager_id=manager_id,
+        manager_kpi__month__month=date.month,
+        manager_kpi__month__year=date.year
+    )
+    before_products = before_query.values_list("product_id", "count")
+    before_product_ids = list(map(lambda x: x[0], before_products))
+    before_amount = before_query.aggregate(count_sum=Sum("count"))["count_sum"]
+
+    old = {
+        product_id: count / before_amount * 100
+        for product_id, count in before_products
+        if product_id not in after_product_ids
+    }
+    new = {
+        product_id: count / after_amount * 100
+        for product_id, count in after_products
+        if product_id not in before_product_ids
+    }
+    return {
+        'before_count': len(before_product_ids),
+        'after_count': len(after_product_ids),
+        'old_count': len(old),
+        'new_count': len(new),
+        'share_old': round(sum(old.values())),
+        'share_new': round(sum(new.values()))
+    }
+
+
+def kpi_main_3lvl(stat_type: str, manager_id: int, date: datetime):
+    match stat_type:
+        case 'pds':
+            return kpi_pds_3lvl(manager_id, date)
+        case 'tmz':
+            return kpi_tmz_3lvl(manager_id, date)
+        case 'sch':
+            return kpi_sch_3lvl(manager_id, date)
+        case 'akb':
+            return kpi_akb_3lvl(manager_id, date)
+        case 'svd':
+            return kpi_svd_3lvl(manager_id, date)
