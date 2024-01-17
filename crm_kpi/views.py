@@ -158,7 +158,7 @@ class KPITotalView(APIView):
 
 
 class KPITotalMain2lvlView(APIView):
-    # permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
         month = request.query_params.get('month')
@@ -170,7 +170,7 @@ class KPITotalMain2lvlView(APIView):
 
 
 class KPITotalMain3lvlView(APIView):
-    # permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request, manager_id):
         month = request.query_params.get('month')
