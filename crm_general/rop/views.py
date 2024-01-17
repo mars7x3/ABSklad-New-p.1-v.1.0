@@ -86,7 +86,7 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(managers__city__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(village__city__in=self.rop_profile.cities.all())
 
     @decorators.action(['GET'], detail=False, url_path="amounts")
     def get_amounts(self, request):
@@ -307,7 +307,7 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
     }
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer__managers__city_id__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(dealer__village__city__in=self.rop_profile.cities.all())
 
     @decorators.action(["GET"], detail=False, url_path="amounts")
     def get_amounts(self, request):
