@@ -2,7 +2,8 @@ from django.urls import path, re_path
 
 from .views import (
     StockGroupAPIView, StockGroupByWeekAPIView,
-    DealerFundsView, DealerView, DealerSalesView, DealerProductView, ProductSalesView, ProductDealersView, ProductView
+    DealerFundsView, DealerView, DealerSalesView, DealerProductView, ProductSalesView, ProductDealersView, ProductView,
+    TransactionView, OrderView
 )
 
 urlpatterns = [
@@ -17,5 +18,8 @@ urlpatterns = [
     re_path("^product-sales/(?P<stock_id>.+)/(?P<date>.+)/$", ProductSalesView.as_view()),
     re_path("^product-dealers/(?P<stock_id>.+)/(?P<date>.+)/$", ProductDealersView.as_view()),
     re_path("^products/(?P<product_id>.+)/(?P<stock_id>.+)/(?P<date>.+)/$", ProductView.as_view()),
+
+    re_path("^transactions/(?P<date>.+)/$", TransactionView.as_view()),
+    re_path("^orders/(?P<date>.+)/$", OrderView.as_view()),
 
 ]

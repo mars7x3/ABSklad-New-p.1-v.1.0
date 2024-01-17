@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import functions
 from django.utils import timezone
 
-from crm_stat.models import StockGroupStat, PurchaseStat, UserTransactionsStat
+from crm_stat.models import StockGroupStat, PurchaseStat
 
 
 class Builder:
@@ -271,3 +271,17 @@ def sum_and_collect_by_map(queryset, fields_map):
             collected_data[source] = value
 
         yield collected_data
+
+
+def date_filters(filter_type: str, date: datetime, date_field: str = "date"):
+    query = {}
+    match filter_type:
+        case "month":
+            query[date_field + "__month"] = date.month
+            query[date_field + "__year"] = date.year
+        case "week":
+            query[date_field + "__gte"] = date
+            query[date_field + "__lte"] = date + timezone.timedelta(days=7)
+        case _:
+            query[date_field] = date
+    return query

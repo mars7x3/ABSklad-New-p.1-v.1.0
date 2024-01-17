@@ -1,15 +1,16 @@
 from django.db.models import F, Sum, Value, Count, Case, When, DecimalField
 from django.db.models.functions import JSONObject, Round
-from django.utils import timezone
 from rest_framework import views, generics, filters, permissions, exceptions, response
 
 from crm_general.filters import FilterByFields
 from crm_general.permissions import IsStaff
 from crm_general.utils import string_date_to_date, list_of_date_stings, string_datetime_datetime
+from one_c.models import MoneyDoc
+from order.models import MyOrder
 
 from .models import StockGroupStat, PurchaseStat, UserTransactionsStat
-from .serializers import StockGroupSerializer
-from .utils import divide_into_weeks, sum_and_collect_by_map
+from .serializers import StockGroupSerializer, TransactionSerializer, OrderSerializer
+from .utils import divide_into_weeks, sum_and_collect_by_map, date_filters
 
 
 class StockGroupByWeekAPIView(views.APIView):
@@ -100,20 +101,9 @@ class DealerFundsView(views.APIView):
 
     def get(self, request, stock_id, date):
         filter_type = request.query_params.get("type", "day")
-
-        query = {}
-        match filter_type:
-            case "month":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m")
-                query["date__month"] = date.month
-                query["date__year"] = date.year
-            case "week":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date__gte"] = date
-                query["date__lte"] = date + timezone.timedelta(days=7)
-            case _:
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date"] = date
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
 
         data = []
         for item in (
@@ -139,20 +129,9 @@ class DealerSalesView(views.APIView):
 
     def get(self, request, stock_id, date):
         filter_type = request.query_params.get("type", "day")
-
-        query = {}
-        match filter_type:
-            case "month":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m")
-                query["date__month"] = date.month
-                query["date__year"] = date.year
-            case "week":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date__gte"] = date
-                query["date__lte"] = date + timezone.timedelta(days=7)
-            case _:
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date"] = date
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
 
         data = []
         for item in (
@@ -189,20 +168,9 @@ class DealerProductView(views.APIView):
 
     def get(self, request, stock_id, date):
         filter_type = request.query_params.get("type", "day")
-
-        query = {}
-        match filter_type:
-            case "month":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m")
-                query["date__month"] = date.month
-                query["date__year"] = date.year
-            case "week":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date__gte"] = date
-                query["date__lte"] = date + timezone.timedelta(days=7)
-            case _:
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date"] = date
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
 
         data = []
         for item in (
@@ -239,20 +207,9 @@ class DealerView(views.APIView):
 
     def get(self, request, user_id, stock_id, date):
         filter_type = request.query_params.get("type", "day")
-
-        query = {}
-        match filter_type:
-            case "month":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m")
-                query["date__month"] = date.month
-                query["date__year"] = date.year
-            case "week":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date__gte"] = date
-                query["date__lte"] = date + timezone.timedelta(days=7)
-            case _:
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date"] = date
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
 
         queryset = (
             PurchaseStat.objects.filter(user_stat__user_id=user_id, stock_stat__stock_id=stock_id, **query)
@@ -311,20 +268,9 @@ class ProductSalesView(views.APIView):
 
     def get(self, request, stock_id, date):
         filter_type = request.query_params.get("type", "day")
-
-        query = {}
-        match filter_type:
-            case "month":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m")
-                query["date__month"] = date.month
-                query["date__year"] = date.year
-            case "week":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date__gte"] = date
-                query["date__lte"] = date + timezone.timedelta(days=7)
-            case _:
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date"] = date
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
 
         data = []
         for item in (
@@ -360,20 +306,9 @@ class ProductDealersView(views.APIView):
 
     def get(self, request, stock_id, date):
         filter_type = request.query_params.get("type", "day")
-
-        query = {}
-        match filter_type:
-            case "month":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m")
-                query["date__month"] = date.month
-                query["date__year"] = date.year
-            case "week":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date__gte"] = date
-                query["date__lte"] = date + timezone.timedelta(days=7)
-            case _:
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date"] = date
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
 
         data = []
         for item in (
@@ -413,20 +348,9 @@ class ProductView(views.APIView):
 
     def get(self, request, product_id, stock_id, date):
         filter_type = request.query_params.get("type", "day")
-
-        query = {}
-        match filter_type:
-            case "month":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m")
-                query["date__month"] = date.month
-                query["date__year"] = date.year
-            case "week":
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date__gte"] = date
-                query["date__lte"] = date + timezone.timedelta(days=7)
-            case _:
-                date = string_datetime_datetime(date.strip(), datetime_format="%Y-%m-%d")
-                query["date"] = date
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
 
         data = []
         queryset = (
@@ -463,3 +387,45 @@ class ProductView(views.APIView):
             item.pop("product_stat_id", None)
             data.append(item)
         return response.Response(data)
+
+
+class TransactionView(views.APIView):
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
+
+    def get(self, request, date):
+        filter_type = request.query_params.get("type", "day")
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date, "created_at__date")
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            query["user_id"] = user_id
+
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["cash_box__stock_id"] = stock_id
+
+        queryset = MoneyDoc.objects.filter(user__isnull=False, **query).order_by("-created_at")
+        serializer = TransactionSerializer(instance=queryset, many=True, context={"request": request, "view": self})
+        return response.Response(serializer.data)
+
+
+class OrderView(views.APIView):
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
+
+    def get(self, request, date):
+        filter_type = request.query_params.get("type", "day")
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date, "created_at__date")
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            query["author__user_id"] = user_id
+
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_id"] = stock_id
+
+        queryset = MyOrder.objects.filter(**query).order_by("-created_at")
+        serializer = OrderSerializer(instance=queryset, many=True, context={"request": request, "view": self})
+        return response.Response(serializer.data)
