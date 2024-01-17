@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
-from crm_general.paginations import AppPaginationClass
+from crm_general.paginations import AppPaginationClass, ProductPagination
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
 from order.models import MyOrder, CartProduct, ReturnOrder
 from product.models import ProductPrice, Collection, Category, AsiaProduct
@@ -272,6 +272,7 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
     )
     serializer_class = ProductPriceListSerializer
     filter_backends = (filters.SearchFilter, FilterByFields)
+    pagination_class = ProductPagination
     search_fields = ("product__name",)
     filter_by_fields = {
         "is_active": {"by": "product__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
