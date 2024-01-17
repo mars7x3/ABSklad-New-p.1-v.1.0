@@ -1,13 +1,11 @@
-from django.db.models import Sum
 from rest_framework import generics, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from account.models import ManagerProfile, MyUser
-from promotion.models import Story, Motivation, Banner, DealerKPIProduct, DealerKPI
+from promotion.models import Story, Motivation, Banner
 from promotion.serializers import StoryListSerializer, StoryDetailSerializer, MotivationSerializer, \
-    BannerListSerializer, BannerSerializer, DealerKPISerializer
+    BannerListSerializer, BannerSerializer
 from promotion.utils import get_motivation_data, get_kpi_info, get_kpi_products
 
 
@@ -62,58 +60,6 @@ class KPIProductsView(APIView):
     def get(self, request):
         data = get_kpi_products(request.user)
         return Response(data, status=status.HTTP_200_OK)
-
-
-class ManagerKPITMZView(APIView):
-    def get(self, request, *args, **kwargs):
-        managers = ManagerProfile.objects.filter(is_main=True)
-        data = []
-        for manager in managers:
-            total_tmz_count = DealerKPIProduct.objects.filter(
-                user__dealer_profile__managers__manager_profile=manager).values(
-                'product'
-            ).annotate(
-                total_count=Sum('count')
-            )
-
-            data.append({
-                'manager': manager.user.name,
-                'total_count': total_tmz_count
-            })
-
-        return data
-
-
-class ManagerKPIPDSListView(APIView):
-    def get(self, request, *args, **kwargs):
-        managers = ManagerProfile.objects.filter(is_main=True)
-        data = []
-        for manager in managers:
-            total_pds = DealerKPIProduct.objects.filter(
-                user__dealer_profile__managers__manager_profile=manager).values(
-                'product'
-            ).annotate(
-                total_pds=Sum('pds')
-            )
-
-            data.append({
-                'manager': manager.user.name,
-                'total_count': total_pds
-            })
-
-        return data
-
-
-class ManagerKPITMZDetailView(APIView):
-    def get(self, request, *args, **kwargs):
-        manager_id = self.request.query_params.get('manager_id')
-        pass
-
-
-class DealerKPIView(viewsets.ModelViewSet):
-    queryset = DealerKPI.objects.all()
-    permission_classes = [IsAuthenticated]
-    serializer_class = DealerKPISerializer
 
 
 

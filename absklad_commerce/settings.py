@@ -55,7 +55,8 @@ INSTALLED_APPS = [
     'promotion',
     'chat',
     'crm_general',
-    'crm_stat'
+    'crm_stat',
+    'crm_kpi',
 ]
 
 MIDDLEWARE = [

@@ -122,8 +122,3 @@ class BannerSerializer(serializers.ModelSerializer):
                                                  many=True, context=self.context).data
         return rep
 
-
-class DealerKPISerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DealerKPI
-        fields = '__all__'
