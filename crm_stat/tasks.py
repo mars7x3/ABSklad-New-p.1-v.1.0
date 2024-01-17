@@ -41,3 +41,9 @@ def collect_stock_groups_for_all():
             processed_months.add((date.month, date.year))
 
         save_stock_group_for_day(date)
+
+
+@app.task()
+def day_stat_task():  # TODO: add to schedule
+    collect_today_stats()  # without delay important!
+    collect_today_stock_groups()
