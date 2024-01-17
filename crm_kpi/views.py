@@ -1,3 +1,5 @@
+import datetime
+
 from django.db.models import Sum, F
 from django.shortcuts import render
 from django.utils import timezone
@@ -14,6 +16,7 @@ from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
     DealerKPIDetailSerializer, DealerKPIProductSerializer, DealerKPITMZTotalSerializer, ManagerKPITMZInfoSerializer, \
     ManagerKPIPDSInfoSerializer
+from crm_kpi.utils import kpi_total_info
 from product.models import AsiaProduct
 
 
@@ -205,3 +208,12 @@ class ManagerPDSBonusModelViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     serializer_class = ManagerKPIPDSInfoSerializer
 
+
+class KPITotalView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request):
+        month = request.query_params.get('month')
+        month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y")).month
+
+        return Response(kpi_total_info(month), status=status.HTTP_200_OK)
