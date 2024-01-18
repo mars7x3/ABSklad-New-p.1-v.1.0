@@ -99,15 +99,18 @@ class StockGroupAPIView(generics.ListAPIView):
 class DealerFundsView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
-    def get(self, request, stock_id, date):
+    def get(self, request, date):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date)
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
 
         data = []
         for item in (
-            UserTransactionsStat.objects.filter(stock_stat__stock_id=stock_id, **query)
+            UserTransactionsStat.objects.filter(**query)
             .values("user_stat_id")
             .annotate(
                 user=JSONObject(
