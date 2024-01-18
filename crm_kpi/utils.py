@@ -27,6 +27,45 @@ def get_tmz_of_user_for_kpi(check_months, user_id):
     return user_order_products
 
 
+def kpi_svd_1lvl(date: datetime):
+    after_query = OrderProduct.objects.filter(
+        order__is_active=True,
+        order__released_at__month=date.month,
+        order__released_at__year=date.year,
+        order__status__in=('success', 'sent')
+    )
+    after_products = after_query.values_list("ab_product_id", "count")
+    after_product_ids = list(map(lambda x: x[0], after_products))
+    after_amount = after_query.aggregate(count_sum=Sum("count"))["count_sum"]
+
+    before_query = ManagerKPISVD.objects.filter(
+        manager_kpi__month__month=date.month,
+        manager_kpi__month__year=date.year
+    )
+    before_products = before_query.values_list("product_id", "count")
+    before_product_ids = list(map(lambda x: x[0], before_products))
+    before_amount = before_query.aggregate(count_sum=Sum("count"))["count_sum"]
+
+    old = {
+        product_id: count / before_amount * 100
+        for product_id, count in before_products
+        if product_id not in after_product_ids
+    }
+    new = {
+        product_id: count / after_amount * 100
+        for product_id, count in after_products
+        if product_id not in before_product_ids
+    }
+    return {
+        'before_count': len(before_product_ids),
+        'after_count': len(after_product_ids),
+        'old_count': len(old),
+        'new_count': len(new),
+        'share_old': round(sum(old.values())),
+        'share_new': round(sum(new.values()))
+    }
+
+
 def kpi_total_info(month):
     kpis = DealerKPI.objects.filter(
         month__month=month
