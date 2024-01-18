@@ -549,3 +549,14 @@ def sync_category_crm_to_1c(category):
 
     category.uid = uid
     category.save()
+
+
+def sync_category_1c_to_crm(data):
+    category = Category.objects.filter(uid=data.get('category_uid')).first()
+    if category:
+        category.title = data.get('category_title')
+        category.save()
+    else:
+        Category.objects.create(title=data.get('category_title'), uid=data.get('category_uid'),
+                                slug=data.get('category_uid'))
+
