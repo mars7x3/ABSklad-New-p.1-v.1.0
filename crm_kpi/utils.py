@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value
+from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value, Subquery
 from django.utils import timezone
 
 from account.models import MyUser
-from crm_kpi.models import DealerKPI, ManagerKPISVD
+from crm_kpi.models import DealerKPI, ManagerKPISVD, ManagerKPI
 from order.models import MyOrder, OrderProduct
 
 
@@ -66,9 +66,35 @@ def kpi_svd_1lvl(date: datetime):
     }
 
 
-def kpi_total_info(month):
+def kpi_acb_1lvl(date: datetime) -> dict[str, int]:
+    manager_kpi_query = ManagerKPI.objects.filter(month__month=date.month, month__year=date.year)
+
+    total = (
+        manager_kpi_query
+        .aggregate(
+            total=Sum("akb", output_field=IntegerField(), default=Value(0))
+        )["total"]
+    )
+    fact = (
+        MyOrder.objects.filter(
+            is_active=True,
+            author__managers__in=Subquery(manager_kpi_query.values("manager_id")),
+            created_at__month=date.month,
+            created_at__year=date.year,
+            status__in=['paid', 'sent', 'success', 'wait']
+        ).order_by("author__user_id").distinct("author__user_id").count()
+    )
+    return {
+        "fact": fact,
+        "total": total,
+        "done_per": round(fact / total * 100) if fact > 0 and total > 0 else 0
+    }
+
+
+def kpi_total_info(date: datetime):
     kpis = DealerKPI.objects.filter(
-        month__month=month
+        month__month=date.month,
+        month__year=date.year
     ).annotate(
         fact_total_pds=Sum("fact_pds", default=0),
         fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
@@ -104,28 +130,28 @@ def kpi_total_info(month):
     return total_data
 
 
-def kpi_main_2lvl(month, stat_type):
+def kpi_main_2lvl(stat_type: str, date: datetime):
 
     match stat_type:
         case 'pds':
-            return kpi_pds_2lvl(month)
+            return kpi_pds_2lvl(date)
         case 'tmz':
-            return kpi_tmz_2lvl(month)
+            return kpi_tmz_2lvl(date)
         case 'sch':
-            return kpi_sch_2lvl(month)
+            return kpi_sch_2lvl(date)
         case 'akb':
-            return kpi_akb_2lvl(month)
+            return kpi_akb_2lvl(date)
         case 'svd':
-            return kpi_svd_2lvl(month)
+            return kpi_svd_2lvl(date)
 
 
-def kpi_pds_2lvl(month):
+def kpi_pds_2lvl(date: datetime):
     managers = MyUser.objects.filter(is_active=True, status='manager', manager_profile__is_main=True)
 
     managers_data = []
     for manager in managers:
         kpis = DealerKPI.objects.filter(
-            month__month=month, user__dealer_profile__managers=manager
+            month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
         ).annotate(
             fact_total_pds=Sum("fact_pds", default=0),
             total_pds=Sum("pds", default=0),
@@ -143,13 +169,13 @@ def kpi_pds_2lvl(month):
     return managers_data
 
 
-def kpi_tmz_2lvl(month):
+def kpi_tmz_2lvl(date: datetime):
     managers = MyUser.objects.filter(is_active=True, status='manager', manager_profile__is_main=True)
 
     managers_data = []
     for manager in managers:
         kpis = DealerKPI.objects.filter(
-            month__month=month, user__dealer_profile__managers=manager
+            month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
         ).annotate(
             fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
             fact_total_tmz_sum=Sum('kpi_products__fact_sum', default=0),
@@ -172,13 +198,13 @@ def kpi_tmz_2lvl(month):
     return managers_data
 
 
-def kpi_sch_2lvl(month):
+def kpi_sch_2lvl(date: datetime):
     managers = MyUser.objects.filter(is_active=True, status='manager', manager_profile__is_main=True)
 
     managers_data = []
     for manager in managers:
         kpis = DealerKPI.objects.filter(
-            month__month=month, user__dealer_profile__managers=manager
+            month__month=date.month, user__dealer_profile__managers=manager
         ).annotate(
             fact_avg_price=Sum(F('kpi_products__fact_sum') / F('kpi_products__fact_count'), output_field=FloatField(),
                                default=0),
@@ -197,16 +223,18 @@ def kpi_sch_2lvl(month):
     return managers_data
 
 
-def kpi_akb_2lvl(month):
+def kpi_akb_2lvl(date: datetime):
     managers = MyUser.objects.filter(is_active=True, status='manager', manager_profile__is_main=True)
 
     managers_data = []
     for manager in managers:
-        plan = manager.mngr_kpis.filter(month__month=month).first()
+        plan = manager.mngr_kpis.filter(month__month=date.month, month__year=date.year).first()
 
         users = MyUser.objects.filter(
             is_active=True, status='dealer', dealer_profile__managers=manager,
-            dealer_profile__orders__created_at__month=month, dealer_profile__orders__is_active=True,
+            dealer_profile__orders__created_at__month=date.month,
+            dealer_profile__orders__created_at__year=date.year,
+            dealer_profile__orders__is_active=True,
             dealer_profile__orders__status__in=['sent', 'success']
         )
         managers_data.append({
@@ -218,20 +246,26 @@ def kpi_akb_2lvl(month):
     return managers_data
 
 
-def kpi_svd_2lvl(month):
+def kpi_svd_2lvl(date: datetime):
     managers = MyUser.objects.filter(is_active=True, status='manager', manager_profile__is_main=True)
 
     managers_data = []
     for manager in managers:
-        before_data = manager.svds.filter(manager_kpi__month__month=month).values_list('product_id', 'count')
+        before_data = manager.svds.filter(
+            manager_kpi__month__month=date.month,
+            manager_kpi__month__year=date.year
+        ).values_list('product_id', 'count')
         before_data = [{item[0]: item[1]} if isinstance(item, tuple) else {item[0]: item[1]} for item in before_data]
         before_count = len(before_data)
 
         after_user_ids = manager.dealer_profiles.all().values_list('id', flat=True)
-        after_data = OrderProduct.objects.filter(order__author_id__in=after_user_ids, order__is_active=True,
-                                                 order__released_at__month=month,
-                                                 order__status__in=['success', 'sent']).values_list('ab_product_id',
-                                                                                                    'count')
+        after_data = OrderProduct.objects.filter(
+            order__author_id__in=after_user_ids,
+            order__is_active=True,
+            order__released_at__month=date.month,
+            order__released_at__year=date.year,
+            order__status__in=['success', 'sent']
+        ).values_list('ab_product_id', 'count')
         after_data = [{item[0]: item[1]} if isinstance(item, tuple) else {item[0]: item[1]} for item in after_data]
         after_count = len(after_data)
 
