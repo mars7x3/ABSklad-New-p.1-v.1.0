@@ -454,7 +454,7 @@ class OrderView(views.APIView):
         query = date_filters(filter_type, date, "created_at__date")
         product_id = request.query_params.get("product_id")
         if product_id:
-            query["ab_product_id"] = product_id
+            query["order_products__ab_product_id"] = product_id
 
         user_id = request.query_params.get("user_id")
         if user_id:
@@ -464,6 +464,6 @@ class OrderView(views.APIView):
         if stock_id:
             query["stock_id"] = stock_id
 
-        queryset = MyOrder.objects.filter(**query).order_by("-created_at")
+        queryset = MyOrder.objects.filter(**query).order_by("-created_at", "id").distinct()
         serializer = OrderSerializer(instance=queryset, many=True, context={"request": request, "view": self})
         return response.Response(serializer.data)
