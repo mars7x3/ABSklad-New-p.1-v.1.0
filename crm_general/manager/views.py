@@ -9,7 +9,7 @@ from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
 from crm_general.paginations import AppPaginationClass, ProductPagination
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
-from order.models import MyOrder, CartProduct, ReturnOrder
+from order.models import MyOrder, CartProduct
 from product.models import ProductPrice, Collection, Category, AsiaProduct
 
 from .mixins import BaseOrderMixin, BaseDealerViewMixin, BaseDealerRelationViewMixin, BaseManagerMixin
@@ -19,8 +19,7 @@ from .serializers import (
     DealerProfileListSerializer, DealerBirthdaySerializer, DealerProfileDetailSerializer,
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
-    WalletListSerializer,
-    ReturnOrderListSerializer, ReturnOrderDetailSerializer, BalancePlusSerializer, ProductListForOrderSerializer,
+    WalletListSerializer, BalancePlusSerializer, ProductListForOrderSerializer,
     ShortProductSerializer
 )
 
@@ -272,7 +271,7 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
     filter_backends = (filters.SearchFilter, FilterByFields)
     search_fields = ("product__name",)
     filter_by_fields = {
-        "is_active": {"by": "product__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
+        "is_active": {"by": "is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
         "category_slug": {"by": "product__category__slug", "type": "string"},
         "city_id": {"by": "city_id", "type": "number"}
     }
@@ -357,49 +356,6 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
 
 class BalancePlusManagerView(BaseManagerMixin, generics.CreateAPIView):
     serializer_class = BalancePlusSerializer
-
-
-# ---------------------------------------- RETURNS
-class ReturnListAPIView(BaseManagerMixin, generics.ListAPIView):
-    queryset = (
-        ReturnOrder.objects.select_related("order")
-                           .only("id", "order", "status", "moder_comment")
-                           .all()
-    )
-    serializer_class = ReturnOrderListSerializer
-    pagination_class = AppPaginationClass
-    filter_backends = (filters.SearchFilter, FilterByFields)
-    search_fields = ("order__name", "order__email")
-    filter_by_fields = {
-        "status": {"by": "status", "type": "string", "addition_schema_params": {
-            "enum": [ro_status for ro_status, _ in ReturnOrder.STATUS]
-        }},
-        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date},
-    }
-
-    def get_queryset(self):
-        return super().get_queryset().filter(order__author__managers=self.request.user.id)
-
-
-class ReturnRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
-    queryset = ReturnOrder.objects.all()
-    serializer_class = ReturnOrderDetailSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "return_id"
-
-    def get_queryset(self):
-        return super().get_queryset().filter(order__author__managers=self.request.user.id)
-
-
-class ReturnUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
-    queryset = ReturnOrder.objects.all()
-    serializer_class = ReturnOrderDetailSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "return_id"
-
-    def get_queryset(self):
-        return super().get_queryset().filter(order__author__managers=self.request.user.id)
 
 
 class ProdListForOrderView(APIView):

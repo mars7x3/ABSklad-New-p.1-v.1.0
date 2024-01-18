@@ -5,20 +5,20 @@ from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
-from order.models import MyOrder, OrderProduct
+from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductCount
 from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
     WareHouseProductSerializer, WareHouseInventorySerializer, \
-    InventoryProductListSerializer
+    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer
 from .mixins import WareHouseManagerMixin
 from ..models import Inventory, CRMTask
 from ..tasks import minus_quantity
@@ -290,3 +290,32 @@ class WareHouseInventoryView(ListModelMixin,
             products = products.filter(title__icontains=search)
         serializer = InventoryProductListSerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ReturnOrderProductView(ListModelMixin,
+                             RetrieveModelMixin,
+                             CreateModelMixin,
+                             GenericViewSet):
+    queryset = ReturnOrder.objects.all()
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = ReturnOrderSerializer
+
+
+class ReturnOrderProductFileAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        request_body = self.request.data
+        return_product_id = request_body.get('return_product_id')
+        return_product = ReturnOrderProduct.objects.get(id=return_product_id)
+        files = self.request.FILES.getlist('files')
+
+        files_to_create = []
+        for file in files:
+            files_to_create.append(
+                ReturnOrderProductFile(
+                    return_product=return_product,
+                    file=file
+                )
+            )
+        ReturnOrderProductFile.objects.bulk_create(files_to_create)
+        return Response({'detail': 'Success'}, status=status.HTTP_201_CREATED)
+
