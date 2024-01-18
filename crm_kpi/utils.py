@@ -109,24 +109,40 @@ def kpi_total_info(date: datetime):
                   'total_pds', 'total_tmz_count', 'total_tmz_sum', 'avg_price')
 
     total_kpis = tuple(sum(x) for x in zip(*kpis))
+    if total_kpis:
+        total_data = {
+            'fact_total_pds': round(total_kpis[0]) if total_kpis else 0,  # Факт ПДС
+            'fact_total_tmz_count': round(total_kpis[1]) if total_kpis else 0,  # Факт ТМЗ количество
+            'fact_total_tmz_sum': round(total_kpis[2]),  # Факт ТМЗ количество
+            'fact_avg_price': round(total_kpis[3]),  # Факт Средний чек
 
-    total_data = {
-        'fact_total_pds': round(total_kpis[0]),  # Факт ПДС
-        'fact_total_tmz_count': round(total_kpis[1]),  # Факт ТМЗ количество
-        'fact_total_tmz_sum': round(total_kpis[2]),  # Факт ТМЗ количество
-        'fact_avg_price': round(total_kpis[3]),  # Факт Средний чек
+            'total_pds': round(total_kpis[4]),  # План ПДС
+            'total_tmz_count': round(total_kpis[5]),  # План ТМЗ количество
+            'total_tmz_sum': round(total_kpis[6]),  # План ТМЗ количество
+            'avg_price': round(total_kpis[7]),  # План Средний чек
 
-        'total_pds': round(total_kpis[4]),  # План ПДС
-        'total_tmz_count': round(total_kpis[5]),  # План ТМЗ количество
-        'total_tmz_sum': round(total_kpis[6]),  # План ТМЗ количество
-        'avg_price': round(total_kpis[7]),  # План Средний чек
+            'per_done_pds': round(total_kpis[4] / total_kpis[0] * 100),  # % ПДС
+            'per_done_tmz_count': round(total_kpis[5] / total_kpis[1] * 100),  # % ТМЗ количество
+            'per_done_tmz_sum': round(total_kpis[6] / total_kpis[2] * 100),  # % ТМЗ количество
+            'per_done_avg_price': round(total_kpis[7] / total_kpis[3] * 100)  # % Средний чек
+        }
+    else:
+        total_data = {
+            'fact_total_pds': 0,
+            'fact_total_tmz_count': 0,
+            'fact_total_tmz_sum': 0,
+            'fact_avg_price': 0,
 
-        'per_done_pds': round(total_kpis[4] / total_kpis[0] * 100),  # % ПДС
-        'per_done_tmz_count': round(total_kpis[5] / total_kpis[1] * 100),  # % ТМЗ количество
-        'per_done_tmz_sum': round(total_kpis[6] / total_kpis[2] * 100),  # % ТМЗ количество
-        'per_done_avg_price': round(total_kpis[7] / total_kpis[3] * 100),  # % Средний чек
-    }
+            'total_pds': 0,
+            'total_tmz_count': 0,
+            'total_tmz_sum': 0,
+            'avg_price': 0,
 
+            'per_done_pds': 0,
+            'per_done_tmz_count': 0,
+            'per_done_tmz_sum': 0,
+            'per_done_avg_price': 0
+        }
     return total_data
 
 
