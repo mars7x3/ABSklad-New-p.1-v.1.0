@@ -15,7 +15,7 @@ from crm_kpi.models import DealerKPIProduct, DealerKPI
 from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
     DealerKPIDetailSerializer, DealerKPIProductSerializer, DealerKPITMZTotalSerializer
-from crm_kpi.utils import kpi_total_info, kpi_main_2lvl, kpi_main_3lvl
+from crm_kpi.utils import kpi_total_info, kpi_main_2lvl, kpi_main_3lvl, kpi_svd_1lvl
 from product.models import AsiaProduct
 
 
@@ -152,9 +152,10 @@ class KPITotalView(APIView):
 
     def get(self, request):
         month = request.query_params.get('month')
-        month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y")).month
-
-        return Response(kpi_total_info(month), status=status.HTTP_200_OK)
+        date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+        data = kpi_total_info(date.month)
+        data["svd"] = kpi_svd_1lvl(date)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class KPITotalMain2lvlView(APIView):

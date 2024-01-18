@@ -10,7 +10,7 @@ urlpatterns = [
     path("stocks/", StockGroupAPIView.as_view()),
     path("stocks-by-weeks/", StockGroupByWeekAPIView.as_view()),
 
-    re_path("^dealer-funds/(?P<stock_id>.+)/(?P<date>.+)/$", DealerFundsView.as_view()),
+    re_path("^dealer-funds/(?P<date>.+)/$", DealerFundsView.as_view()),
     re_path("^dealer-sales/(?P<stock_id>.+)/(?P<date>.+)/$", DealerSalesView.as_view()),
     re_path("^dealer-products/(?P<stock_id>.+)/(?P<date>.+)/$", DealerProductView.as_view()),
     re_path("^dealers/(?P<user_id>.+)/(?P<stock_id>.+)/(?P<date>.+)/$", DealerView.as_view()),
