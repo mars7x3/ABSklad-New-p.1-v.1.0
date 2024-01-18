@@ -149,7 +149,7 @@ class DealerKPIView(viewsets.ModelViewSet):
 
 
 class KPITotalView(APIView):
-    # permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
         month = request.query_params.get('month')
@@ -174,7 +174,7 @@ class KPITotalMain2lvlView(APIView):
             date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
         except ValueError as e:
             raise ValidationError({"detail": str(e)})
-        return Response({'result': kpi_main_2lvl(date, stat_type)}, status=status.HTTP_200_OK)
+        return Response({'result': kpi_main_2lvl(stat_type, date) or []}, status=status.HTTP_200_OK)
 
 
 class KPITotalMain3lvlView(APIView):
