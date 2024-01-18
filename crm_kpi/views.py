@@ -15,7 +15,7 @@ from crm_kpi.models import DealerKPIProduct, DealerKPI
 from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
     DealerKPIDetailSerializer, DealerKPITMZTotalSerializer
-from crm_kpi.utils import kpi_total_info, kpi_main_2lvl, kpi_main_3lvl, kpi_svd_1lvl
+from crm_kpi.utils import kpi_total_info, kpi_main_2lvl, kpi_main_3lvl, kpi_svd_1lvl, kpi_acb_1lvl
 from product.models import AsiaProduct
 
 
@@ -149,7 +149,7 @@ class DealerKPIView(viewsets.ModelViewSet):
 
 
 class KPITotalView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
+    # permission_classes = [IsAuthenticated, IsDirector]
 
     def get(self, request):
         month = request.query_params.get('month')
@@ -158,8 +158,9 @@ class KPITotalView(APIView):
         except ValueError as e:
             raise ValidationError({"detail": str(e)})
 
-        data = kpi_total_info(date.month)
+        data = kpi_total_info(date)
         data["svd"] = kpi_svd_1lvl(date)
+        data["acb"] = kpi_acb_1lvl(date)
         return Response(data, status=status.HTTP_200_OK)
 
 

@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value
+from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value, Subquery
 from django.utils import timezone
 
 from account.models import MyUser
-from crm_kpi.models import DealerKPI, ManagerKPISVD
+from crm_kpi.models import DealerKPI, ManagerKPISVD, ManagerKPI
 from order.models import MyOrder, OrderProduct
 
 
@@ -66,9 +66,35 @@ def kpi_svd_1lvl(date: datetime):
     }
 
 
-def kpi_total_info(month):
+def kpi_acb_1lvl(date: datetime) -> dict[str, int]:
+    manager_kpi_query = ManagerKPI.objects.filter(month__month=date.month, month__year=date.year)
+
+    total = (
+        manager_kpi_query
+        .aggregate(
+            total=Sum("akb", output_field=IntegerField(), default=Value(0))
+        )["total"]
+    )
+    fact = (
+        MyOrder.objects.filter(
+            is_active=True,
+            author__managers__in=Subquery(manager_kpi_query.values("manager_id")),
+            created_at__month=date.month,
+            created_at__year=date.year,
+            status__in=['paid', 'sent', 'success', 'wait']
+        ).order_by("author__user_id").distinct("author__user_id").count()
+    )
+    return {
+        "fact": fact,
+        "total": total,
+        "done_per": round(fact / total * 100) if fact > 0 and total > 0 else 0
+    }
+
+
+def kpi_total_info(date: datetime):
     kpis = DealerKPI.objects.filter(
-        month__month=month
+        month__month=date.month,
+        month__year=date.year
     ).annotate(
         fact_total_pds=Sum("fact_pds", default=0),
         fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
