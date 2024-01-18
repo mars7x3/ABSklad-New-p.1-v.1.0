@@ -5,7 +5,6 @@ from django.db import transaction
 from django.db.models import F, Q, Sum, Count, Value, DecimalField, FloatField
 from django.db.models.functions import Round
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import (
@@ -17,7 +16,7 @@ from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
 from crm_general.utils import get_motivation_done
 from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
-from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, ReturnOrder, ReturnOrderProduct
+from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct
 from order.tasks import create_order_notification
 from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage, ProductCount
 
@@ -305,7 +304,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     class Meta:
         model = DealerProfile
         fields = ("user", "address", "birthday", "city", "dealer_status", "wallet", "stores",
-                  "liability", "dealer_status_id", "price_type", "price_type_id", "motivations")
+                  "liability", "dealer_status_id", "price_type", "price_type_id", "motivations", 'village')
         user_status = "dealer"
         read_only_fields = ("motivations",)
 
@@ -546,55 +545,6 @@ class WalletListSerializer(serializers.ModelSerializer):
             return last_replenishment.created_at
 
 
-# -------------------------------------------------- RETURNS
-class ReturnOrderListSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField(read_only=True)
-    city = serializers.SerializerMethodField(read_only=True)
-    phone = serializers.SerializerMethodField(read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
-    email = serializers.SerializerMethodField(read_only=True)
-    stock_city = serializers.SerializerMethodField(read_only=True)
-    stock_name = serializers.SerializerMethodField(read_only=True)
-    stock_address = serializers.SerializerMethodField(read_only=True)
-    moderated = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = ReturnOrder
-        fields = ("id", "name", "city", "phone", "email", "stock_city", "price", "moderated", "moder_comment",
-                  "stock_name", "stock_address")
-
-    def get_name(self, instance) -> str:
-        return instance.order.name
-
-    def get_price(self, instance) -> float:
-        return instance.return_products.aggregate(price=Sum(F("price") * F("count")))["price"]
-
-    def get_city(self, instance) -> str | None:
-        if instance.order.author and instance.order.author.city:
-            return instance.order.author.city.title
-
-    def get_phone(self, instance) -> str:
-        return instance.order.phone
-
-    def get_email(self, instance) -> str:
-        return instance.order.gmail
-
-    def get_stock_city(self, instance) -> str | None:
-        if instance.order.stock:
-            return instance.order.stock.city.title
-
-    def get_stock_name(self, instance) -> str | None:
-        if instance.order.stock:
-            return instance.order.stock.title
-
-    def get_stock_address(self, instance) -> str | None:
-        if instance.order.stock:
-            return instance.order.stock.address
-
-    def get_moderated(self, instance) -> bool:
-        return instance.status != "Новый"
-
-
 class OrderStockInfoSerializer(serializers.ModelSerializer):
     city = serializers.SlugRelatedField(slug_field="title", read_only=True)
     warehouse = serializers.SerializerMethodField(read_only=True)
@@ -617,39 +567,6 @@ class OrderReturnOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
         fields = ("name", "gmail", "phone", "address", "type_status", "id", "created_at", "stock")
-
-
-class OrderReturnProductSerializer(serializers.ModelSerializer):
-    product_name = serializers.SerializerMethodField(read_only=True)
-    vendor_code = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = ReturnOrderProduct
-        fields = ("id", "product_name", "vendor_code", "price", "count")
-
-    def get_product_name(self, instance) -> str:
-        return instance.product.title
-
-    def get_vendor_code(self, instance) -> str:
-        return instance.product.vendor_code
-
-
-class ReturnOrderDetailSerializer(serializers.ModelSerializer):
-    order = OrderReturnOrderSerializer(many=False, read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
-    products = OrderReturnProductSerializer(many=True, read_only=True, source="return_products")
-    moder_comment = serializers.CharField(write_only=True, required=True)
-    status = serializers.ChoiceField(
-        choices=[(status, name) for status, name in ReturnOrder.STATUS if name != "Новый"],
-        required=True
-    )
-
-    class Meta:
-        model = ReturnOrder
-        fields = ("order", "price", "products", "moder_comment", "status", "created_at")
-
-    def get_price(self, instance) -> float:
-        return instance.return_products.aggregate(price=Sum(F("price") * F("count")))["price"]
 
 
 class BalancePlusSerializer(serializers.ModelSerializer):
