@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Iterable, Any, Callable
 
@@ -34,11 +35,8 @@ class Builder:
             value = item[field]
 
             if relations and value and source in relations:
-                try:
-                    value = relations[source][value]
-                except KeyError as e:
-                    print(source, " ", relations[source])
-                    raise e
+                value = relations[source][value]
+
             collected_data[source] = value
 
         for source, value in self.default_map.items():
@@ -101,7 +99,8 @@ def stat_create_or_update(
         on_update: Callable = None
 ) -> list[int | str]:
     if not queryset.exists():
-        raise ValueError("Not found any objects!")
+        logging.error("Not found any objects!")
+        return []
 
     another_model_match_field = builder.fields_map[match_field]
     match_filters = {match_field + "__in": queryset.values_list(match_field_y, flat=True)}
