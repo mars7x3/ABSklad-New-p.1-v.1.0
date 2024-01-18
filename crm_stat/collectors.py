@@ -3,8 +3,8 @@ from logging import getLogger
 
 from django.db import models
 from django.db.models import functions
-from django.utils import timezone
 
+from account.models import MyUser
 from general_service.models import City, Stock
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
@@ -130,35 +130,24 @@ def save_stock_stats(city_relations):
 
 
 def save_user_stats(date, city_relations: dict):
-    orders_query = (
-        MyOrder.objects.filter(
-            created_at__date=date,
-            status__in=("success", "sent"),
-            is_active=True,
-            author__village__city_id__in=list(city_relations.keys())
+    users_query = (
+        MyUser.objects
+        .filter(status="dealer", dealer_profile__village__isnull=False, dealer_profile__isnull=False)
+        .values(user_id=models.F("id"))
+        .annotate(
+            city_id=models.F("dealer_profile__village__city_id"),
+            email=models.F("email"),
+            name=models.F("name")
         )
     )
 
-    def on_save_users(queryset):
-        return (
-            queryset
-            .values(user_id=models.F("author__user_id"))
-            .annotate(
-                city_id=models.F("author__village__city_id"),
-                email=models.F("author__user__email"),
-                name=models.F("author__user__name")
-            )
-        )
-
     processed_objs = stat_create_or_update(
-        queryset=orders_query,
+        queryset=users_query,
         builder=user_builder,
         match_field="user_id",
-        match_field_y="author__user_id",
+        match_field_y="user_id",
         update_ignore_fields=["user_id"],
-        relations={"city_stat_id": city_relations},
-        on_create=on_save_users,
-        on_update=on_save_users
+        relations={"city_stat_id": city_relations}
     )
     logger.info(f"Successfully collected users for date {date}")
     return set(map(lambda obj: obj.id, processed_objs))
@@ -198,47 +187,22 @@ def save_product_stats(date):
     return set(map(lambda obj: obj.id, processed_objs))
 
 
-def save_transaction_stats(date, user_relations, stock_relations, city_relations):
+def save_transaction_stats(date, user_relations, stock_relations):
     transactions = MoneyDoc.objects.filter(
         is_active=True,
         created_at__date=date,
-        user__in=list(user_relations.keys()),
-        cash_box__stock__in=list(stock_relations.keys())
+        user__isnull=False,
+        cash_box__stock__in=stock_relations.keys()
     )
 
     if not transactions.exists():
         logger.error(f"Not found transactions for date {date}")
         return
 
-    users = transactions.filter(user__dealer_profile__village__city_id__in=list(city_relations.keys()))
-    saved_user_ids = UserStat.objects.values_list("user_id", flat=True)
-    if saved_user_ids:
-        users = users.exclude(user_id__in=saved_user_ids)
-
-    if users.exists():
-        new_users = user_builder.build_model_by_list(
-            items=(
-                users
-                .values("user_id")
-                .annotate(
-                    city_id=models.F("user__dealer_profile__village__city_id"),
-                    email=models.F("user__email"),
-                    name=models.F("user__name")
-                )
-            ),
-            match_field="user_id",
-            relations={"city_stat_id": city_relations}
-        )
-
-        user_relations |= {
-            getattr(user_stat, "user_id"): user_stat.id
-            for user_stat in UserStat.objects.bulk_create(new_users)
-        }
-
     new_transaction_stats = user_transaction_builder.build_model_by_list(
         items=(
             transactions
-            .values("user_id")
+            .values("user_id", "cash_box__stock_id")
             .annotate(
                 stock_id=models.F("cash_box__stock_id"),
                 date=functions.TruncDate("created_at"),
@@ -322,47 +286,63 @@ def collects_stats_for_date(time: datetime):
     date = time.date()
 
     processed_city_stat_ids = save_city_stats()
+    city_stat_query = CityStat.objects.all()
+    if processed_city_stat_ids:
+        city_stat_query = city_stat_query.filter(id__in=processed_city_stat_ids)
+
     city_relations = {
         city_id: city_stat_id
-        for city_stat_id, city_id in (
-            CityStat.objects.filter(id__in=processed_city_stat_ids).values_list("id", "city_id")
-        )
+        for city_stat_id, city_id in city_stat_query.values_list("id", "city_id")
     }
     if not city_relations:
-        raise ValueError("Not found cities stats!")
+        logger.error("Not found cities stats!")
+        return
+
+    stock_stat_query = StockStat.objects.all()
+    user_stat_query = UserStat.objects.all()
 
     processed_stock_stat_ids = save_stock_stats(city_relations)
+    if processed_stock_stat_ids:
+        stock_stat_query = stock_stat_query.filter(id__in=processed_stock_stat_ids)
+
     processed_user_stat_ids = save_user_stats(date, city_relations=city_relations)
+
+    if processed_user_stat_ids:
+        user_stat_query = user_stat_query.filter(id__in=processed_user_stat_ids)
+
     processed_product_stat_ids = save_product_stats(date)
 
     stock_relations = {
         stock_id: stock_stat_id
-        for stock_stat_id, stock_id in (
-            StockStat.objects.filter(id__in=processed_stock_stat_ids).values_list("id", "stock_id")
-        )
+        for stock_stat_id, stock_id in stock_stat_query.values_list("id", "stock_id")
     }
     user_relations = {
         user_id: user_stat_id
-        for user_stat_id, user_id in (
-            UserStat.objects.filter(id__in=processed_user_stat_ids).values_list("id", "user_id")
-        )
+        for user_stat_id, user_id in user_stat_query.values_list("id", "user_id")
     }
 
     if not stock_relations or not user_relations:
-        raise ValueError("Not fount stock or user stats!")
+        logger.error("Not fount stock or user stats!")
+        return
 
     UserTransactionsStat.objects.filter(date=date).delete()
-    save_transaction_stats(date, city_relations=city_relations, stock_relations=stock_relations,
-                           user_relations=user_relations)
+    save_transaction_stats(
+        date=date,
+        stock_relations=stock_relations,
+        user_relations=user_relations
+    )
+
+    product_stat_query = ProductStat.objects.all()
+    if processed_product_stat_ids:
+        product_stat_query = product_stat_query.filter(id__in=processed_product_stat_ids)
 
     product_relations = {
         product_id: product_stat_id
-        for product_stat_id, product_id in (
-            ProductStat.objects.filter(id__in=processed_product_stat_ids).values_list("id", "product_id")
-        )
+        for product_stat_id, product_id in product_stat_query.values_list("id", "product_id")
     }
     if not product_relations:
-        raise ValueError("Not found product relations!")
+        logger.error("Not found product relations!")
+        return
 
     PurchaseStat.objects.filter(date=date).delete()
     save_purchase_stats(
