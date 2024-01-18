@@ -267,11 +267,11 @@ def kpi_svd_2lvl(date: datetime):
 
     managers_data = []
     for manager in managers:
-        before_data = manager.svds.filter(
+        before_data = ManagerKPISVD.objects.filter(
+            manager_kpi__manager=manager,
             manager_kpi__month__month=date.month,
             manager_kpi__month__year=date.year
-        ).values_list('product_id', 'count')
-        before_data = [{item[0]: item[1]} if isinstance(item, tuple) else {item[0]: item[1]} for item in before_data]
+        ).order_by("product_id").distinct("product_id").values_list("product_id", "count")
         before_count = len(before_data)
 
         after_user_ids = manager.dealer_profiles.all().values_list('id', flat=True)
@@ -282,28 +282,27 @@ def kpi_svd_2lvl(date: datetime):
             order__released_at__year=date.year,
             order__status__in=['success', 'sent']
         ).values_list('ab_product_id', 'count')
-        after_data = [{item[0]: item[1]} if isinstance(item, tuple) else {item[0]: item[1]} for item in after_data]
         after_count = len(after_data)
 
         old_count = 0
         share_old = 0
-        sum_old = sum([value for dictionary in before_data for value in dictionary.values()])
-        for b in before_data:
-            p, c = b.items()
-            after_ids = [key for dictionary in after_data for key in dictionary.keys()]
-            if p not in after_ids:
+        sum_old = sum([count for _, count in before_data])
+        after_ids = [product_id for product_id, _ in after_data]
+
+        for product_id, count in before_data:
+            if product_id not in after_ids:
                 old_count += 1
-                share_old += c / sum_old * 100
+                share_old += count / sum_old * 100
 
         new_count = 0
         share_new = 0
-        sum_new = sum([value for dictionary in after_data for value in dictionary.values()])
-        for b in after_data:
-            p, c = b.items()
-            before_ids = [key for dictionary in before_data for key in dictionary.keys()]
-            if p not in before_ids:
+        sum_new = sum([count for _, count in after_data])
+        before_ids = [product_id for product_id, _ in before_data]
+
+        for product_id, count in after_data:
+            if product_id not in before_ids:
                 new_count += 1
-                share_new += c / sum_new * 100
+                share_new += count / sum_new * 100
 
         managers_data.append({
             'before_count': before_count,
