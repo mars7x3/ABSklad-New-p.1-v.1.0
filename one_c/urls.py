@@ -7,6 +7,8 @@ router = DefaultRouter()
 urlpatterns = [
 
     path('crm/sync/1c-to-crm/', SyncProductCRUDVIew.as_view()),
+    path('crm/1c/sync/category/', SyncCategoryCRUDVIew.as_view()),
+
 
     path('', include(router.urls)),
 ]
