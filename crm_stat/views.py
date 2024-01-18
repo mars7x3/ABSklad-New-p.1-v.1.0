@@ -186,7 +186,7 @@ class DealerProductView(views.APIView):
         data = []
         for item in (
             PurchaseStat.objects.filter(**query)
-            .values("user_stat_id")
+            .values("user_stat__user_id")
             .annotate(
                 user=JSONObject(
                     id=F("user_stat__user_id"),
@@ -207,7 +207,7 @@ class DealerProductView(views.APIView):
                 )
             )
         ):
-            item.pop("user_stat_id", None)
+            item.pop("user_stat__user_id", None)
             item.pop("sales_count")
             data.append(item)
         return response.Response(data)
@@ -439,7 +439,7 @@ class TransactionView(views.APIView):
             case "bank":
                 query["status"] = "Без нал"
 
-        queryset = MoneyDoc.objects.filter(user__isnull=False, **query).order_by("-created_at")
+        queryset = MoneyDoc.objects.filter(is_active=True, user__isnull=False, **query).order_by("-created_at")
         serializer = TransactionSerializer(instance=queryset, many=True, context={"request": request, "view": self})
         return response.Response(serializer.data)
 
