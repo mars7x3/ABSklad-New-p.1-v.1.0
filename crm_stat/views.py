@@ -130,15 +130,19 @@ class DealerFundsView(views.APIView):
 class DealerSalesView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
-    def get(self, request, stock_id, date):
+    def get(self, request, date):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date)
 
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
+
         data = []
         for item in (
-            PurchaseStat.objects.filter(stock_stat__stock_id=stock_id, **query)
+            PurchaseStat.objects.filter(**query)
             .values("user_stat_id")
             .annotate(
                 user=JSONObject(
@@ -169,15 +173,19 @@ class DealerSalesView(views.APIView):
 class DealerProductView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
-    def get(self, request, stock_id, date):
+    def get(self, request, date):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date)
 
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
+
         data = []
         for item in (
-            PurchaseStat.objects.filter(stock_stat__stock_id=stock_id, **query)
+            PurchaseStat.objects.filter(**query)
             .values("user_stat_id")
             .annotate(
                 user=JSONObject(
@@ -208,14 +216,18 @@ class DealerProductView(views.APIView):
 class DealerView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
-    def get(self, request, user_id, stock_id, date):
+    def get(self, request, user_id, date):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date)
 
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
+
         queryset = (
-            PurchaseStat.objects.filter(user_stat__user_id=user_id, stock_stat__stock_id=stock_id, **query)
+            PurchaseStat.objects.filter(user_stat__user_id=user_id, **query)
             .values("stock_stat__stock_id")
             .annotate(
                 stock=JSONObject(
@@ -269,15 +281,19 @@ class DealerView(views.APIView):
 class ProductSalesView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
-    def get(self, request, stock_id, date):
+    def get(self, request, date):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date)
 
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
+
         data = []
         for item in (
-            PurchaseStat.objects.filter(stock_stat__stock_id=stock_id, **query)
+            PurchaseStat.objects.filter(**query)
             .values("product_stat_id")
             .annotate(
                 product=JSONObject(
@@ -307,17 +323,21 @@ class ProductSalesView(views.APIView):
 class ProductDealersView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
-    def get(self, request, stock_id, date):
+    def get(self, request, date):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date)
 
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
+
         data = []
         for item in (
-            PurchaseStat.objects.filter(stock_stat__stock_id=stock_id, **query)
+            PurchaseStat.objects.filter(**query)
             .values("product_stat_id")
-            .annotate_funds(stock_stat_id=stock_id, **query)
+            .annotate_funds(**query)
             .annotate(
                 product=JSONObject(
                     id=F("product_stat__product_id"),
@@ -349,17 +369,21 @@ class ProductDealersView(views.APIView):
 class ProductView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
-    def get(self, request, product_id, stock_id, date):
+    def get(self, request, product_id, date):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date)
 
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
+
         data = []
         queryset = (
-            PurchaseStat.objects.filter(stock_stat__stock_id=stock_id, product_stat__product_id=product_id, **query)
+            PurchaseStat.objects.filter(product_stat__product_id=product_id, **query)
             .values("product_stat_id")
-            .annotate_funds(stock_stat_id=stock_id)
+            .annotate_funds(**query)
             .annotate(
                 product=JSONObject(
                     id=F("product_stat__product_id"),
@@ -428,6 +452,10 @@ class OrderView(views.APIView):
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
         query = date_filters(filter_type, date, "created_at__date")
+        product_id = request.query_params.get("product_id")
+        if product_id:
+            query["order_products__ab_product_id"] = product_id
+
         user_id = request.query_params.get("user_id")
         if user_id:
             query["author__user_id"] = user_id
@@ -436,6 +464,6 @@ class OrderView(views.APIView):
         if stock_id:
             query["stock_id"] = stock_id
 
-        queryset = MyOrder.objects.filter(**query).order_by("-created_at")
+        queryset = MyOrder.objects.filter(**query).order_by("-created_at", "id").distinct()
         serializer = OrderSerializer(instance=queryset, many=True, context={"request": request, "view": self})
         return response.Response(serializer.data)
