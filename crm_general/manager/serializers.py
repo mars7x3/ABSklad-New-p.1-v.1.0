@@ -308,6 +308,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
 
     def validate(self, attrs):
         price_type = attrs.pop("price_type_id", None)
+        attrs['managers'] = [self.context['request'].user]
         if price_type:
             attrs["price_type"] = price_type
         if price_type is None:
