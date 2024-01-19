@@ -305,6 +305,8 @@ def kpi_svd_2lvl(date: datetime):
                 share_new += count / sum_new * 100
 
         managers_data.append({
+            'id': manager.id,
+            'name': manager.name,
             'before_count': before_count,
             'after_count': after_count,
             'old_count': old_count,
