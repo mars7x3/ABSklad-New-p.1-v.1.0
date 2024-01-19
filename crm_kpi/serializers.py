@@ -47,10 +47,13 @@ class DealerKPISerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['user__name'] = instance.user.name
         rep['user__city'] = instance.user.dealer_profile.village.city.title
-        rep['pds_percent_completion'] = (instance.fact_pds / instance.pds) * 100
+        rep['pds_percent_completion'] = round((instance.fact_pds / instance.pds) * 100 if instance.pds > 0 else 0)
         sum_count = instance.kpi_products.all().aggregate(Sum('count'))
         fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
-        rep['tmz_percent_completion'] = (fact_sum_count / sum_count) * 100
+        if sum_count['count__sum'] is not None and fact_sum_count['fact_count__sum'] is not None:
+            rep['tmz_percent_completion'] = fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100
+        else:
+            rep['tmz_percent_completion'] = 0
         return rep
 
 
@@ -63,10 +66,13 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['user__name'] = instance.user.name
         rep['user__city'] = instance.user.dealer_profile.village.city.title
-        rep['pds_percent_completion'] = (instance.fact_pds / instance.pds) * 100
+        rep['pds_percent_completion'] = round((instance.fact_pds / instance.pds) * 100 if instance.pds > 0 else 0)
         sum_count = instance.kpi_products.all().aggregate(Sum('count'))
         fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
-        rep['tmz_percent_completion'] = (fact_sum_count / sum_count) * 100
+        if sum_count['count__sum'] is not None and fact_sum_count['fact_count__sum'] is not None:
+            rep['tmz_percent_completion'] = fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100
+        else:
+            rep['tmz_percent_completion'] = 0
         rep['products'] = DealerKPIProductSerializer(instance.kpi_products.all(), many=True).data
         return rep
 
