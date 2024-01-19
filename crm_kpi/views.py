@@ -126,23 +126,37 @@ class DealerKPIView(viewsets.ModelViewSet):
     @action(methods=['GET'], detail=False, url_path='dealers')
     def get_dealers_for_kpi(self, request, *args, **kwargs):
         search = self.request.query_params.get('search')
+        city_id = self.request.query_params.get('city_id')
+        dealer_status = self.request.query_params.get('status')
         dealers = MyUser.objects.filter(is_active=True, status='dealer')
-
         if search:
             dealers = dealers.filter(name__icontains=search)
 
-        serializer = DealerListSerializer(dealers, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if city_id:
+            dealers = dealers.filter(dealer_profile__village__city_id=city_id)
+
+        if dealer_status == 'true':
+            dealers = dealers.filter(dealer_profile__wallet__amount_crm__gte=50000)
+        elif dealer_status == 'false':
+            dealers = dealers.filter(dealer_profile__wallet__amount_crm__lte=50000)
+
+        paginator = DealerKPIPagination()
+        page = paginator.paginate_queryset(dealers, request)
+        serializer = DealerListSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @action(methods=['GET'], detail=False, url_path='products')
     def get_product_for_kpi(self, request, *args, **kwargs):
         search = self.request.query_params.get('search')
         products = AsiaProduct.objects.filter(is_active=True)
-
+        collection_slug = self.request.query_params.get('collection_slug')
+        category_slug = self.request.query_params.get('category_slug')
         if search:
             products = products.filter(title__icontains=search)
-        else:
-            return Response({'detail': 'search required!'}, status=status.HTTP_400_BAD_REQUEST)
+        if collection_slug:
+            products = products.filter(collection__slug=collection_slug)
+        if category_slug:
+            products = products.filter(category__slug=category_slug)
 
         serializer = ProductListKPISerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
