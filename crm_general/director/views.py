@@ -25,6 +25,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
+from crm_general.permissions import IsStaff
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
@@ -1015,6 +1016,6 @@ class MaxatTestView(APIView):
 
 class DealerStatusModelViewSet(viewsets.ModelViewSet):
     queryset = DealerStatus.objects.all()
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsStaff]
     serializer_class = DirectorDealerStatusSerializer
 
