@@ -94,14 +94,27 @@ class DealerKPITMZTotalSerializer(serializers.Serializer):
 
 
 class DealerListSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField(read_only=True)
+    city_title = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = MyUser
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'city_title', 'status')
+
+    def get_status(self, instance) -> bool:
+        return instance.dealer_profile.wallet.amount_crm >= 50000
+
+    def get_city_title(self, instance):
+        return instance.dealer_profile.village.city.title if instance.dealer_profile.village else ''
 
 
 class ProductListKPISerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title')
+        fields = ('vendor_code', 'id', 'title')
 
-
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['collection__title'] = instance.collection.title
+        rep['category__title'] = instance.category.title
+        return rep
