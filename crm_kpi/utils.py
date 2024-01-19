@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value, Subquery
+from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value, Subquery, OuterRef
 from django.utils import timezone
 
 from account.models import MyUser
@@ -435,44 +435,56 @@ def kpi_akb_3lvl(manager_id: int, date: datetime) -> list[dict]:
 
 
 def kpi_svd_3lvl(manager_id: int, date: datetime):
-    after_query = OrderProduct.objects.filter(
+    order_products_query = OrderProduct.objects.filter(
         order__author__managers=manager_id,
         order__is_active=True,
         order__released_at__month=date.month,
         order__released_at__year=date.year,
         order__status__in=('success', 'sent')
     )
-    after_products = after_query.values_list("ab_product_id", "count")
-    after_product_ids = list(map(lambda x: x[0], after_products))
-    after_amount = after_query.aggregate(count_sum=Sum("count"))["count_sum"]
-
-    before_query = ManagerKPISVD.objects.filter(
-        manager_kpi__manager_id=manager_id,
-        manager_kpi__month__month=date.month,
-        manager_kpi__month__year=date.year
+    items = (
+        ManagerKPISVD.objects.filter(
+            manager_kpi__manager_id=manager_id,
+            manager_kpi__month__month=date.month,
+            manager_kpi__month__year=date.year
+        )
+        .values("product_id")
+        .annotate(
+            title=F("product__title"),
+            plan=Sum("count"),
+            total_fact=Subquery(
+                order_products_query.filter(ab_product_id=OuterRef("product_id"))
+                .values("ab_product_id")
+                .annotate(
+                    total_count=Sum("count", default=Value(0), output_field=IntegerField())
+                ).values("total_count")[:1],
+                default=Value(0)
+            )
+        )
+        .annotate(
+            fact=Case(
+                When(total_fact__isnull=True, then=Value(0)),
+                default=F("total_fact")
+            )
+        )
+        .annotate(
+            done_per=Case(
+                When(
+                    fact__gt=0, plan__gt=0,
+                    then=F("fact") / F("plan") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        )
     )
-    before_products = before_query.values_list("product_id", "count")
-    before_product_ids = list(map(lambda x: x[0], before_products))
-    before_amount = before_query.aggregate(count_sum=Sum("count"))["count_sum"]
 
-    old = {
-        product_id: count / before_amount * 100
-        for product_id, count in before_products
-        if product_id not in after_product_ids
-    }
-    new = {
-        product_id: count / after_amount * 100
-        for product_id, count in after_products
-        if product_id not in before_product_ids
-    }
-    return {
-        'before_count': len(before_product_ids),
-        'after_count': len(after_product_ids),
-        'old_count': len(old),
-        'new_count': len(new),
-        'share_old': round(sum(old.values())),
-        'share_new': round(sum(new.values()))
-    }
+    data = []
+    for item in items:
+        item.pop("total_fact", None)
+        item["id"] = item.pop("product_id")
+        data.append(item)
+    return data
 
 
 def kpi_main_3lvl(stat_type: str, manager_id: int, date: datetime):
