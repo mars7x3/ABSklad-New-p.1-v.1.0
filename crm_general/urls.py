@@ -146,6 +146,9 @@ accountant_router.register("accountant/category/list", AccountantCategoryView)
 accountant_router.register("accountant/stock/list", AccountantStockViewSet)
 accountant_router.register("accountant/balance/list", AccountantBalanceListView)
 accountant_router.register("accountant/balance/plus/list", BalancePlusListView)
+accountant_router.register("accountant/inventory", InventoryListUpdateView)
+accountant_router.register("accountant/return-order", ReturnOrderView)
+accountant_router.register("accountant/return-order/update", ReturnOrderProductUpdateView)
 
 
 accountant_urlpatterns = [

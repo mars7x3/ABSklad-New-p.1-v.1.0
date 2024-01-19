@@ -294,11 +294,11 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     stores = DealerStoreSerializer(many=True, source="dealer_stores", read_only=True)
     liability = serializers.IntegerField(required=True)
     price_type = PriceTypeSerializer(read_only=True, many=False)
-    price_type_id = serializers.PrimaryKeyRelatedField(
-        queryset=PriceType.objects.all(),
-        required=True,
-        write_only=True
-    )
+    # price_type_id = serializers.PrimaryKeyRelatedField(
+    #     queryset=PriceType.objects.all(),
+    #     required=True,
+    #     write_only=True
+    # )
     city = CitySerializer(read_only=True, many=False)
 
     class Meta:
@@ -313,9 +313,11 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         manager_profile_city = view.manager_profile.city
         attrs["city"] = manager_profile_city
 
-        price_type = attrs.pop("price_type_id", None)
+        price_type = attrs.pop("price_type", None)
         if price_type:
             attrs["price_type"] = price_type
+        if price_type is None:
+            attrs['price_type'] = None
         dealer_status = attrs.pop("dealer_status_id", None)
         if dealer_status:
             attrs["dealer_status"] = dealer_status
