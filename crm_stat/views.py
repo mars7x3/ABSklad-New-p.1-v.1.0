@@ -444,7 +444,8 @@ class TransactionUserView(views.APIView):
             .values("user_id")
             .annotate(
                 name=F("user__name"),
-                amount=Sum("amount")
+                amount=Sum("amount"),
+                count=Count("id", distinct=True)
             )
         )
         return response.Response(data)
