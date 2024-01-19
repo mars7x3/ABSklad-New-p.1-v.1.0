@@ -2,10 +2,11 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from django.db.models import Sum, F, IntegerField, Case, When, FloatField, Value, Subquery, OuterRef
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
 from account.models import MyUser
-from crm_kpi.models import DealerKPI, ManagerKPISVD, ManagerKPI
+from crm_kpi.models import DealerKPI, ManagerKPISVD, ManagerKPI, DealerKPIProduct
 from order.models import MyOrder, OrderProduct
 
 
@@ -92,42 +93,60 @@ def kpi_acb_1lvl(date: datetime) -> dict[str, int]:
 
 
 def kpi_total_info(date: datetime):
-    kpis = DealerKPI.objects.filter(
-        month__month=date.month,
-        month__year=date.year
-    ).annotate(
-        fact_total_pds=Sum("fact_pds", default=0),
-        fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
-        fact_total_tmz_sum=Sum('kpi_products__fact_sum', default=0),
-        fact_avg_price=Sum(F('kpi_products__fact_sum') / F('kpi_products__fact_count'), output_field=FloatField(),
-                           default=0),
-        total_pds=Sum("pds", default=0),
-        total_tmz_count=Sum('kpi_products__count', default=0),
-        total_tmz_sum=Sum('kpi_products__sum', default=0),
-        avg_price=Sum(F('kpi_products__sum') / F('kpi_products__count'), output_field=FloatField(), default=0),
-    ).values_list('fact_total_pds', 'fact_total_tmz_count', 'fact_total_tmz_sum', 'fact_avg_price',
-                  'total_pds', 'total_tmz_count', 'total_tmz_sum', 'avg_price')
+    kpis = (
+        DealerKPI.objects.filter(month__month=date.month, month__year=date.year)
+        .values(date=TruncMonth("month"))
+        .annotate(
+            fact_total_pds=Sum("fact_pds", default=0),
+            fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
+            fact_total_tmz_sum=Sum('kpi_products__fact_sum', default=0),
+            fact_avg_price=Sum(F('kpi_products__fact_sum') / F('kpi_products__fact_count'), output_field=FloatField(),
+                               default=0),
+            total_pds=Sum("pds", default=0),
+            total_tmz_count=Sum('kpi_products__count', default=0),
+            total_tmz_sum=Sum('kpi_products__sum', default=0),
+            avg_price=Sum(F('kpi_products__sum') / F('kpi_products__count'), output_field=FloatField(), default=0),
+        )
+        .annotate(
+            per_done_pds=Case(
+                When(
+                    total_pds__gt=0, fact_total_pds__gt=0,
+                    then=F("total_pds") / F("fact_total_pds") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            ),
+            per_done_tmz_count=Case(
+                When(
+                    total_tmz_count__gt=0, fact_total_tmz_count__gt=0,
+                    then=F("total_tmz_count") / F("fact_total_tmz_count") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            ),
+            per_done_tmz_sum=Case(
+                When(
+                    total_tmz_sum__gt=0, fact_total_tmz_sum__gt=0,
+                    then=F("total_tmz_sum") / F("fact_total_tmz_sum") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            ),
+            per_done_avg_price=Case(
+                When(
+                    avg_price__gt=0, fact_avg_price__gt=0,
+                    then=F("avg_price") / F("fact_avg_price") * 100
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        )
+    )
 
-    total_kpis = tuple(sum(x) for x in zip(*kpis))
-    if total_kpis:
-        total_data = {
-            'fact_total_pds': round(total_kpis[0]) if total_kpis else 0,  # Факт ПДС
-            'fact_total_tmz_count': round(total_kpis[1]) if total_kpis else 0,  # Факт ТМЗ количество
-            'fact_total_tmz_sum': round(total_kpis[2]),  # Факт ТМЗ количество
-            'fact_avg_price': round(total_kpis[3]),  # Факт Средний чек
-
-            'total_pds': round(total_kpis[4]),  # План ПДС
-            'total_tmz_count': round(total_kpis[5]),  # План ТМЗ количество
-            'total_tmz_sum': round(total_kpis[6]),  # План ТМЗ количество
-            'avg_price': round(total_kpis[7]),  # План Средний чек
-
-            'per_done_pds': round(total_kpis[4] / total_kpis[0] * 100),  # % ПДС
-            'per_done_tmz_count': round(total_kpis[5] / total_kpis[1] * 100),  # % ТМЗ количество
-            'per_done_tmz_sum': round(total_kpis[6] / total_kpis[2] * 100),  # % ТМЗ количество
-            'per_done_avg_price': round(total_kpis[7] / total_kpis[3] * 100)  # % Средний чек
-        }
+    if kpis:
+        return kpis[0]
     else:
-        total_data = {
+        return {
             'fact_total_pds': 0,
             'fact_total_tmz_count': 0,
             'fact_total_tmz_sum': 0,
@@ -143,11 +162,9 @@ def kpi_total_info(date: datetime):
             'per_done_tmz_sum': 0,
             'per_done_avg_price': 0
         }
-    return total_data
 
 
 def kpi_main_2lvl(stat_type: str, date: datetime):
-
     match stat_type:
         case 'pds':
             return kpi_pds_2lvl(date)
@@ -499,3 +516,55 @@ def kpi_main_3lvl(stat_type: str, manager_id: int, date: datetime):
             return kpi_akb_3lvl(manager_id, date)
         case 'svd':
             return kpi_svd_3lvl(manager_id, date)
+
+
+def update_dealer_kpi_product(order_product: OrderProduct) -> bool:
+    order = order_product.order
+    dealer_kpi = DealerKPIProduct.objects.filter(
+        product_id=order.product.id,
+        kpi__user_id=getattr(order.author, "user_id"),
+        kpi__month__month=order.released_at.month,
+        kpi__month__year=order.released_at.year
+    ).first()
+
+    if not dealer_kpi:
+        return False
+
+    if order.is_active:
+        dealer_kpi.fact_count += order.product.count
+        dealer_kpi.fact_sum += order.product.total_price
+    else:
+        dealer_kpi.fact_count -= order.product.count
+        dealer_kpi.fact_sum -= order.product.total_price
+    dealer_kpi.save()
+    return True
+
+
+def update_dealer_kpi(order: MyOrder):
+    dealer_kpi = DealerKPI.objects.filter(
+        month__month=order.released_at.month,
+        month__year=order.released_at.year,
+        user=order.author.user
+    ).first()
+
+    if not dealer_kpi:
+        return
+
+    saved_product_ids = dealer_kpi.kpi_products.values_list("product_id", flat=True)
+    new_products_kpi = []
+
+    for order_product in order.order_products.all():
+        if order_product.ab_product.id not in saved_product_ids:
+            new_products_kpi.append(
+                DealerKPIProduct(
+                    kpi=dealer_kpi,
+                    product=order_product.ab_product,
+                    fact_count=order_product.count,
+                    fact_sum=order_product.total_price
+                )
+            )
+        else:
+            update_dealer_kpi_product(order_product)
+
+    if new_products_kpi:
+        DealerKPIProduct.objects.bulk_create(new_products_kpi)
