@@ -1,3 +1,6 @@
+import datetime
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import MyUser
@@ -17,7 +20,7 @@ class DealerKPISerializer(serializers.ModelSerializer):
         if products is None:
             raise serializers.ValidationError({'detail': 'products are required'})
 
-        created = DealerKPI.objects.filter(user=user, month=month)
+        created = DealerKPI.objects.filter(user=user, month__month=month.month, month__year=month.year).first()
         if created:
             raise serializers.ValidationError({'detail': f'KPI is already created for user id {user.id}\n'
                                                          f'for current month {month}'})

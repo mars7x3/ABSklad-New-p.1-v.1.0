@@ -4,7 +4,7 @@ from .views import *
 
 router = DefaultRouter()
 
-router.register('crm-kpi/crud', DealerKPIView)
+router.register('crm-kpi/dealer/crud', DealerKPIView)
 
 
 urlpatterns = [
