@@ -186,7 +186,7 @@ class DealerProductView(views.APIView):
         data = []
         for item in (
             PurchaseStat.objects.filter(**query)
-            .values("user_stat__user_id")
+            .values("user_stat_id")
             .annotate(
                 user=JSONObject(
                     id=F("user_stat__user_id"),
@@ -207,7 +207,7 @@ class DealerProductView(views.APIView):
                 )
             )
         ):
-            item.pop("user_stat__user_id", None)
+            item.pop("user_stat_id", None)
             item.pop("sales_count")
             data.append(item)
         return response.Response(data)
@@ -228,7 +228,7 @@ class DealerView(views.APIView):
 
         queryset = (
             PurchaseStat.objects.filter(user_stat__user_id=user_id, **query)
-            .values("stock_stat__stock_id")
+            .values("stock_stat_id")
             .annotate(
                 stock=JSONObject(
                     id=F("stock_stat__stock_id"),
@@ -272,7 +272,7 @@ class DealerView(views.APIView):
             item.pop("incoming_bank_amount", None)
             item.pop("incoming_cash_amount", None)
 
-            item.pop("stock_stat__stock_id", None)
+            item.pop("stock_stat_id", None)
             item["date"] = str(date.date())
             data.append(item)
         return response.Response(data)
@@ -413,6 +413,40 @@ class ProductView(views.APIView):
             item.pop("incoming_cash_amount", None)
             item.pop("product_stat_id", None)
             data.append(item)
+        return response.Response(data)
+
+
+class TransactionUserView(views.APIView):
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
+
+    def get(self, request, date):
+        filter_type = request.query_params.get("type", "day")
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date, "created_at__date")
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            query["user_id"] = user_id
+
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["cash_box__stock_id"] = stock_id
+
+        status = request.query_params.get("status")
+        match status:
+            case "cash":
+                query["status"] = "Нал"
+            case "bank":
+                query["status"] = "Без нал"
+
+        data = (
+            MoneyDoc.objects.filter(is_active=True, user__isnull=False, **query)
+            .values("user_id")
+            .annotate(
+                name=F("user__name"),
+                amount=Sum("amount")
+            )
+        )
         return response.Response(data)
 
 
