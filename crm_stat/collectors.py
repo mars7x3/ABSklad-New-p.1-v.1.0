@@ -7,7 +7,7 @@ from django.db.models import functions
 from account.models import MyUser
 from general_service.models import City, Stock
 from one_c.models import MoneyDoc
-from order.models import MyOrder, OrderProduct
+from order.models import MyOrder
 from product.models import AsiaProduct
 
 from .models import UserTransactionsStat, PurchaseStat, UserStat, ProductStat, StockStat, CityStat, StockGroupStat
