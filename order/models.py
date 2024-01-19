@@ -79,6 +79,7 @@ class ReturnOrderProduct(models.Model):
     )
     return_order = models.ForeignKey(ReturnOrder, on_delete=models.CASCADE, related_name='products')
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='returns')
+    status = models.CharField(max_length=8, choices=STATUS, default='created')
     count = models.PositiveIntegerField(default=0)
     price = models.DecimalField(max_digits=100, decimal_places=2)
     comment = models.CharField(max_length=1000, null=True)

@@ -992,7 +992,6 @@ class StockListView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = StockListSerializer
 
 
-
 class MaxatTestView(APIView):
     def get(self, request):
         month = request.query_params.get('month')
@@ -1013,7 +1012,7 @@ class MaxatTestView(APIView):
             )
         return Response({'result': data}, status=status.HTTP_200_OK)
 
-      
+
 class DealerStatusModelViewSet(viewsets.ModelViewSet):
     queryset = DealerStatus.objects.all()
     permission_classes = [IsAuthenticated, IsDirector]

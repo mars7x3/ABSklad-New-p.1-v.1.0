@@ -64,6 +64,7 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['village__title'] = instance.village.title if instance.village else None
+        rep['is_active'] = instance.user.is_active
         return rep
 
     def get_name(self, instance):
