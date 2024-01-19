@@ -272,7 +272,7 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
     search_fields = ("product__name",)
     filter_by_fields = {
         "is_active": {"by": "is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
-        "category_slug": {"by": "product__category__slug", "type": "string"},
+        "category_slug": {"by": "category__slug", "type": "string"},
         "city_id": {"by": "city_id", "type": "number"}
     }
 

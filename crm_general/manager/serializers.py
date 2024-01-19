@@ -293,27 +293,21 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     )
     stores = DealerStoreSerializer(many=True, source="dealer_stores", read_only=True)
     liability = serializers.IntegerField(required=True)
-    price_type = PriceTypeSerializer(read_only=True, many=False)
-    # price_type_id = serializers.PrimaryKeyRelatedField(
-    #     queryset=PriceType.objects.all(),
-    #     required=True,
-    #     write_only=True
-    # )
-    # city = CitySerializer(read_only=True, many=False)
+    price_type = PriceTypeSerializer(many=False, read_only=True)
+    price_type_id = serializers.PrimaryKeyRelatedField(
+        queryset=PriceType.objects.all(),
+        required=False
+    )
 
     class Meta:
         model = DealerProfile
         fields = ("user", "address", "birthday", "village", "dealer_status", "wallet", "stores",
-                  "liability", "dealer_status_id", "price_type", "price_type_id", "motivations", 'village')
+                  "liability", "dealer_status_id", "price_type", "price_type_id", "motivations")
         user_status = "dealer"
         read_only_fields = ("motivations",)
 
     def validate(self, attrs):
-        # view = self.context["view"]
-        # manager_profile_city = view.manager_profile.city
-        # attrs["vil"] = manager_profile_city
-
-        price_type = attrs.pop("price_type", None)
+        price_type = attrs.pop("price_type_id", None)
         if price_type:
             attrs["price_type"] = price_type
         if price_type is None:

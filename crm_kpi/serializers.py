@@ -1,5 +1,6 @@
 import datetime
 
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -42,6 +43,13 @@ class DealerKPISerializer(serializers.ModelSerializer):
         DealerKPIProduct.objects.bulk_create(kpi_products_to_create)
         return instance
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['user__name'] = instance.user.name
+        rep['user__city'] = instance.user.dealer_profile.village.city.title
+        rep['pds_percent_completion'] = (instance.pds / instance.fact_pds) * 100
+        return rep
+
 
 class DealerKPIDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -52,6 +60,10 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['user__name'] = instance.user.name
         rep['user__city'] = instance.user.dealer_profile.village.city.title
+        rep['pds_percent_completion'] = (instance.pds / instance.fact_pds) * 100
+        sum_count = instance.kpi_products.all().aggregate(Sum('count'))
+        fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
+        rep['tmz_percent_completion'] = (sum_count / fact_sum_count) * 100
         rep['products'] = DealerKPIProductSerializer(instance.kpi_products.all(), many=True).data
         return rep
 
