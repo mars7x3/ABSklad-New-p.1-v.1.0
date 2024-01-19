@@ -299,19 +299,19 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     #     required=True,
     #     write_only=True
     # )
-    city = CitySerializer(read_only=True, many=False)
+    # city = CitySerializer(read_only=True, many=False)
 
     class Meta:
         model = DealerProfile
-        fields = ("user", "address", "birthday", "city", "dealer_status", "wallet", "stores",
+        fields = ("user", "address", "birthday", "village", "dealer_status", "wallet", "stores",
                   "liability", "dealer_status_id", "price_type", "price_type_id", "motivations", 'village')
         user_status = "dealer"
         read_only_fields = ("motivations",)
 
     def validate(self, attrs):
-        view = self.context["view"]
-        manager_profile_city = view.manager_profile.city
-        attrs["city"] = manager_profile_city
+        # view = self.context["view"]
+        # manager_profile_city = view.manager_profile.city
+        # attrs["vil"] = manager_profile_city
 
         price_type = attrs.pop("price_type", None)
         if price_type:
