@@ -9,7 +9,23 @@ from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder,
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
 
+class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReturnOrderProductFile
+        fields = ('id', 'file')
+
+
+class ReturnOrderProductSerializer(serializers.ModelSerializer):
+    files = ReturnOrderProductFileSerializer(many=True)
+
+    class Meta:
+        model = ReturnOrderProduct
+        fields = '__all__'
+
+
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
+    return_product = ReturnOrderProductSerializer(read_only=True)
+
     class Meta:
         model = OrderProduct
         fields = '__all__'
@@ -193,20 +209,6 @@ class InventoryProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
         fields = ('id', 'title')
-
-
-class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ReturnOrderProductFile
-        fields = ('id', 'file')
-
-
-class ReturnOrderProductSerializer(serializers.ModelSerializer):
-    files = ReturnOrderProductFileSerializer(many=True)
-
-    class Meta:
-        model = ReturnOrderProduct
-        fields = '__all__'
 
 
 class ReturnOrderSerializer(serializers.ModelSerializer):
