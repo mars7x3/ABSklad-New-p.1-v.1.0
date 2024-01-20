@@ -70,6 +70,9 @@ class ReturnOrder(models.Model):
     order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='return_orders')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ('-created_at',)
+
 
 class ReturnOrderProduct(models.Model):
     STATUS = (
