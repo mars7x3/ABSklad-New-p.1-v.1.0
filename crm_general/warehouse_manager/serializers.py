@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from crm_general.models import CRMTask, CRMTaskFile, Inventory, InventoryProduct
 from crm_general.serializers import VerboseChoiceField
-from order.models import MyOrder, OrderProduct
+from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
 
@@ -61,8 +61,7 @@ class WareHouseCategoryListSerializer(serializers.ModelSerializer):
 class WareHouseProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'is_discount', 'vendor_code', 'created_at', 'category', 'collection')
-        read_only_fields = ('is_active',)
+        fields = ('id', 'title', 'is_discount', 'vendor_code', 'created_at', 'category', 'collection', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -110,20 +109,6 @@ class MarketerProductImageSerializer(serializers.ModelSerializer):
 class MarketerProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
-        fields = '__all__'
-
-
-class WareHouseTaskFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CRMTaskFile
-        fields = ('id', 'file')
-
-
-class WareHouseTaskSerializer(serializers.ModelSerializer):
-    files = WareHouseTaskFileSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = CRMTask
         fields = '__all__'
 
 
@@ -185,3 +170,70 @@ class InventoryProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
         fields = ('id', 'title')
+
+
+class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReturnOrderProductFile
+        fields = ('id', 'file')
+
+
+class ReturnOrderProductSerializer(serializers.ModelSerializer):
+    files = ReturnOrderProductFileSerializer(many=True)
+
+    class Meta:
+        model = ReturnOrderProduct
+        fields = '__all__'
+
+
+class ReturnOrderSerializer(serializers.ModelSerializer):
+    products = ReturnOrderProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ReturnOrder
+        fields = '__all__'
+
+    def validate(self, attrs):
+        order_id = self.context['request'].data.get('order')
+        order = MyOrder.objects.get(id=order_id)
+        order_product_ids = order.order_products.filter().values_list('ab_product__id', flat=True)
+        products = self.context['request'].data.get('products')
+
+        for p_id in products:
+            if p_id['id'] not in order_product_ids:
+                raise serializers.ValidationError({'detail': 'product not in order'})
+
+            order_product = order.order_products.filter(ab_product_id=p_id['id']).first()
+            if p_id['count'] > order_product.count:
+                raise serializers.ValidationError({'detail': 'count can not be more than in order'})
+
+        return attrs
+
+    def create(self, validated_data):
+        request_body = self.context['request'].data
+
+        instance = super().create(validated_data)
+        products = request_body.get('products')
+        return_products = []
+        for product in products:
+            product_price = instance.order.order_products.filter(ab_product_id=product['id']).first()
+            product_instance = AsiaProduct.objects.get(id=product['id'])
+            return_products.append(
+                ReturnOrderProduct(
+                    return_order=instance,
+                    product=product_instance,
+                    count=product['count'],
+                    price=product['count'] * product_price.price,
+                    comment=product['comment']
+                )
+            )
+        ReturnOrderProduct.objects.bulk_create(return_products)
+
+        return instance
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.order.author.user.name
+        rep['status'] = instance.order.status
+        return rep
+

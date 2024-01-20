@@ -1,6 +1,9 @@
 import datetime
 
 from django.utils import timezone
+
+from django.utils.crypto import get_random_string
+
 from drf_yasg.utils import swagger_auto_schema
 
 from rest_framework import status, viewsets, generics
@@ -139,6 +142,7 @@ class CartAddView(generics.GenericAPIView):
             return Response({"text": "Success!"}, status=status.HTTP_200_OK)
         else:
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 

@@ -26,7 +26,7 @@ def minus_quantity(order_id, stock_id):
     counts = ProductCount.objects.filter(stock=stock)
     for p_id, count in products_id:
         quantity = counts.get(product_id=p_id)
-        quantity.count -= count
+        quantity.count_crm -= count
         quantity.save()
 
 

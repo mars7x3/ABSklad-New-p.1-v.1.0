@@ -1,7 +1,7 @@
 from typing import Callable
 
 from django.db import models
-from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate, JSONObject
+from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate
 from django.utils.translation import gettext_lazy as _
 
 from account.models import MyUser
@@ -18,11 +18,14 @@ class CityStat(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f"ID: {getattr(self, 'id')} City: {getattr(self.city, 'id') if self.city else None}.{self.title}"
+
 
 class UserStat(models.Model):
     objects = models.Manager()
 
-    city_stat = models.ForeignKey(CityStat, on_delete=models.CASCADE, related_name='users')
+    city_stat = models.ForeignKey(CityStat, on_delete=models.SET_NULL, null=True, related_name='users')
     user = models.ForeignKey(MyUser, on_delete=models.SET_NULL, null=True)
     email = models.EmailField(max_length=100)
     name = models.CharField(max_length=50, blank=True, null=True)
@@ -30,7 +33,7 @@ class UserStat(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{getattr(self, 'id')}.{self.name}"
+        return f"ID: {getattr(self, 'id')} User: {getattr(self.user, 'id') if self.user else None}.{self.name}"
 
 
 class StockStat(models.Model):
@@ -40,9 +43,12 @@ class StockStat(models.Model):
     title = models.CharField(max_length=100)
     address = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=False)
-    city_stat = models.ForeignKey(CityStat, on_delete=models.CASCADE, related_name='stocks')
+    city_stat = models.ForeignKey(CityStat, on_delete=models.SET_NULL, null=True, related_name='stocks')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ID: {getattr(self, 'id')} User: {getattr(self.stock, 'id') if self.stock else None}.{self.title}"
 
 
 class ProductStat(models.Model):
@@ -55,6 +61,10 @@ class ProductStat(models.Model):
     collection = models.ForeignKey(Collection, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return (f"ID: {getattr(self, 'id')} "
+                f"Product: {getattr(self.product, 'id') if self.product else None}.{self.title}")
 
 
 class BaseStatistics(models.Model):
@@ -112,9 +122,9 @@ class PurchasesQuerySet(models.QuerySet):
         if date_trunc:
             tx_subquery = (
                 tx_base_query
-                .values("bank_income", "cash_income")
                 .annotate(stat_date=date_trunc("date"))
                 .filter(stat_date=models.OuterRef("stat_date"))
+                .values("stat_date")
             )
             incoming_users_query = (
                 tx_base_query
@@ -122,10 +132,7 @@ class PurchasesQuerySet(models.QuerySet):
                 .filter(stat_date=models.OuterRef("stat_date"))
             )
         else:
-            tx_subquery = (
-                tx_base_query
-                .values("bank_income", "cash_income")
-            )
+            tx_subquery = tx_base_query
             incoming_users_query = tx_base_query
 
         return (
@@ -140,7 +147,7 @@ class PurchasesQuerySet(models.QuerySet):
                     .annotate(cash_amount=models.Sum("cash_income"))
                     .values("cash_amount")[:1]
                 ),
-                incoming_users_count=models.Subquery(
+                users_count=models.Subquery(
                     incoming_users_query
                     .annotate(users_count=models.Count("user_stat__user_id", distinct=True))
                     .values("users_count")[:1]
@@ -156,6 +163,11 @@ class PurchasesQuerySet(models.QuerySet):
                     models.When(cash_amount__isnull=True, then=models.Value(0.0)),
                     default=models.F("cash_amount"),
                     output_field=models.DecimalField()
+                ),
+                incoming_users_count=models.Case(
+                    models.When(users_count__isnull=True, then=models.Value(0)),
+                    default=models.F("users_count"),
+                    output_field=models.IntegerField()
                 )
             )
         )

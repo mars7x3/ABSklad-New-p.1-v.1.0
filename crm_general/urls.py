@@ -24,9 +24,6 @@ from .manager.views import (
     CategoryListAPIView as ManagerCategoryListAPIView,
     ProductRetrieveAPIView as ManagerProductRetrieveAPIView,
     BalanceViewSet as ManagerBalanceViewSet,
-    ReturnListAPIView as ManagerReturnListAPIView,
-    ReturnRetrieveAPIView as ManagerReturnRetrieveAPIView,
-    ReturnUpdateAPIView as ManagerReturnUpdateAPIView,
     BalancePlusManagerView as ManagerBalancePlusManagerView, ProdListForOrderView, ManagerDeleteOrderView,
 )
 
@@ -66,7 +63,8 @@ from .marketer.views import (
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
-    WareHouseSaleReportView, WareHouseTaskView, WareHouseInventoryView, WareHouseSaleReportDetailView
+    WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView, ReturnOrderProductView,
+    ReturnOrderProductFileAPIView
 )
 
 main_director_router = SimpleRouter()
@@ -148,6 +146,9 @@ accountant_router.register("accountant/category/list", AccountantCategoryView)
 accountant_router.register("accountant/stock/list", AccountantStockViewSet)
 accountant_router.register("accountant/balance/list", AccountantBalanceListView)
 accountant_router.register("accountant/balance/plus/list", BalancePlusListView)
+accountant_router.register("accountant/inventory", InventoryListUpdateView)
+accountant_router.register("accountant/return-order", ReturnOrderView)
+accountant_router.register("accountant/return-order/update", ReturnOrderProductUpdateView)
 
 
 accountant_urlpatterns = [
@@ -197,12 +198,6 @@ manager_urlpatterns = [
     path("manager/products/", ManagerProductPriceListAPIView.as_view(), name="crm_general-manager-products-list"),
     re_path("^manager/products/(?P<product_id>.+)/detail/$", ManagerProductRetrieveAPIView.as_view(),
             name="crm_general-manager-product-detail"),
-    # Returns
-    path("manager/returns/", ManagerReturnListAPIView.as_view(), name="crm_general-manager-returns-list"),
-    re_path("^manager/returns/(?P<return_id>.+)/detail/$", ManagerReturnRetrieveAPIView.as_view(),
-            name="crm_general-manager-returns-detail"),
-    re_path("^manager/returns/(?P<return_id>.+)/update/$", ManagerReturnUpdateAPIView.as_view(),
-            name="crm_general-manager-returns-update"),
 
     # Balances and Other
     path("manager/balance/plus/", ManagerBalancePlusManagerView.as_view(),
@@ -290,13 +285,16 @@ warehouse_manager_router.register('order', WareHouseOrderView, basename='warehou
 warehouse_manager_router.register('product', WareHouseProductViewSet, basename='warehouse-product')
 warehouse_manager_router.register('category', WareHouseCategoryViewSet, basename='warehouse-category')
 warehouse_manager_router.register('collection', WareHouseCollectionViewSet, basename='warehouse-collection')
-warehouse_manager_router.register('task', WareHouseTaskView, basename='warehouse-task')
 warehouse_manager_router.register('inventory', WareHouseInventoryView, basename='warehouse-inventory')
+warehouse_manager_router.register('order-return', ReturnOrderProductView, basename='warehouse-order-return')
+
 
 warehouse_manager_urlpatterns = [
     path('warehouse-manager/', include(warehouse_manager_router.urls)),
     path('warehouse-manager/report/', WareHouseSaleReportView.as_view()),
     path('warehouse-manager/report/<int:pk>/', WareHouseSaleReportDetailView.as_view()),
+    path('warehouse-manager/return-product/upload-file/', ReturnOrderProductFileAPIView.as_view()),
+
 ]
 
 crm_router = SimpleRouter()
@@ -316,8 +314,7 @@ crm_urlpatterns = [
     path("crm/category/list/", CategoryListView.as_view()),
     path("crm/price-type/list/", PriceTypeListView.as_view()),
     path("crm/staff/task/response/", TaskResponseView.as_view()),
-
-
+    path("crm/villages/list/", VillageListView.as_view()),
 
     path("crm/user/image/cd", UserImageCDView.as_view()),
 

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Iterable, Any, Callable
 
@@ -5,15 +6,15 @@ from django.db import models
 from django.db.models import functions
 from django.utils import timezone
 
-from crm_stat.models import StockGroupStat, PurchaseStat, UserTransactionsStat
+from crm_stat.models import StockGroupStat, PurchaseStat
 
 
 class Builder:
     def __init__(
-            self,
-            model,
-            fields_map: dict[str, str],
-            default_map: dict[str, Callable | str | int | float] = None
+        self,
+        model,
+        fields_map: dict[str, str],
+        default_map: dict[str, Callable | str | int | float] = None
     ):
         assert issubclass(model, models.Model)
         self.model = model
@@ -34,11 +35,8 @@ class Builder:
             value = item[field]
 
             if relations and value and source in relations:
-                try:
-                    value = relations[source][value]
-                except KeyError as e:
-                    print(source, " ", relations[source])
-                    raise e
+                value = relations[source][value]
+
             collected_data[source] = value
 
         for source, value in self.default_map.items():
@@ -88,77 +86,6 @@ class Builder:
                     new.append(instance)
                     processed.add(match_value)
         return new
-
-
-def stat_create_or_update(
-        queryset: models.QuerySet,
-        builder: Builder,
-        match_field: str,
-        match_field_y: str,
-        update_ignore_fields: list[str],
-        relations=None,
-        on_create: Callable = None,
-        on_update: Callable = None
-) -> list[int | str]:
-    if not queryset.exists():
-        raise ValueError("Not found any objects!")
-
-    another_model_match_field = builder.fields_map[match_field]
-    match_filters = {match_field + "__in": queryset.values_list(match_field_y, flat=True)}
-    saved_objs = {
-        getattr(obj, match_field): obj
-        for obj in builder.model.objects.filter(**match_filters)
-    }
-    saved_matches = list(saved_objs.keys())
-
-    processed_objs = list()
-
-    new_objs = queryset.exclude(pk__in=saved_matches)
-    if new_objs.exists():
-        if not on_create:
-            items = new_objs.values(*builder.fields_map.values())
-        else:
-            items = on_create(new_objs)
-
-        new_instances = builder.build_model_by_list(
-            items=items,
-            match_field=another_model_match_field,
-            relations=relations
-        )
-        new_objs = builder.model.objects.bulk_create(new_instances)
-        processed_objs.extend(new_objs)
-
-    to_update_instances = queryset.filter(pk__in=saved_matches)
-
-    if to_update_instances.exists():
-        to_update = []
-
-        if on_update:
-            items = on_update(to_update_instances)
-        else:
-            items = to_update_instances.values(*builder.fields_map.values())
-
-        update_fields = set()
-
-        for data in items:
-            update_instance = saved_objs[data[another_model_match_field]]
-
-            update_data = builder.build_dict(data, ignore_fields=update_ignore_fields, relations=relations)
-            for field, value in update_data.items():
-                if hasattr(update_instance, field):
-                    setattr(update_instance, field, value)
-                    update_fields.add(field)
-
-            if hasattr(update_instance, "updated_at"):
-                update_instance.updated_at = timezone.now()
-                update_fields.add("updated_at")
-
-            to_update.append(update_instance)
-
-        if to_update:
-            builder.model.objects.bulk_update(to_update, fields=update_fields)
-            processed_objs.extend(to_update)
-    return processed_objs
 
 
 def stock_date_filters(
@@ -271,3 +198,17 @@ def sum_and_collect_by_map(queryset, fields_map):
             collected_data[source] = value
 
         yield collected_data
+
+
+def date_filters(filter_type: str, date: datetime, date_field: str = "date"):
+    query = {}
+    match filter_type:
+        case "month":
+            query[date_field + "__month"] = date.month
+            query[date_field + "__year"] = date.year
+        case "week":
+            query[date_field + "__gte"] = date
+            query[date_field + "__lte"] = date + timezone.timedelta(days=7)
+        case _:
+            query[date_field] = date
+    return query

@@ -1,3 +1,7 @@
+import datetime
+
+from django.db.models import Sum
+from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import MyUser
@@ -17,7 +21,7 @@ class DealerKPISerializer(serializers.ModelSerializer):
         if products is None:
             raise serializers.ValidationError({'detail': 'products are required'})
 
-        created = DealerKPI.objects.filter(user=user, month=month)
+        created = DealerKPI.objects.filter(user=user, month__month=month.month, month__year=month.year).first()
         if created:
             raise serializers.ValidationError({'detail': f'KPI is already created for user id {user.id}\n'
                                                          f'for current month {month}'})
@@ -39,6 +43,19 @@ class DealerKPISerializer(serializers.ModelSerializer):
         DealerKPIProduct.objects.bulk_create(kpi_products_to_create)
         return instance
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['user__name'] = instance.user.name
+        rep['user__city'] = instance.user.dealer_profile.village.city.title
+        rep['pds_percent_completion'] = round((instance.fact_pds / instance.pds) * 100 if instance.pds > 0 else 0)
+        sum_count = instance.kpi_products.all().aggregate(Sum('count'))
+        fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
+        if sum_count['count__sum'] is not None and fact_sum_count['fact_count__sum'] is not None:
+            rep['tmz_percent_completion'] = fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100
+        else:
+            rep['tmz_percent_completion'] = 0
+        return rep
+
 
 class DealerKPIDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,6 +66,13 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['user__name'] = instance.user.name
         rep['user__city'] = instance.user.dealer_profile.village.city.title
+        rep['pds_percent_completion'] = round((instance.fact_pds / instance.pds) * 100 if instance.pds > 0 else 0)
+        sum_count = instance.kpi_products.all().aggregate(Sum('count'))
+        fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
+        if sum_count['count__sum'] is not None and fact_sum_count['fact_count__sum'] is not None:
+            rep['tmz_percent_completion'] = fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100
+        else:
+            rep['tmz_percent_completion'] = 0
         rep['products'] = DealerKPIProductSerializer(instance.kpi_products.all(), many=True).data
         return rep
 
@@ -76,14 +100,27 @@ class DealerKPITMZTotalSerializer(serializers.Serializer):
 
 
 class DealerListSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField(read_only=True)
+    city_title = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = MyUser
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'city_title', 'status')
+
+    def get_status(self, instance) -> bool:
+        return instance.dealer_profile.wallet.amount_crm >= 50000
+
+    def get_city_title(self, instance):
+        return instance.dealer_profile.village.city.title if instance.dealer_profile.village else ''
 
 
 class ProductListKPISerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title')
+        fields = ('vendor_code', 'id', 'title')
 
-
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['collection__title'] = instance.collection.title
+        rep['category__title'] = instance.category.title
+        return rep

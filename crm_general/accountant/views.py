@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework.filters import SearchFilter
 from rest_framework import viewsets, status, mixins, generics, filters
 from rest_framework.decorators import action
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,15 +17,18 @@ from crm_general.accountant.permissions import IsAccountant
 from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDetailSerializer, \
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
     AccountantStockListSerializer, AccountantStockDetailSerializer, \
-    DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer
-from crm_general.accountant.utils import check_reservation
+    DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer, InventorySerializer, \
+    AccountantStockShortSerializer, InventoryDetailSerializer, ReturnOrderDetailSerializer, ReturnOrderSerializer, \
+    ReturnOrderProductSerializer
 from crm_general.filters import FilterByFields
+from crm_general.models import Inventory
+from crm_general.paginations import GeneralPurposePagination
 
 from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
-from general_service.models import Stock    
+from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
 from one_c.models import MoneyDoc
-from order.models import MyOrder
+from order.models import MyOrder, ReturnOrder, ReturnOrderProduct
 from crm_general.tasks import minus_quantity
 from product.models import AsiaProduct, Collection, Category
 
@@ -141,7 +144,7 @@ class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
 
         city = request.query_params.get('city')
         if city:
-            kwargs['city__slug'] = city
+            kwargs['village__city__slug'] = city
 
         dealer_status = request.query_params.get('status')
         if dealer_status:
@@ -265,9 +268,8 @@ class AccountantOrderModerationView(APIView):
                     order.status = order_status
                     order.save()
                     if order.status == 'paid':
-                        minus_quantity(order.id, order.city_stock.slug)
+                        minus_quantity(order.id, order.stock.id)
                         #sync_order_pay_to_1C(order)
-                        check_reservation(order_id)
 
                     kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
                               'link_id': order.id, 'status': 'order'}
@@ -287,9 +289,9 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
         queryset = self.queryset
         pr_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
-        if pr_status == 'true':
+        if pr_status == 'active':
             queryset = queryset.filter(is_active=True)
-        elif pr_status == 'false':
+        elif pr_status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
         if search:
@@ -366,4 +368,62 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
         return self.serializer_class
 
 
+class InventoryListUpdateView(ListModelMixin,
+                              RetrieveModelMixin,
+                              UpdateModelMixin,
+                              GenericViewSet):
 
+    queryset = Inventory.objects.all()
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = InventorySerializer
+    retrieve_serializer_class = InventoryDetailSerializer
+    pagination_class = GeneralPurposePagination
+
+    def get_serializer_class(self):
+        if self.detail:
+            return self.retrieve_serializer_class
+        return self.serializer_class
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.queryset
+        request_query = self.request.query_params
+        stock_id = request_query.get('stock_id')
+        search = request_query.get('search')
+        inventory_status = request_query.get('status')
+
+        if stock_id:
+            queryset = queryset.filter(user__warehouse_profile__stock_id=stock_id)
+        if inventory_status:
+            queryset = queryset.filter(status=inventory_status)
+        if search:
+            queryset = queryset.filter(user__name__icontains=search)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=False, url_path='stock-list')
+    def get_stock_list(self, request):
+        stocks = Stock.objects.all()
+        serializer = AccountantStockShortSerializer(stocks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ReturnOrderView(ListModelMixin,
+                      RetrieveModelMixin,
+                      UpdateModelMixin,
+                      GenericViewSet):
+    queryset = ReturnOrder.objects.all()
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = ReturnOrderSerializer
+    retrieve_serializer_class = ReturnOrderDetailSerializer
+
+    def get_serializer_class(self):
+        if self.detail:
+            return self.retrieve_serializer_class
+        return self.serializer_class
+
+
+class ReturnOrderProductUpdateView(UpdateModelMixin, GenericViewSet):
+    queryset = ReturnOrderProduct.objects.all()
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = ReturnOrderProductSerializer

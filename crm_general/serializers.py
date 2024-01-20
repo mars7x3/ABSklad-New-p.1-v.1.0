@@ -10,7 +10,7 @@ from transliterate import translit
 
 from account.models import MyUser, DealerStatus, DealerProfile
 from crm_general.models import CRMTaskFile, CRMTask
-from general_service.models import Stock, City, PriceType
+from general_service.models import Stock, City, PriceType, Village
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
 
@@ -351,3 +351,8 @@ class CRMTaskFileSerializer(serializers.ModelSerializer):
         model = CRMTaskFile
         fields = '__all__'
 
+
+class VillageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Village
+        fields = ('id', 'title')

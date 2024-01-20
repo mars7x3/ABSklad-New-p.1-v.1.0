@@ -1,10 +1,10 @@
 import datetime
 
 from django.db.models import Sum, F
-from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,8 +14,8 @@ from crm_general.director.permissions import IsDirector
 from crm_kpi.models import DealerKPIProduct, DealerKPI
 from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
-    DealerKPIDetailSerializer, DealerKPIProductSerializer, DealerKPITMZTotalSerializer
-from crm_kpi.utils import kpi_total_info, kpi_main_2lvl
+    DealerKPIDetailSerializer, DealerKPITMZTotalSerializer
+from crm_kpi.utils import kpi_total_info, kpi_main_2lvl, kpi_main_3lvl, kpi_svd_1lvl, kpi_acb_1lvl
 from product.models import AsiaProduct
 
 
@@ -25,9 +25,8 @@ class ManagerKPITMZView(APIView):
         data = []
         for manager in managers:
             total_tmz_count = DealerKPIProduct.objects.filter(
-                kpi__user__dealer_profile__managers__manager_profile=manager).aggregate(
-                total_count_sum=Sum('count')
-            )
+                kpi__user__dealer_profile__managers__manager_profile=manager
+            ).aggregate(total_count_sum=Sum('count'))
             data.append({
                 'manager_id': manager.user.id,
                 'manager': manager.user.name,
@@ -42,9 +41,8 @@ class ManagerKPIPDSListView(APIView):
         data = []
         for manager in managers:
             total_pds = DealerKPI.objects.filter(
-                user__dealer_profile__managers__manager_profile=manager).aggregate(
-                total_pds_sum=Sum('pds')
-            )
+                user__dealer_profile__managers__manager_profile=manager
+            ).aggregate(total_pds_sum=Sum('pds'))
 
             data.append({
                 'manager_id': manager.user.id,
@@ -103,15 +101,18 @@ class DealerKPIView(viewsets.ModelViewSet):
         return self.serializer_class
 
     def list(self, request, *args, **kwargs):
-        today = timezone.now()
-        current_month = today.month
-
         request_query = self.request.query_params
         month = request_query.get('month')
         if month:
-            queryset = self.queryset.filter(month__month=month)
+            try:
+                date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+            except ValueError as e:
+                raise ValidationError({"detail": str(e)})
+
+            queryset = self.queryset.filter(month__month=date.month, month__year=date.year)
         else:
-            queryset = self.queryset.filter(month__month=current_month)
+            today = timezone.now()
+            queryset = self.queryset.filter(month__month=today.month, month__year=today.year)
 
         search = request_query.get('search')
         if search:
@@ -125,23 +126,37 @@ class DealerKPIView(viewsets.ModelViewSet):
     @action(methods=['GET'], detail=False, url_path='dealers')
     def get_dealers_for_kpi(self, request, *args, **kwargs):
         search = self.request.query_params.get('search')
+        city_id = self.request.query_params.get('city_id')
+        dealer_status = self.request.query_params.get('status')
         dealers = MyUser.objects.filter(is_active=True, status='dealer')
-
         if search:
             dealers = dealers.filter(name__icontains=search)
 
-        serializer = DealerListSerializer(dealers, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if city_id:
+            dealers = dealers.filter(dealer_profile__village__city_id=city_id)
+
+        if dealer_status == 'true':
+            dealers = dealers.filter(dealer_profile__wallet__amount_crm__gte=50000)
+        elif dealer_status == 'false':
+            dealers = dealers.filter(dealer_profile__wallet__amount_crm__lte=50000)
+
+        paginator = DealerKPIPagination()
+        page = paginator.paginate_queryset(dealers, request)
+        serializer = DealerListSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @action(methods=['GET'], detail=False, url_path='products')
     def get_product_for_kpi(self, request, *args, **kwargs):
         search = self.request.query_params.get('search')
         products = AsiaProduct.objects.filter(is_active=True)
-
+        collection_slug = self.request.query_params.get('collection_slug')
+        category_slug = self.request.query_params.get('category_slug')
         if search:
             products = products.filter(title__icontains=search)
-        else:
-            return Response({'detail': 'search required!'}, status=status.HTTP_400_BAD_REQUEST)
+        if collection_slug:
+            products = products.filter(collection__slug=collection_slug)
+        if category_slug:
+            products = products.filter(category__slug=category_slug)
 
         serializer = ProductListKPISerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -152,9 +167,15 @@ class KPITotalView(APIView):
 
     def get(self, request):
         month = request.query_params.get('month')
-        month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y")).month
+        try:
+            date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+        except ValueError as e:
+            raise ValidationError({"detail": str(e)})
 
-        return Response(kpi_total_info(month), status=status.HTTP_200_OK)
+        data = kpi_total_info(date)
+        data["svd"] = kpi_svd_1lvl(date)
+        data["acb"] = kpi_acb_1lvl(date)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class KPITotalMain2lvlView(APIView):
@@ -163,8 +184,28 @@ class KPITotalMain2lvlView(APIView):
     def get(self, request):
         month = request.query_params.get('month')
         stat_type = request.query_params.get('stat_type')
+        try:
+            date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+        except ValueError as e:
+            raise ValidationError({"detail": str(e)})
+        return Response({'result': kpi_main_2lvl(stat_type, date) or []}, status=status.HTTP_200_OK)
 
-        month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y")).month
 
-        return Response({'result': kpi_main_2lvl(month, stat_type)}, status=status.HTTP_200_OK)
+class KPITotalMain3lvlView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
 
+    def get(self, request, manager_id):
+        month = request.query_params.get('month')
+        stat_type = request.query_params.get('stat_type')
+
+        if not month or not stat_type:
+            raise ValidationError({"detail": "month and stat_type is required params!"})
+
+        try:
+            date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+        except ValueError as e:
+            raise ValidationError({"detail": str(e)})
+        return Response(
+            {'result': kpi_main_3lvl(stat_type, manager_id, date)},
+            status=status.HTTP_200_OK
+        )

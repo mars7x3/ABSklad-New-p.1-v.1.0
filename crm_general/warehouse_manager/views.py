@@ -5,22 +5,23 @@ from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
-from order.models import MyOrder, OrderProduct
+from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductCount
 from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
     WareHouseProductSerializer, WareHouseInventorySerializer, \
-    InventoryProductListSerializer
+    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer
 from .mixins import WareHouseManagerMixin
-from ..models import Inventory
+from ..models import Inventory, CRMTask
+from ..tasks import minus_quantity
 
 
 class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
@@ -84,6 +85,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             if order.status == 'paid':
                 order.status = 'sent'
                 order.save()
+                minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
                 return Response({'detail': 'Order status successfully changed to "sent"'},
                                 status=status.HTTP_200_OK)
             return Response({'detail': 'Order status must be "paid" to change to "sent"'},
@@ -91,7 +93,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
         return Response({'detail': 'Incorrect order status'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = AsiaProduct.objects.all()
     serializer_class = WareHouseProductListSerializer
     retrieve_serializer_class = WareHouseProductSerializer
@@ -245,32 +247,6 @@ class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
         return Response({'result': data})
 
 
-class WareHouseTaskView(ListModelMixin,
-                        RetrieveModelMixin,
-                        GenericViewSet):
-    permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = GeneralPurposePagination
-
-    def get_queryset(self):
-        return self.queryset.filter(task__is_active=True, executor=self.request.user.id)
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        is_done = self.request.query_params.get('is_done')
-        search = self.request.query_params.get('search')
-        if is_done == 'true':
-            queryset = queryset.filter(is_done=True)
-        if is_done == 'false':
-            queryset = queryset.filter(is_done=False)
-
-        if search:
-            queryset = queryset.filter(task__title__icontains=search)
-        paginator = GeneralPurposePagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
-
-
 class WareHouseInventoryView(ListModelMixin,
                              RetrieveModelMixin,
                              CreateModelMixin,
@@ -314,3 +290,32 @@ class WareHouseInventoryView(ListModelMixin,
             products = products.filter(title__icontains=search)
         serializer = InventoryProductListSerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ReturnOrderProductView(ListModelMixin,
+                             RetrieveModelMixin,
+                             CreateModelMixin,
+                             GenericViewSet):
+    queryset = ReturnOrder.objects.all()
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = ReturnOrderSerializer
+
+
+class ReturnOrderProductFileAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        request_body = self.request.data
+        return_product_id = request_body.get('return_product_id')
+        return_product = ReturnOrderProduct.objects.get(id=return_product_id)
+        files = self.request.FILES.getlist('files')
+
+        files_to_create = []
+        for file in files:
+            files_to_create.append(
+                ReturnOrderProductFile(
+                    return_product=return_product,
+                    file=file
+                )
+            )
+        ReturnOrderProductFile.objects.bulk_create(files_to_create)
+        return Response({'detail': 'Success'}, status=status.HTTP_201_CREATED)
+

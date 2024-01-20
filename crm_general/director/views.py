@@ -25,6 +25,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
+from crm_general.permissions import IsStaff
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
@@ -992,7 +993,6 @@ class StockListView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = StockListSerializer
 
 
-
 class MaxatTestView(APIView):
     def get(self, request):
         month = request.query_params.get('month')
@@ -1013,9 +1013,9 @@ class MaxatTestView(APIView):
             )
         return Response({'result': data}, status=status.HTTP_200_OK)
 
-      
+
 class DealerStatusModelViewSet(viewsets.ModelViewSet):
     queryset = DealerStatus.objects.all()
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsStaff]
     serializer_class = DirectorDealerStatusSerializer
 

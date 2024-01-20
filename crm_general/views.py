@@ -17,8 +17,8 @@ from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
     CityCRUDSerializer, PriceTypeListSerializer, DealerProfileSerializer, \
-    ShortProductSerializer, CRMTaskCRUDSerializer
-from general_service.models import City, Stock, PriceType
+    ShortProductSerializer, CRMTaskCRUDSerializer, VillageSerializer
+from general_service.models import City, Stock, PriceType, Village
 from order.db_request import query_debugger
 from product.models import Collection, AsiaProduct, ProductImage, Category
 from promotion.models import Discount
@@ -269,3 +269,10 @@ class TaskResponseView(APIView):
 
             return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
         return Response({'text': 'Permission denied!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VillageListView(APIView):
+    def get(self, request, *args, **kwargs):
+        villages = Village.objects.all()
+        serializer = VillageSerializer(villages, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

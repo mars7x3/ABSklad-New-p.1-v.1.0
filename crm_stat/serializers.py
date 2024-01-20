@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from one_c.models import MoneyDoc
+from order.models import MyOrder
 from .models import StockGroupStat, StockStat
 
 
@@ -16,3 +18,27 @@ class StockGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = StockGroupStat
         exclude = ("id", "stat_type",)
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = MoneyDoc
+        fields = ("id", "user_name", "status", "amount", "created_at")
+
+    def get_user_name(self, obj):
+        if obj.user:
+            return obj.user.name
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = MyOrder
+        fields = ("id", "user_name", "price", "created_at")
+
+    def get_user_name(self, obj):
+        if obj.author:
+            return obj.author.user.name

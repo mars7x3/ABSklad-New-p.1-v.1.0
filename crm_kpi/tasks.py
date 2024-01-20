@@ -1,16 +1,86 @@
 import logging
+from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 
 from absklad_commerce.celery import app
 from account.models import MyUser
+from order.models import OrderProduct
 from product.models import AsiaProduct
-from .models import DealerKPI, DealerKPIProduct
+
+from .models import DealerKPI, DealerKPIProduct, ManagerKPI, ManagerKPISVD
 from .utils import get_tmz_of_user_for_kpi
 
 logger = logging.getLogger('tasks_management')
+
+
+@app.task()
+def create_kpi():
+    create_dealer_kpi.delay()
+    create_manager_kpi.delay()
+
+
+@app.task()
+def create_manager_kpi():
+    today = timezone.now()
+    current_date = datetime(month=today.month, year=today.year, day=1).date()
+    month_ago = today - relativedelta(months=1)
+    three_month_ago = today - relativedelta(months=3)
+
+    saved_manager_ids = ManagerKPI.objects.filter(month__month=today.month, month__year=today.year).values("manager_id")
+
+    managers_queryset = MyUser.objects.filter(~models.Q(id__in=models.Subquery(saved_manager_ids)), status='manager')
+    managers = (
+        managers_queryset
+        .values("id")
+        .annotate(
+            akb=models.Count(
+                "dealer_profiles__user_id",
+                distinct=True,
+                filter=models.Q(
+                    dealer_profiles__orders__isnull=False,
+                    dealer_profiles__orders__created_at__month=month_ago.month
+                )
+            )
+        )
+    )
+
+    new_managers_kpi = [
+        ManagerKPI(manager_id=manager["id"], akb=manager["akb"], month=current_date)
+        for manager in managers
+    ]
+
+    if not new_managers_kpi:
+        logger.error(f"Not found new managers for ManagerKPI saving date: {current_date}")
+        return
+
+    saved_manager_kpi_objs = {
+        getattr(manager_kpi, "manager_id"): manager_kpi
+        for manager_kpi in ManagerKPI.objects.bulk_create(new_managers_kpi)
+    }
+
+    products = (
+        OrderProduct.objects.filter(
+            order__author__managers__id__in=saved_manager_kpi_objs.keys(),
+            order__created_at__gte=three_month_ago,
+            order__status__in=['paid', 'sent', 'success', 'wait']
+        )
+        .values(manager_id=models.F('order__author__managers__id'), product_id=models.F('ab_product__id'))
+        .annotate(total_count=models.Sum('count'))
+    )
+    new_managers_svd = [
+        ManagerKPISVD(
+            manager_kpi=saved_manager_kpi_objs[product["manager_id"]],
+            product_id=product["product_id"],
+            count=product["total_count"]
+        )
+        for product in products
+        if product["manager_id"] in saved_manager_kpi_objs
+    ]
+    if new_managers_svd:
+        ManagerKPISVD.objects.bulk_create(new_managers_svd)
 
 
 @app.task()
