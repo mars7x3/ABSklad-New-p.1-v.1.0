@@ -4,9 +4,11 @@ from uuid import uuid4
 
 import requests
 from django.db import transaction
+from django.db.models import F, Case, When, Value, IntegerField
 from django.utils import timezone
+from transliterate import translit
 
-from account.models import DealerStatus, MyUser, Wallet, DealerProfile
+from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
 from general_service.models import Stock, City, PriceType, CashBox
 from one_c.models import MoneyDoc
@@ -14,8 +16,61 @@ from order.models import MyOrder, OrderProduct
 from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Collection
 
 
+def total_cost_price(products):
+    amount = 0
+    for p in products:
+        product = AsiaProduct.objects.filter(
+            uid=p.get('uid')
+        ).annotate(
+            cost_price=Case(
+                When(cost_prices__is_active=True, then=F('cost_prices__price')),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        ).first()
+        if product:
+            amount += product.cost_price * int(p.get('count'))
+
+    return round(amount)
+
+
+def plus_quantity(order):
+    products_data = order.order_products.all().values_list('product_id', 'count')
+    update_data = []
+    for p_id, count in products_data:
+        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock)
+        if quantity:
+            quantity.count += count
+            update_data.append(quantity)
+    ProductCount.objects.bulk_update(update_data, ['count'])
+
+
+def generate_products_data(products):
+    result = []
+    for p in products:
+        product = AsiaProduct.objects.get(uid=p.get('uid'))
+        total_price = int(p.get('price')) * int(p.get('count'))
+        cost_price = product.cost_prices.filter(is_active=True).first()
+        result.append({'title': product.title, 'category': product.category, 'count': int(p.get('count')),
+                       'ab_product': product, 'total_price': total_price, 'price': int(p.get('price')),
+                       'cost_price': cost_price.price})
+
+    return result
+
+
+def minus_quantity(order):
+    products_data = order.order_products.all().values_list('product_id', 'count')
+    update_data = []
+    for p_id, count in products_data:
+        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock)
+        if quantity:
+            quantity.count -= count
+            update_data.append(quantity)
+    ProductCount.objects.bulk_update(update_data, ['count'])
+
+
 def sync_prods_list():
-    url = 'http://91.211.251.134/ab1c/hs/asoi/leftovers'
+    url = 'http://91.211.251.134/testcrm/hs/asoi/leftovers'
     username = 'Директор'
     password = '757520ля***'
     response = requests.get(url, auth=(username.encode('utf-8'), password.encode('utf-8')))
@@ -88,8 +143,8 @@ def sync_prods_list():
         ProductPrice.objects.bulk_update(prod_price_data, ['price'])
 
 
-def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
-    products = request.data.get('products')
+def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
+    products = data.get('products')
     print('***Product CRUD***')
     print(products)
     dealer_statuses = DealerStatus.objects.all()
@@ -103,6 +158,8 @@ def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
         product = AsiaProduct.objects.filter(uid=uid).first()
         if product:
             product.title = prod.get('title')
+            product.is_active = bool(int(prod.get('is_active')))
+            product.vendor_code = prod.get('vendor_code')
             product.save()
             if product.category:
                 if product.category.uid != prod.get('category_uid'):
@@ -112,7 +169,9 @@ def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
                         product.save()
 
         else:
-            product = AsiaProduct.objects.create(uid=uid, title=prod.get('title'))
+            product = AsiaProduct.objects.create(uid=uid, title=prod.get('title'),
+                                                 is_active=bool(int(prod.get('is_active'))),
+                                                 vendor_code=prod.get('vendor_code'))
             category = Category.objects.filter(uid=prod.get('category_uid')).first()
             if category:
                 product.category = category
@@ -132,7 +191,7 @@ def sync_prod_crud_1c_crm(request):  # sync product 1C -> CRM
 
 
 def sync_dealer():
-    url = 'http://91.211.251.134/ab1c/hs/asoi/clients'
+    url = 'http://91.211.251.134/testcrm/hs/asoi/clients'
     username = 'Директор'
     password = '757520ля***'
     response = requests.get(url, auth=(username.encode('utf-8'), password.encode('utf-8')))
@@ -195,7 +254,7 @@ def sync_dealer():
 
 
 def sync_order_histories_1c_to_crm():
-    url = 'http://91.211.251.134/ab1c/hs/asoi/GetSale'
+    url = 'http://91.211.251.134/testcrm/hs/asoi/GetSale'
     username = 'Директор'
     password = '757520ля***'
     response = requests.get(url, auth=(username.encode('utf-8'), password.encode('utf-8')))
@@ -310,182 +369,32 @@ def sync_pay_doc_histories():
     MoneyDoc.objects.bulk_update(update_data, ['created_at'])
 
 
-def sync_order_to_1C(order):
-    try:
-        with transaction.atomic():
-            url = "http://91.211.251.134/ab1c/hs/asoi/CreateSale"
-            products = order.order_products.all()
-            released_at = timezone.localtime(order.released_at)
-            money = order.money_docs.filter(is_active=True).first()
-            payload = json.dumps({
-                "user_uid": order.author.uid,
-                "created_at": f'{released_at}',
-                "payment_doc_uid": money.uid,
-                "cityUID": order.city_stock.stocks.first().uid,
-                "products": [
-                    {"title": p.title,
-                     "uid": p.uid,
-                     "count": int(p.count),
-                     'price': int(p.price)}
-                    for p in products
-                ]
-            })
-
-            username = 'Директор'
-            password = '757520ля***'
-            print('***ORDER CREATE***')
-            print(payload)
-            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-            print(response.text)
-            response_data = json.loads(response.content)
-
-            uid = response_data.get('result_uid')
-            order.uid = uid
-            order.save()
-    except Exception as e:
-        raise TypeError
-
-
-def sync_order_pay_to_1C(order):
-    try:
-        with transaction.atomic():
-
-            url = "http://91.211.251.134/ab1c/hs/asoi/CreateaPyment"
-            if 'Наличка' == order.type_status or order.type_status == 'Каспи':
-                type_status = 'Наличка'
-                cash_box_uid = order.author.city.cash_boxs.first().uid
-            else:
-                type_status = 'Без нал'
-                cash_box_uid = ''
-            payload = json.dumps({
-                "user_uid": order.author.uid,
-                "amount": int(order.price),
-                "created_at": f'{timezone.localtime(order.created_at)}',
-                "order_type": type_status,
-                "cashbox_uid": cash_box_uid,
-            })
-            print('***ORDER PAY***')
-            print('sync_order_pay_to_1C: ', payload)
-            username = 'Директор'
-            password = '757520ля***'
-            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-            print('1C return - ', response.text)
-
-            response_data = json.loads(response.content)
-            payment_doc_uid = response_data.get('result_uid')
-            order.payment_doc_uid = payment_doc_uid
-            order.save()
-            MoneyDoc.objects.create(order=order, user=order.author, amount=order.price, uid=payment_doc_uid)
-
-    except Exception as e:
-        raise TypeError
-
-
-def sync_1c_money_doc(money_doc):
-    url = "http://91.211.251.134/ab1c/hs/asoi/CreateaPyment"
-    if money_doc.status == 'Без нал':
-        cash_box_uid = ''
+def sync_1c_money_doc_crud(data):
+    money_doc = MoneyDoc.objects.filter(uid=data.get('uid')).first()
+    user = MyUser.objects.filter(uid=data.get('user')).first()
+    cash_box = CashBox.objects.filter(uid=data.get('cash_box')).first()
+    if not user:
+        return False, 'Контрагент не существует'
+    if not cash_box:
+        return False, 'Касса не существует'
+    if money_doc:
+        money_doc.status = data.get('status')
+        money_doc.is_active = bool(int(data.get('is_active')))
+        money_doc.amount = data.get('amount')
+        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S')
+        money_doc.save()
     else:
-        city = money_doc.user.dealer_profile.village.city
-        cash_box = city.stocks.first().cash_boxs.first()
-        cash_box_uid = cash_box.uid
-    # TODO: если в регионе будет больше 1 склада, то надо будет логику кассы поменять.
-
-    payload = json.dumps({
-        "user_uid": money_doc.user.uid,
-        "amount": int(money_doc.amount),
-        "created_at": f'{timezone.localtime(money_doc.created_at)}',
-        "order_type": money_doc.status,
-        "cashbox_uid": cash_box_uid,
-
-    })
-    print('***Sync_order_pay_to_1C: ', payload)
-
-    username = 'Директор'
-    password = '757520ля***'
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-    print('return - ', response.text)
-    response_data = json.loads(response.content)
-    uid = response_data.get('result_uid')
-
-    money_doc.uid = uid
-    money_doc.save()
-
-
-def sync_return_order_to_1C(returns_order):
-    url = "http://91.211.251.134/ab1c/hs/asoi/ReturnGoods"
-    products = returns_order.return_products.all()
-    payload = json.dumps({
-        "uid": returns_order.order.uid,
-        "created_at": f'{timezone.localtime(returns_order.created_at)}',
-        "products_return": [
-            {
-                "uid": p.product.uid,
-                "count": int(p.count),
-            }
-            for p in products
-        ]
-    })
-
-    username = 'Директор'
-    password = '757520ля***'
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-
-
-def sync_dealer_back_to_1C(dealer):
-    url = "http://91.211.251.134/ab1c/hs/asoi/clients"
-    profile = dealer.dealer_profile
-    payload = json.dumps({
-        "clients": [{
-            'Name': dealer.name,
-            'UID': dealer.uid,
-            'Telephone': dealer.phone,
-            'Address': dealer.address,
-            'Liability': profile.liability,
-            'Email': dealer.email,
-            'City': profile.village.city.title,
-            'CityUID': profile.village.city.user_uid,
-        }]})
-    username = 'Директор'
-    password = '757520ля***'
-    print('***DEALER SYNC***')
-    print(payload)
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-    print(response.text)
-    response_data = json.loads(response.content)
-
-    dealer_uid = response_data.get('client')
-    if dealer_uid:
-        dealer.uid = dealer_uid
-        dealer.save()
-
-
-def sync_product_crm_to_1c(product):
-    url = "http://91.211.251.134/ab1c/hs/asoi/GoodsCreate"
-    payload = json.dumps({
-        "NomenclatureName": product.title,
-        "NomenclatureUID": product.uid,
-        "CategoryName": product.category.title,
-        "CategoryUID": product.category.uid,
-        "Prices": [
-            {
-                "PriceTypes": p.city.title,
-                "PricetypesUID": p.city.price_uid,
-                "PriceAmount": int(p.price)
-            }
-            for p in product.prices.filter(dealer_status__discount=0)
-        ]
-    })
-    username = 'Директор'
-    password = '757520ля***'
-    print('***PRODUCT SYNC***')
-    print(payload)
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-    print(response.text)
-    response_data = json.loads(response.content)
-    product_uid = response_data.get('NomenclatureUID')
-    product.uid = product_uid
-    product.save()
+        data = {
+            'uid': data.get('uid'),
+            'user': user,
+            'cash_box': cash_box,
+            'status': data.get('status'),
+            'is_active': bool(int(data.get('is_active'))),
+            'amount': data.get('amount'),
+            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S')
+        }
+        CashBox.objects.create(**data)
+    return True, 'Success!'
 
 
 def sync_dealer_1C_to_back(request):
@@ -496,6 +405,7 @@ def sync_dealer_1C_to_back(request):
         "email": request.data.get("Email"),
         'status': 'dealer_1c',
         'password': generate_pwd(),
+        'is_active': bool(int(request.data.get('is_active')))
     }
     profile_data = {
         "liability": request.data.get('Liability'),
@@ -508,7 +418,6 @@ def sync_dealer_1C_to_back(request):
     if city:
         village = city.villages.first()
         profile_data['village'] = village
-        data['is_active'] = True
     else:
         data['is_active'] = False
         profile_data['village'] = None
@@ -534,29 +443,187 @@ def sync_dealer_1C_to_back(request):
     Wallet.objects.get_or_create(user=user)
 
 
-def sync_category_crm_to_1c(category):
-    url = "http://91.211.251.134/ab1c/hs/asoi/CategoryGoodsCreate"
-    payload = json.dumps({
-        "category_title": category.title,
-        "category_uid": category.uid,
-    })
-
-    username = 'Директор'
-    password = '757520ля***'
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-    response_data = json.loads(response.content)
-    uid = response_data.get('category_uid')
-
-    category.uid = uid
-    category.save()
-
-
 def sync_category_1c_to_crm(data):
     category = Category.objects.filter(uid=data.get('category_uid')).first()
     if category:
         category.title = data.get('category_title')
+        category.is_active = bool(int(data.get('is_active')))
         category.save()
     else:
         Category.objects.create(title=data.get('category_title'), uid=data.get('category_uid'),
-                                slug=data.get('category_uid'))
+                                slug=data.get('category_uid'), is_active=bool(int(data.get('is_active'))))
+
+
+def order_1c_to_crm(data):
+    order_data = dict()
+    products = data.get('products')
+    user = MyUser.objects.get(uid=data.get('user_uid'))
+    city_stock = Stock.objects.filter(uid=data.get('stock_uid')).first()
+    if user and city_stock:
+        order_data['author'] = user.dealer_profile
+        order_data['cost_price'] = total_cost_price(products)
+        order_data['status'] = 'sent'
+        order_data['uid'] = data.get('order_uid')
+        order_data['price'] = data.get('total_price')
+        order_data['type_status'] = 'wallet'
+        order_data['stock'] = city_stock
+        order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
+        order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
+        order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
+        order_data['is_active'] = bool(int(data['is_active']))
+
+        order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
+        if order:
+            # update
+            if order.is_active:
+                plus_quantity(order)
+
+            for key, value in order_data.items():
+                setattr(order, key, value)
+
+            order.save()
+
+            if order.is_active:
+                order.order_products.all().delete()
+                products_data = generate_products_data(products)
+                OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products_data])
+                minus_quantity(order)
+
+        else:
+            # create order
+            order = MyOrder.objects.create(**order_data)
+
+            products_data = generate_products_data(products)
+            OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products_data])
+            minus_quantity(order)
+
+            kwargs = {'user': user, 'title': f'Заказ #{order.id}', 'description': order.comment,
+                      'link_id': order.id, 'status': 'order', 'is_push': True}
+            Notification.objects.create(**kwargs)
+
+            # change_dealer_status.delay(user.id)
+
+
+def sync_test_nurs():
+    url = "http://91.211.251.134/testcrm/hs/asoi/GoodsCreate"
+    payload = json.dumps({
+        "NomenclatureName": 'Nurs, eto tovar!',
+        "NomenclatureUID": '2dfcc1c2-1c86-11ed-8a2f-2c59e53ae4c3',
+        "CategoryName": 'Nurs eto category!',
+        "CategoryUID": '65265414-1c85-11ed-8a2f-2c59e53ae4c3',
+        "is_product": 0,
+        # "uid": ""
+    })
+    username = 'Директор'
+    password = '757520ля***'
+    print('***PRODUCT SYNC***')
+    print(payload)
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    print(response.text)
+    print(response.status_code)
+
+
+def sync_1c_price_city_crud(data):
+    city = City.objects.filter(price_uid=data['uid']).first()
+    price_type = PriceType.objects.filter(uid=data['uid']).first()
+
+    if city:
+        city.is_active = bool(int(data['is_active']))
+        city.title = data['title']
+        city.save()
+    elif price_type:
+        price_type.is_active = bool(int(data['is_active']))
+        price_type.title = data['title']
+        price_type.save()
+    else:
+        data = {
+            'uid': data['uid'],
+            'title': data['title'],
+            'is_active': bool(int(data['is_active']))
+        }
+        PriceType.objects.create(**data)
+    return True, 'Success!'
+
+
+def sync_1c_user_city_crud(data):
+    city = City.objects.filter(user_uid=data['uid']).first()
+    title = translit(data['title'], 'ru', reversed=True)
+    slug = title.replace(' ', '_').lower()
+    if city:
+        city.is_active = bool(int(data['is_active']))
+        city.title = data['title']
+        city.slug = slug
+        city.save()
+    else:
+        data = {
+            'uid': data['uid'],
+            'title': data['title'],
+            'is_active': bool(int(data['is_active'])),
+            'slug': slug
+        }
+        City.objects.create(**data)
+    return True, 'Success!'
+
+
+def sync_1c_stock_crud(data):
+    stock = Stock.objects.filter(uid=data['uid']).first()
+    if stock:
+        stock.is_active = bool(int(data['is_active']))
+        stock.title = data['title']
+        stock.save()
+    else:
+        data = {
+            'uid': data['uid'],
+            'title': data['title'],
+            'is_active': bool(int(data['is_active'])),
+        }
+        Stock.objects.create(**data)
+    return True, 'Success!'
+
+
+def sync_1c_prod_count_crud(data):
+    product = AsiaProduct.objects.filter(uid=data['uid']).first()
+    if product:
+        update_data = []
+        for p in data['products']:
+            stock = Stock.objects.filter(uid=p['stock_uid']).first()
+            count = product.counts.filter(stock=stock)
+            if stock:
+                count.count_1c = p['count']
+                update_data.append(count)
+            else:
+                return False, 'Склад не найден!'
+        ProductCount.objects.bulk_update(update_data, ['count_1c'])
+        return True, 'Success!'
+    else:
+        return False, 'Продукт не найден!'
+
+
+def sync_1c_prod_price_crud(data):
+    product = AsiaProduct.objects.filter(uid=data['uid']).first()
+    d_status = DealerStatus.objects.filter(discount=0).first()
+    if product:
+        price_type_data = []
+        city_data = []
+
+        for p in data['products']:
+            price_type = PriceType.objects.filter(uid=p['city_uid']).first()
+            city = City.objects.filter(price_uid=p['city_uid']).first()
+            if price_type:
+                price = product.prices.filter(d_status=d_status, price_type=price_type).first()
+                price.price = p['amount']
+                price_type_data.append(price)
+            elif city:
+                price = product.prices.filter(d_status=d_status, city=city).first()
+                price.price = p['amount']
+                city_data.append(price)
+            else:
+                return False, 'Город не найден!'
+        if price_type_data:
+            ProductPrice.objects.bulk_update(price_type_data, ['price'])
+        elif city_data:
+            ProductPrice.objects.bulk_update(city_data, ['price'])
+        return True, 'Success!'
+    else:
+        return False, 'Продукт не найден!'
 
