@@ -91,7 +91,15 @@ def get_kpi_info(user):
     kpi = user.kpis.filter(month__month=datetime.datetime.now().month).first()
     tmz = sum(kpi.kpi_products.all().values_list('count', flat=True))
     fact_tmz = sum(kpi.kpi_products.all().values_list('fact_count', flat=True))
-    return {'pds': kpi.pds, 'tmz': tmz, 'fact_pds': kpi.fact_pds, 'fact_tmz': fact_tmz}
+    data = {
+        'pds': kpi.pds,
+        'tmz': tmz,
+        'fact_pds': kpi.fact_pds,
+        'fact_tmz': fact_tmz,
+        'tmz_percent': kpi.fact_pds / kpi.pds * 100,
+        'pds_percent': fact_tmz / tmz * 100,
+    }
+    return data
 
 
 def get_kpi_products(user):
@@ -104,7 +112,8 @@ def get_kpi_products(user):
                 'title': p.product.title,
                 'id': p.product.id,
                 'count': p.count,
-                'fact_count': p.fact_count
+                'fact_count': p.fact_count,
+                'percent': p.fact_count / p.count * 100
             }
         )
     return prods_data
