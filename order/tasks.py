@@ -9,7 +9,8 @@ def create_order_notification(order_id):
     kwargs = {'user': order.author.user, 'status': 'order', 'title': f'Заказ #{order.id}',
               'description': order.comment, 'link_id': order.id, 'is_push': True}
 
-    Notification.objects.create(**kwargs)
+    notification = Notification.objects.create(**kwargs)
+    return notification
 
 
 

@@ -1,7 +1,9 @@
 import datetime
 
 from django.utils import timezone
+
 from django.utils.crypto import get_random_string
+
 from drf_yasg.utils import swagger_auto_schema
 
 from rest_framework import status, viewsets, generics
@@ -53,6 +55,15 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
 
         if o_status:
             kwargs['status'] = o_status
+
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        if start_date and end_date:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
+            end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+            # end_date = end_date + datetime.timedelta(days=1)
+            kwargs['created_at__gte'] = start_date
+            kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
 
