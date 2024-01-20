@@ -146,6 +146,12 @@ class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
         if city:
             kwargs['village__city__slug'] = city
 
+        descending = request.query_params.get('descending')
+        if descending == 'true':
+            queryset = queryset.order_by('-wallet__amount_crm', '-wallet__amount_1c')
+        elif descending == 'false':
+            queryset = queryset.order_by('wallet__amount_crm', 'wallet__amount_1c')
+
         dealer_status = request.query_params.get('status')
         if dealer_status:
             kwargs['dealer_status'] = dealer_status
