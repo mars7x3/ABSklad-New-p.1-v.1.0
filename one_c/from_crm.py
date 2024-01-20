@@ -69,7 +69,7 @@ def sync_dealer_back_to_1C(dealer):
             'Name': dealer.name,
             'UID': dealer.uid,
             'Telephone': dealer.phone,
-            'Address': dealer.address,
+            'Address': profile.address,
             'Liability': profile.liability,
             'Email': dealer.email,
             'City': profile.village.city.title if profile.village else '',
