@@ -123,6 +123,9 @@ class Inventory(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        ordering = ('-created_at',)
+
 
 class InventoryProduct(models.Model):
     inventory = models.ForeignKey(Inventory, on_delete=models.CASCADE, related_name='products')
