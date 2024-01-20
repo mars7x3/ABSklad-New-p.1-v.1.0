@@ -146,13 +146,13 @@ class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
         if city:
             kwargs['village__city__slug'] = city
 
-        descending_crm = request.query_params.get('descending')
+        descending_crm = request.query_params.get('descending_crm')
         if descending_crm == 'true':
             queryset = queryset.order_by('-wallet__amount_crm')
         elif descending_crm == 'false':
             queryset = queryset.order_by('wallet__amount_crm')
 
-        descending_1c = request.query_params.get('descending')
+        descending_1c = request.query_params.get('descending_1c')
         if descending_1c == 'true':
             queryset = queryset.order_by('-wallet__amount_1c')
         elif descending_1c == 'false':
@@ -430,6 +430,17 @@ class ReturnOrderView(ListModelMixin,
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = ReturnOrderSerializer
     retrieve_serializer_class = ReturnOrderDetailSerializer
+
+    def get_queryset(self):
+        search = self.request.query_params.get('search')
+        order_status = self.request.query_params.get('status')
+        queryset = ReturnOrder.objects.all()
+        if search:
+            queryset = ReturnOrder.objects.filter(order__author__user__name__icontains=search)
+        if order_status:
+            queryset = ReturnOrder.objects.filter(order__status=order_status)
+
+        return queryset
 
     def get_serializer_class(self):
         if self.detail:
