@@ -437,10 +437,10 @@ def sync_dealer_1C_to_back(request):
         profile.save()
 
     else:
-        user = MyUser.objects.create(**data)
-        DealerProfile.objects.create(**profile_data)
+        user = MyUser.objects.create_user(**data)
+        profile = DealerProfile.objects.create(user=user, **profile_data)
 
-    Wallet.objects.get_or_create(user=user)
+    Wallet.objects.get_or_create(dealer=profile)
 
 
 def sync_category_1c_to_crm(data):
