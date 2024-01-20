@@ -410,7 +410,6 @@ class InventoryListUpdateView(ListModelMixin,
 
 class ReturnOrderView(ListModelMixin,
                       RetrieveModelMixin,
-                      UpdateModelMixin,
                       GenericViewSet):
     queryset = ReturnOrder.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]

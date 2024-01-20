@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from crm_general.models import CRMTask, CRMTaskFile, Inventory, InventoryProduct
 from crm_general.serializers import VerboseChoiceField
+from crm_general.warehouse_manager.utils import create_order_return_product
 from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
@@ -218,40 +219,33 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         order_id = self.context['request'].data.get('order')
         order = MyOrder.objects.get(id=order_id)
+        count = self.context['request'].data.get('count')
         order_product_ids = order.order_products.filter().values_list('ab_product__id', flat=True)
-        products = self.context['request'].data.get('products')
+        product = int(self.context['request'].data.get('product'))
+        if product not in order_product_ids:
+            raise serializers.ValidationError({'detail': 'product not in order'})
 
-        for p_id in products:
-            if p_id['id'] not in order_product_ids:
-                raise serializers.ValidationError({'detail': 'product not in order'})
-
-            order_product = order.order_products.filter(ab_product_id=p_id['id']).first()
-            if p_id['count'] > order_product.count:
-                raise serializers.ValidationError({'detail': 'count can not be more than in order'})
+        order_product = order.order_products.filter(ab_product_id=product).first()
+        if int(count) > order_product.count:
+            raise serializers.ValidationError({'detail': 'count can not be more than in order'})
 
         return attrs
 
     def create(self, validated_data):
         request_body = self.context['request'].data
-
-        instance = super().create(validated_data)
-        products = request_body.get('products')
-        return_products = []
-        for product in products:
-            product_price = instance.order.order_products.filter(ab_product_id=product['id']).first()
-            product_instance = AsiaProduct.objects.get(id=product['id'])
-            return_products.append(
-                ReturnOrderProduct(
-                    return_order=instance,
-                    product=product_instance,
-                    count=product['count'],
-                    price=product['count'] * product_price.price,
-                    comment=product['comment']
-                )
-            )
-        ReturnOrderProduct.objects.bulk_create(return_products)
-
-        return instance
+        order_id = request_body.get('order')
+        comment = request_body.get('comment')
+        count = request_body.get('count')
+        product_id = request_body.get('product')
+        files = self.context['request'].FILES.getlist('files')
+        return_order = ReturnOrder.objects.filter(order_id=order_id).first()
+        if return_order:
+            create_order_return_product(return_order, comment, int(count), files, product_id)
+            return return_order
+        else:
+            instance = super().create(validated_data)
+            create_order_return_product(instance, comment, int(count), files, product_id)
+            return instance
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
