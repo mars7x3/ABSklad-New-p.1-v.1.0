@@ -436,9 +436,9 @@ class ReturnOrderView(ListModelMixin,
         order_status = self.request.query_params.get('status')
         queryset = ReturnOrder.objects.all()
         if search:
-            queryset = ReturnOrder.objects.filter(order__author__user__name__icontains=search)
+            queryset = queryset.filter(order__author__user__name__icontains=search)
         if order_status:
-            queryset = ReturnOrder.objects.filter(order__status=order_status)
+            queryset = queryset.filter(order__status=order_status)
 
         return queryset
 
