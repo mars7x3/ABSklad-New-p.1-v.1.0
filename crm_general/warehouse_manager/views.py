@@ -36,17 +36,16 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
         queryset = self.get_queryset()
         order_status = self.request.query_params.get('status')
         type_status = self.request.query_params.get('type_status')
-        start_time = self.request.query_params.get('start_time')
-        end_time = self.request.query_params.get('end_time')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
         search = self.request.query_params.get('search')
 
         if order_status:
             queryset = queryset.filter(status=order_status)
         if type_status:
             queryset = queryset.filter(type_status=type_status)
-
-        if start_time and end_time:
-            queryset = queryset.filter(created_at__gte=start_time, created_at__lte=end_time)
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__gte=start_date, created_at__lte=end_date)
 
         if search:
             queryset = queryset.filter(Q(name__icontains=search), Q(gmail__icontains=search))

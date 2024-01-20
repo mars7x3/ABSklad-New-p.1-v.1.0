@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
 from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
-from crm_general.paginations import AppPaginationClass, ProductPagination
+from crm_general.paginations import AppPaginationClass, ProductPagination, GeneralPurposePagination
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
 from order.models import MyOrder, CartProduct
 from product.models import ProductPrice, Collection, Category, AsiaProduct
@@ -33,7 +33,7 @@ class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
                        .all()
     )
     serializer_class = ShortOrderSerializer
-    pagination_class = AppPaginationClass
+    pagination_class = GeneralPurposePagination
     filter_backends = (filters.SearchFilter, filters.OrderingFilter, FilterByFields)
     search_fields = ("author__user__name", "id")
     ordering_fields = ("id", "price", "created_at", "paid_at", "released_at")
