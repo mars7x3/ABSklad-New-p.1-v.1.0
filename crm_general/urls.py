@@ -64,7 +64,7 @@ from .marketer.views import (
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
     WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView, ReturnOrderProductView,
-    ReturnOrderProductFileAPIView
+    ReturnOrderProductFileAPIView, InventoryProductDeleteView
 )
 
 main_director_router = SimpleRouter()
@@ -286,6 +286,8 @@ warehouse_manager_router.register('product', WareHouseProductViewSet, basename='
 warehouse_manager_router.register('category', WareHouseCategoryViewSet, basename='warehouse-category')
 warehouse_manager_router.register('collection', WareHouseCollectionViewSet, basename='warehouse-collection')
 warehouse_manager_router.register('inventory', WareHouseInventoryView, basename='warehouse-inventory')
+warehouse_manager_router.register('inventory/product/delete', InventoryProductDeleteView,
+                                  basename='warehouse-inventory-product-delete')
 warehouse_manager_router.register('order-return', ReturnOrderProductView, basename='warehouse-order-return')
 
 

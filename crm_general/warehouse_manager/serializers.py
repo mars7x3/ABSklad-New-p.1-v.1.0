@@ -131,6 +131,7 @@ class InventoryProductSerializer(serializers.ModelSerializer):
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField(read_only=True)
+    receiver_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Inventory
@@ -161,9 +162,22 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
             rep['products'] = InventoryProductSerializer(instance.products.all(),  read_only=True, many=True).data
         return rep
 
+    def update(self, instance, validated_data):
+        products = self.context['request'].data.get('products')
+        if products:
+            for product in products:
+                inventory_product = InventoryProduct.objects.filter(id=product['id']).first()
+                inventory_product.count = product['count']
+                inventory_product.save()
+        return super().update(instance, validated_data)
+
     @staticmethod
     def get_sender_name(obj):
         return obj.sender.name
+
+    @staticmethod
+    def get_receiver_name(obj):
+        return obj.receiver.name if obj.receiver else None
 
 
 class InventoryProductListSerializer(serializers.ModelSerializer):

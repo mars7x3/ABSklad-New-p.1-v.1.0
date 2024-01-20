@@ -253,7 +253,6 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
         rep['type_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
                                                                                        price_type__isnull=False),
                                                                 many=True, context=self.context).data
-
         return rep
 
     @staticmethod
