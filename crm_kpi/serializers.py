@@ -46,7 +46,8 @@ class DealerKPISerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['user__name'] = instance.user.name
-        rep['user__city'] = instance.user.dealer_profile.village.city.title
+        rep['user__city'] = instance.user.dealer_profile.village.city.title if (instance.user.
+                                                                                dealer_profile.village) else ''
         rep['pds_percent_completion'] = round((instance.fact_pds / instance.pds) * 100 if instance.pds > 0 else 0)
         sum_count = instance.kpi_products.all().aggregate(Sum('count'))
         fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
@@ -65,7 +66,8 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['user__name'] = instance.user.name
-        rep['user__city'] = instance.user.dealer_profile.village.city.title
+        rep['user__city'] = instance.user.dealer_profile.village.city.title if (instance.user.
+                                                                                dealer_profile.village) else ''
         rep['pds_percent_completion'] = round((instance.fact_pds / instance.pds) * 100 if instance.pds > 0 else 0)
         sum_count = instance.kpi_products.all().aggregate(Sum('count'))
         fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))

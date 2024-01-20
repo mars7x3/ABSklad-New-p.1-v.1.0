@@ -59,21 +59,21 @@ class MarketerCollectionModelViewSet(ListModelMixin,
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = MarketerCollectionSerializer
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.queryset
-        c_status = self.request.query_params.get('status')
-        search = self.request.query_params.get('search')
-
-        if c_status == 'active':
-            queryset = queryset.filter(is_active=True)
-        elif c_status == 'inactive':
-            queryset = queryset.filter(is_active=False)
-
-        if search:
-            queryset = queryset.filter(title__icontains=search)
-
-        serializer = ShortProductSerializer(queryset, many=True, context=self.get_renderer_context())
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    # def list(self, request, *args, **kwargs):
+    #     queryset = self.queryset
+    #     c_status = self.request.query_params.get('status')
+    #     search = self.request.query_params.get('search')
+    #
+    #     if c_status == 'active':
+    #         queryset = queryset.filter(is_active=True)
+    #     elif c_status == 'inactive':
+    #         queryset = queryset.filter(is_active=False)
+    #
+    #     if search:
+    #         queryset = queryset.filter(title__icontains=search)
+    #
+    #     serializer = ShortProductSerializer(queryset, many=True, context=self.get_renderer_context())
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class MarketerCategoryModelViewSet(ListModelMixin,
