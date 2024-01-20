@@ -100,25 +100,26 @@ def kpi_total_info(date: datetime):
             fact_total_pds=Sum("fact_pds", default=0),
             fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
             fact_total_tmz_sum=Sum('kpi_products__fact_sum', default=0),
+            total_pds=Sum("pds", default=0),
+            total_tmz_count=Sum('kpi_products__count', default=0),
+            total_tmz_sum=Sum('kpi_products__sum', default=0),
+        )
+        .annotate(
             fact_avg_price=Sum(
                 Case(
                     When(
-                        kpi_products__fact_sum__gt=0, kpi_products__fact_count__gt=0,
-                        then=F('kpi_products__fact_sum') / F('kpi_products__fact_count')
+                        fact_total_tmz_sum__gt=0, fact_total_tmz_count__gt=0,
+                        then=F('fact_total_tmz_sum') / F('fact_total_tmz_count')
                     ),
                     output_field=FloatField(),
                     default=Value(0.0)
                 )
-
             ),
-            total_pds=Sum("pds", default=0),
-            total_tmz_count=Sum('kpi_products__count', default=0),
-            total_tmz_sum=Sum('kpi_products__sum', default=0),
             avg_price=Sum(
                 Case(
                     When(
-                        kpi_products__sum__gt=0, kpi_products__count__gt=0,
-                        then=F('kpi_products__sum') / F('kpi_products__count')
+                        fact_total_tmz_sum__gt=0, fact_total_tmz_count__gt=0,
+                        then=F('fact_total_tmz_sum') / F('fact_total_tmz_count')
                     ),
                     output_field=FloatField(),
                     default=Value(0.0)
