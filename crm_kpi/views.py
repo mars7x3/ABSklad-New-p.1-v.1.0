@@ -5,16 +5,18 @@ from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.mixins import DestroyModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
 from account.models import ManagerProfile, MyUser
 from crm_general.director.permissions import IsDirector
 from crm_kpi.models import DealerKPIProduct, DealerKPI
 from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
-    DealerKPIDetailSerializer, DealerKPITMZTotalSerializer
+    DealerKPIDetailSerializer, DealerKPITMZTotalSerializer, DealerKPIProductSerializer
 from crm_kpi.utils import kpi_total_info, kpi_main_2lvl, kpi_main_3lvl, kpi_svd_1lvl, kpi_acb_1lvl
 from product.models import AsiaProduct
 
@@ -160,6 +162,12 @@ class DealerKPIView(viewsets.ModelViewSet):
 
         serializer = ProductListKPISerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DeleteKPIProductView(DestroyModelMixin, GenericViewSet):
+    queryset = DealerKPIProduct.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = DealerKPIProductSerializer
 
 
 class KPITotalView(APIView):

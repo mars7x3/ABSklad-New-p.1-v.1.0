@@ -5,7 +5,7 @@ from .views import *
 router = DefaultRouter()
 
 router.register('crm-kpi/dealer/crud', DealerKPIView)
-
+router.register('crm-kpi/dealer/product/delete', DeleteKPIProductView)
 
 urlpatterns = [
     path('crm/kpi/total/info/', KPITotalView.as_view()),

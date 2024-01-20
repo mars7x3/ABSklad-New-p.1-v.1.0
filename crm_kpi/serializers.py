@@ -70,16 +70,24 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
         sum_count = instance.kpi_products.all().aggregate(Sum('count'))
         fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
         if sum_count['count__sum'] is not None and fact_sum_count['fact_count__sum'] is not None:
-            rep['tmz_percent_completion'] = fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100
+            rep['tmz_percent_completion'] = round(fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100)
         else:
             rep['tmz_percent_completion'] = 0
         rep['products'] = DealerKPIProductSerializer(instance.kpi_products.all(), many=True).data
         return rep
 
     def update(self, instance, validated_data):
+        products = self.context['request'].data.get('products')
         if instance.is_confirmed is not False:
             raise serializers.ValidationError({'detail': 'Can not update KPI which is already confirmed'})
-        return super().update(instance, validated_data)
+
+        instance = super().update(instance, validated_data)
+        for p in products:
+            dealer_product = DealerKPIProduct.objects.filter(id=p['id']).first()
+            dealer_product.count = p['count']
+            dealer_product.save()
+
+        return instance
 
 
 class DealerKPIProductSerializer(serializers.ModelSerializer):
