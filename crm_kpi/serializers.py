@@ -91,6 +91,8 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
                 dealer_product.save()
             else:
                 product = AsiaProduct.objects.filter(id=p['product']).first()
+                if product is None:
+                    raise serializers.ValidationError({'detail': 'Product not found'})
                 DealerKPIProduct.objects.create(kpi=instance, product=product, count=p['count'])
 
         return instance
