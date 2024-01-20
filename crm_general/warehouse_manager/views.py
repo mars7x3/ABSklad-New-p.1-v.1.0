@@ -199,11 +199,22 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
                                                order__created_at__range=(start_date, end_date)
                                                ).aggregate(Sum('count'))['count__sum'] or 0
 
+            count_crm = ProductCount.objects.filter(product=product,
+                                                    stock=self.warehouse_profile.stock).aggregate(
+                                                    count_crm=Sum('count_crm')
+                                                )
+            count_1c = ProductCount.objects.filter(product=product,
+                                                   stock=self.warehouse_profile.stock).aggregate(
+                                                   count_1c=Sum('count_1c')
+                                                )
+            print(count_1c)
+            print(count_crm)
+            reserved = count_1c['count_1c'] - count_crm['count_crm']
             statistics_entry = {
                 "id": product.id,
                 "vendor_code": product.vendor_code,
                 "title": product.title,
-                "reserved": '',
+                "reserved": reserved,
                 "category": product.category.title,
                 "before": remains + sold + movement_delta,
                 "sold": sold,
