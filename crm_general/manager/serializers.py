@@ -12,7 +12,7 @@ from account.models import (
     BalancePlus, BalancePlusFile
 )
 from crm_general.models import CRMTask
-from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
+from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer, VillageSerializer
 from crm_general.utils import get_motivation_done
 from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
@@ -246,13 +246,13 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 
 
 class DealerBirthdaySerializer(serializers.ModelSerializer):
-    city = CitySerializer(many=False, read_only=True)
+    village = VillageSerializer(many=False, read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
     name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
-        fields = ("id", "name", "birthday", "city", "dealer_status")
+        fields = ("id", "name", "birthday", "village", "dealer_status")
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance) -> str:
@@ -495,11 +495,19 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True)
     sizes = ProductSizeSerializer(many=True)
     collection = serializers.SlugRelatedField(slug_field="title", read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AsiaProduct
         fields = ("id", "images", "diagram", "title", "vendor_code", "description", "sizes", "collection",
-                  "weight", "package_count", "made_in", "created_at", "updated_at")
+                  "weight", "package_count", "made_in", "created_at", "updated_at", 'price')
+
+    def get_price(self, instance):
+        user = self.context['request'].user
+        price = instance.prices.filter(city=user.manager_profile.city, d_status__discount=0).first()
+        if price:
+            return price.price
+        return price
 
 
 # ------------------------------------------------- BALANCES

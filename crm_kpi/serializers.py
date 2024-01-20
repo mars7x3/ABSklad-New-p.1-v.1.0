@@ -51,7 +51,7 @@ class DealerKPISerializer(serializers.ModelSerializer):
         sum_count = instance.kpi_products.all().aggregate(Sum('count'))
         fact_sum_count = instance.kpi_products.all().aggregate(Sum('fact_count'))
         if sum_count['count__sum'] is not None and fact_sum_count['fact_count__sum'] is not None:
-            rep['tmz_percent_completion'] = fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100
+            rep['tmz_percent_completion'] = round(fact_sum_count['fact_count__sum'] / sum_count['count__sum'] * 100)
         else:
             rep['tmz_percent_completion'] = 0
         return rep
@@ -83,9 +83,13 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
 
         instance = super().update(instance, validated_data)
         for p in products:
-            dealer_product = DealerKPIProduct.objects.filter(id=p['id']).first()
-            dealer_product.count = p['count']
-            dealer_product.save()
+            dealer_product = DealerKPIProduct.objects.filter(product_id=p['product'], kpi=instance).first()
+            if dealer_product:
+                dealer_product.count = p['count']
+                dealer_product.save()
+            else:
+                product = AsiaProduct.objects.filter(id=p['product']).first()
+                DealerKPIProduct.objects.create(kpi=instance, product=product, count=p['count'])
 
         return instance
 

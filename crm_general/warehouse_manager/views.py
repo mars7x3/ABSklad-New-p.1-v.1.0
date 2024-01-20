@@ -2,7 +2,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q, Sum, F
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin, \
+    DestroyModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelViewSet
@@ -18,9 +19,9 @@ from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
     WareHouseProductSerializer, WareHouseInventorySerializer, \
-    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer
+    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer, InventoryProductSerializer
 from .mixins import WareHouseManagerMixin
-from ..models import Inventory, CRMTask
+from ..models import Inventory, CRMTask, InventoryProduct
 from ..tasks import minus_quantity
 
 
@@ -250,6 +251,7 @@ class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
 class WareHouseInventoryView(ListModelMixin,
                              RetrieveModelMixin,
                              CreateModelMixin,
+                             UpdateModelMixin,
                              GenericViewSet):
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     serializer_class = WareHouseInventorySerializer
@@ -285,11 +287,17 @@ class WareHouseInventoryView(ListModelMixin,
     def get_products(self, request, *args, **kwargs):
         category_id = self.request.query_params.get('category_id')
         search = self.request.query_params.get('search')
-        products = AsiaProduct.objects.filter(category__id=category_id)
+        products = AsiaProduct.objects.filter(is_active=True, category__id=category_id)
         if search:
             products = products.filter(title__icontains=search)
         serializer = InventoryProductListSerializer(products, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class InventoryProductDeleteView(DestroyModelMixin, GenericViewSet):
+    queryset = InventoryProduct.objects.all()
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = InventoryProductSerializer
 
 
 class ReturnOrderProductView(ListModelMixin,
