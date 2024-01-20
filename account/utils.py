@@ -1,6 +1,8 @@
-import random
 import requests
+import json
 from django.utils.crypto import get_random_string
+from decouple import config
+from account.models import MyUser
 
 
 def random_code():
@@ -34,3 +36,32 @@ def generate_pwd() -> str:
     password = get_random_string(length=8,
                                  allowed_chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
     return password
+
+
+def send_push_notification(users, title, text, link_id, status):
+    url = "https://fcm.googleapis.com/fcm/send"
+    tokens = [user.firebase_token for user in users]
+    payload = json.dumps({
+      "registration_ids": tokens,
+      "notification": {
+          "title": title,
+          "body": text,
+          "payload": {
+              "id": link_id,
+              "status": status
+          }
+      }
+    })
+    headers = {
+        'Authorization': f'key={config("SECRET_KEY")}',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    print(response.text)
+
+
+
+
+
