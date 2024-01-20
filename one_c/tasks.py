@@ -12,7 +12,7 @@ from product.models import ProductCount
 @app.task
 def sync_balance_1c_to_crm():
     print('***sync_balance_1c_to_crm***')
-    url = "http://91.211.251.134/ab1c/hs/asoi/Balance"
+    url = "http://91.211.251.134/testcrm/hs/asoi/Balance"
     username = 'Директор'
     password = '757520ля***'
     response = requests.request("GET", url, auth=(username.encode('utf-8'), password.encode('utf-8')))
@@ -32,7 +32,7 @@ def sync_balance_1c_to_crm():
 @app.task
 def sync_product_count():
     print("***START SYNC PRODUCT COUNT***")
-    url = 'http://91.211.251.134/ab1c/hs/asoi/leftovers'
+    url = 'http://91.211.251.134/testcrm/hs/asoi/leftovers'
     username = 'Директор'
     password = '757520ля***'
     response = requests.get(url, auth=(username.encode('utf-8'), password.encode('utf-8')))
