@@ -164,12 +164,20 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         products = self.context['request'].data.get('products')
+        instance = super().update(instance, validated_data)
         if products:
             for product in products:
-                inventory_product = InventoryProduct.objects.filter(id=product['id']).first()
-                inventory_product.count = product['count']
-                inventory_product.save()
-        return super().update(instance, validated_data)
+                inventory_product = InventoryProduct.objects.filter(product_id=product['product'],
+                                                                    inventory=instance).first()
+                if inventory_product:
+                    inventory_product.count = product['count']
+                    inventory_product.save()
+                else:
+                    ab_product = AsiaProduct.objects.filter(id=product['product'], is_active=True).first()
+                    if ab_product is None:
+                        raise serializers.ValidationError({'detail': 'Product not found'})
+                    InventoryProduct.objects.create(inventory=instance, product=ab_product, count=product['count'])
+        return instance
 
     @staticmethod
     def get_sender_name(obj):

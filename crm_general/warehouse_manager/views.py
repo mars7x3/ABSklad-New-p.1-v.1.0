@@ -207,8 +207,7 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
                                                    stock=self.warehouse_profile.stock).aggregate(
                                                    count_1c=Sum('count_1c')
                                                 )
-            print(count_1c)
-            print(count_crm)
+
             reserved = count_1c['count_1c'] - count_crm['count_crm']
             statistics_entry = {
                 "id": product.id,
