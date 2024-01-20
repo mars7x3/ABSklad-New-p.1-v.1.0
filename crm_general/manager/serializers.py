@@ -209,10 +209,10 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
         return instance.user.name
 
     def get_city(self, instance):
-        return instance.village.city.title
+        return instance.village.city.title if instance.village else None
 
     def get_village(self, instance):
-        return instance.village.title
+        return instance.village.title if instance.village else None
 
     def get_balance_amount(self, instance) -> Decimal:
         try:
