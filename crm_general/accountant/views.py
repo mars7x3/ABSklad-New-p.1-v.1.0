@@ -379,6 +379,9 @@ class InventoryListUpdateView(ListModelMixin,
     retrieve_serializer_class = InventoryDetailSerializer
     pagination_class = GeneralPurposePagination
 
+    def get_queryset(self):
+        return Inventory.objects.all()
+
     def get_serializer_class(self):
         if self.detail:
             return self.retrieve_serializer_class
@@ -392,7 +395,7 @@ class InventoryListUpdateView(ListModelMixin,
         inventory_status = request_query.get('status')
 
         if stock_id:
-            queryset = queryset.filter(user__warehouse_profile__stock_id=stock_id)
+            queryset = queryset.filter(sender__warehouse_profile__stock_id=stock_id)
         if inventory_status:
             queryset = queryset.filter(status=inventory_status)
         if search:
