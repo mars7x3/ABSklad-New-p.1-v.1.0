@@ -203,6 +203,7 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
                 "id": product.id,
                 "vendor_code": product.vendor_code,
                 "title": product.title,
+                "reserved": '',
                 "category": product.category.title,
                 "before": remains + sold + movement_delta,
                 "sold": sold,
