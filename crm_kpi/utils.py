@@ -105,26 +105,22 @@ def kpi_total_info(date: datetime):
             total_tmz_sum=Sum('kpi_products__sum', default=0),
         )
         .annotate(
-            fact_avg_price=Sum(
-                Case(
-                    When(
-                        fact_total_tmz_sum__gt=0, fact_total_tmz_count__gt=0,
-                        then=F('fact_total_tmz_sum') / F('fact_total_tmz_count')
-                    ),
-                    output_field=FloatField(),
-                    default=Value(0.0)
-                )
+            fact_avg_price=Case(
+                When(
+                    fact_total_tmz_sum__gt=0, fact_total_tmz_count__gt=0,
+                    then=F('fact_total_tmz_sum') / F('fact_total_tmz_count')
+                ),
+                output_field=FloatField(),
+                default=Value(0.0)
             ),
-            avg_price=Sum(
-                Case(
-                    When(
-                        fact_total_tmz_sum__gt=0, fact_total_tmz_count__gt=0,
-                        then=F('fact_total_tmz_sum') / F('fact_total_tmz_count')
-                    ),
-                    output_field=FloatField(),
-                    default=Value(0.0)
-                )
-            ),
+            avg_price=Case(
+                When(
+                    fact_total_tmz_sum__gt=0, fact_total_tmz_count__gt=0,
+                    then=F('fact_total_tmz_sum') / F('fact_total_tmz_count')
+                ),
+                output_field=FloatField(),
+                default=Value(0.0)
+            )
         )
         .annotate(
             per_done_pds=Case(
