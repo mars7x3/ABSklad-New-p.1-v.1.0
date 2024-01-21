@@ -55,7 +55,7 @@ class MyOrderDetailSerializer(serializers.ModelSerializer):
 class OrderReceiptSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderReceipt
-        exclude = ('order', )
+        exclude = ('order',)
 
 
 class OrderProductSerializer(serializers.ModelSerializer):
@@ -222,6 +222,26 @@ class AccountantStockListSerializer(serializers.ModelSerializer):
         return rep
 
 
+class AccountantStockProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'vendor_code', 'title', 'is_active', 'is_discount')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        stock_id = self.context.get('stock_id')
+        rep['collection_name'] = instance.collection.title if instance.collection else None
+        rep['category_name'] = instance.category.title if instance.category else None
+        stocks_count_crm = sum(instance.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
+        rep['stocks_count_crm'] = stocks_count_crm
+        rep['stocks_count_1c'] = sum(instance.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+        price = instance.prices.filter(city__stocks__id=stock_id).first()
+        rep['price'] = price.price if price else '---'
+        rep['total_price'] = sum(instance.prices.filter(city__stocks__id=stock_id).
+                                 values_list('price', flat=True))
+        return rep
+
+
 class AccountantStockDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
@@ -231,7 +251,9 @@ class AccountantStockDetailSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         products = instance.counts.all().values_list('product', flat=True)
         asia_products = AsiaProduct.objects.filter(pk__in=products)
-        rep['products'] = AccountantProductSerializer(asia_products, read_only=True, many=True).data
+        stock_id = instance.id
+        rep['products'] = AccountantStockProductSerializer(asia_products, context={'stock_id': stock_id},
+                                                           read_only=True, many=True).data
         return rep
 
 
