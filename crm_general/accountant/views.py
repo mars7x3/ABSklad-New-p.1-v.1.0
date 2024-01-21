@@ -37,7 +37,7 @@ class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
     # permission_classes = [IsAuthenticated, IsAccountant]
     queryset = MyOrder.objects.filter(is_active=True)
     serializer_class = MyOrderListSerializer
-    pagination_class = CRMPaginationClass
+    pagination_class = GeneralPurposePagination
 
     def get_serializer_class(self):
         if self.detail:
@@ -75,7 +75,7 @@ class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
             kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
-        paginator = CRMPaginationClass()
+        paginator = GeneralPurposePagination()
         page = paginator.paginate_queryset(queryset, request)
         serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
         return self.get_paginated_response(serializer)
