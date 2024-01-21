@@ -222,9 +222,8 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         last_15_days = timezone.now() - timezone.timedelta(days=15)
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
-                                                                  order__status__in=['sent', 'paid',
-                                                                                     'success'])
-                                   .values_list('count'))) / 15, 2)
+                                                                  order__status__in=['sent', 'paid', 'success'])
+                                   .values_list('count', flat=True))), 2) / 15
         avg_check = instance.order_products.filter(order__is_active=True,
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
