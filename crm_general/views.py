@@ -240,9 +240,10 @@ class CRMTaskListView(viewsets.ReadOnlyModelViewSet):
             kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = CRMTaskCRUDSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class TaskResponseView(APIView):
