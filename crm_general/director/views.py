@@ -189,10 +189,10 @@ class BalanceListView(mixins.ListModelMixin, GenericViewSet):
                 kwargs['amount_1c__lte'] = 50000
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-
-        return self.get_paginated_response(serializer)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = BalanceListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class BalanceListTotalView(APIView):
@@ -467,9 +467,10 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
             kwargs['user__is_active'] = bool(int(is_active))
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DirectorDealerSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class DirectorDealerCRUDView(mixins.CreateModelMixin,
@@ -785,9 +786,10 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
             kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DirectorTaskListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class DirectorStockCRUDView(viewsets.ModelViewSet):

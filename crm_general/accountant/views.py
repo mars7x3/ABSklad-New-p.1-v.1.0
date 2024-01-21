@@ -79,8 +79,6 @@ class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
         page = paginator.paginate_queryset(queryset, request)
         serializer = MyOrderListSerializer(page, many=True, context=self.get_renderer_context()).data
         return paginator.get_paginated_response(serializer)
-        # serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        # return Response(serializer, status=status.HTTP_200_OK)
 
 
 class AccountantOrderTotalInfoView(APIView):
@@ -166,10 +164,10 @@ class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
             kwargs['dealer_status'] = dealer_status
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-
-        return self.get_paginated_response(serializer)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DealerProfileListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class AccountantBalanceHistoryListView(APIView):
