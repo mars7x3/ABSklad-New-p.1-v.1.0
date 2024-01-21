@@ -13,6 +13,7 @@ from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone, PriceType
+from one_c.from_crm import sync_dealer_back_to_1C
 from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
 
@@ -397,6 +398,7 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
             profile_serializer = DirectorDealerProfileSerializer(data=profile)
             profile_serializer.is_valid(raise_exception=True)
             profile_serializer.save(user=user)
+            sync_dealer_back_to_1C(user)
             return user
 
     def update(self, instance, validated_data):
@@ -411,6 +413,7 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
             profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
             profile_serializer.is_valid(raise_exception=True)
             profile_serializer.save()
+            sync_dealer_back_to_1C(instance)
             return instance
 
 
