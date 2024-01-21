@@ -17,15 +17,17 @@ class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
 
 class ReturnOrderProductSerializer(serializers.ModelSerializer):
     files = ReturnOrderProductFileSerializer(many=True)
+    title = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ReturnOrderProduct
         fields = '__all__'
 
+    def get_title(self, instance):
+        return instance.product.title
+
 
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
-    return_product = ReturnOrderProductSerializer(read_only=True)
-
     class Meta:
         model = OrderProduct
         fields = '__all__'
@@ -42,10 +44,15 @@ class OrderListSerializer(serializers.ModelSerializer):
 class OrderDetailSerializer(serializers.ModelSerializer):
     order_products = WareHouseOrderProductSerializer(read_only=True, many=True)
     type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
+    return_orders = serializers.SerializerMethodField()
 
     class Meta:
         model = MyOrder
         fields = '__all__'
+
+    def get_return_orders(self, instance):
+        return_order_instances = instance.return_orders.all()
+        return ReturnOrderSerializer(return_order_instances, many=True).data
 
 
 class WareHouseCollectionListSerializer(serializers.ModelSerializer):

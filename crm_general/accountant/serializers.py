@@ -308,11 +308,12 @@ class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
 
 class ReturnOrderProductSerializer(serializers.ModelSerializer):
     files = ReturnOrderProductFileSerializer(many=True, read_only=True)
+    title = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ReturnOrderProduct
         fields = '__all__'
-        read_only_fields = ('count', 'price', 'comment', 'created_at', 'product', 'return_order')
+        read_only_fields = ('count', 'price', 'comment', 'created_at', 'product', 'return_order', 'title')
 
     def update(self, instance, validated_data):
         if validated_data['status'] == 'success':
@@ -320,6 +321,9 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
                                                          product_id=instance.product.id,
                                                          count=instance.count)
         return super().update(instance, validated_data)
+
+    def get_title(self, instance):
+        return instance.product.title
 
 
 class ReturnOrderDetailSerializer(serializers.ModelSerializer):
