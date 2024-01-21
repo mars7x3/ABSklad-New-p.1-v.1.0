@@ -317,23 +317,3 @@ class ReturnOrderProductView(ListModelMixin,
     queryset = ReturnOrder.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     serializer_class = ReturnOrderSerializer
-
-
-class ReturnOrderProductFileAPIView(APIView):
-    def post(self, request, *args, **kwargs):
-        request_body = self.request.data
-        return_product_id = request_body.get('return_product_id')
-        return_product = ReturnOrderProduct.objects.get(id=return_product_id)
-        files = self.request.FILES.getlist('files')
-
-        files_to_create = []
-        for file in files:
-            files_to_create.append(
-                ReturnOrderProductFile(
-                    return_product=return_product,
-                    file=file
-                )
-            )
-        ReturnOrderProductFile.objects.bulk_create(files_to_create)
-        return Response({'detail': 'Success'}, status=status.HTTP_201_CREATED)
-
