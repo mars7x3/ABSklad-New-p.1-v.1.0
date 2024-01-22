@@ -89,9 +89,11 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        user = self.context['request'].user
+        stock_id = user.warehouse_profile.stock.id
         rep['collection_name'] = instance.collection.title if instance.collection else None
         rep['category_name'] = instance.category.title if instance.category else None
-        rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
+        rep['stocks_count'] = sum(instance.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
         cost_price = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_price.price if cost_price else '---'
 
@@ -99,7 +101,7 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
                                                                   order__status__in=['sent', 'paid', 'success'])
-                                   .values_list('count', flat=True))), 2) / 15
+                                   .values_list('count', flat=True)), 2) / 15)
         avg_check = instance.order_products.filter(order__is_active=True,
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
@@ -107,7 +109,7 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
         if len(avg_check) == 0:
             rep['avg_check'] = 0
         else:
-            rep['avg_check'] = sum(avg_check) / len(avg_check)
+            rep['avg_check'] = round(sum(avg_check) / len(avg_check))
 
         return rep
 
