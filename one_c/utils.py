@@ -277,9 +277,9 @@ def sync_order_histories_1c_to_crm():
                             'author': author.dealer_profile,
                             'price': o.get('total_price'),
                             'type_status': o.get('type_status') if o.get('type_status') else 'Карта',
-                            'created_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
-                            'released_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
-                            'paid_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
+                            'created_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+                            'released_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+                            'paid_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
                             'uid': o.get('uid'),
                             'status': 'success',
                             'stock': stock,
@@ -327,7 +327,7 @@ def sync_order_histories_1c_to_crm():
         print('*** ', x)
         order = MyOrder.objects.filter(uid=o.get('uid')).first()
         if order:
-            order.created_at = datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S")
+            order.created_at = datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
             order.save()
 
 
@@ -357,7 +357,7 @@ def sync_pay_doc_histories():
 
     update_data = []
     for p in payments:
-        date_object = datetime.datetime.strptime(p['created_at'], "%d.%m.%Y %H:%M:%S")
+        date_object = datetime.datetime.strptime(p['created_at'], "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         money_doc = MoneyDoc.objects.filter(uid=p['uid']).first()
         if money_doc:
             money_doc.created_at = date_object
@@ -378,7 +378,7 @@ def sync_1c_money_doc_crud(data):
         money_doc.status = data.get('status')
         money_doc.is_active = bool(int(data.get('is_active')))
         money_doc.amount = data.get('amount')
-        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S')
+        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
         money_doc.save()
     else:
         data = {
@@ -388,7 +388,7 @@ def sync_1c_money_doc_crud(data):
             'status': data.get('status'),
             'is_active': bool(int(data.get('is_active'))),
             'amount': data.get('amount'),
-            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S')
+            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
         }
         CashBox.objects.create(**data)
     return True, 'Success!'
@@ -468,14 +468,17 @@ def order_1c_to_crm(data):
         order_data['price'] = data.get('total_price')
         order_data['type_status'] = 'wallet'
         order_data['stock'] = city_stock
-        order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
-        order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
-        order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
+        order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
+        order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
+        order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         order_data['is_active'] = bool(int(data['is_active']))
 
         order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
         if order:
             # update
+            order_data.pop('paid_at')
+            order_data.pop('created_at')
+
             if order.is_active:
                 plus_quantity(order)
 
