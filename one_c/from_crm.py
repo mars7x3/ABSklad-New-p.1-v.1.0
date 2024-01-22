@@ -188,7 +188,7 @@ def sync_order_to_1C(order):
             released_at = timezone.localtime(order.released_at)
             money = order.money_docs.filter(is_active=True).first()
             payload = json.dumps({
-                "user_uid": order.author.uid,
+                "user_uid": order.author.user.uid,
                 "created_at": f'{released_at}',
                 "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
                 "cityUID": order.city_stock.stocks.first().uid,
