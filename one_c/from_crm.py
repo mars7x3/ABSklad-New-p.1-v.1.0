@@ -153,7 +153,7 @@ def sync_money_doc_to_1C(order):
                 type_status = 'Без нал'
                 cash_box_uid = ''
             payload = json.dumps({
-                "user_uid": order.author.uid,
+                "user_uid": order.author.user.uid,
                 "amount": int(order.price),
                 "created_at": f'{timezone.localtime(order.created_at)}',
                 "order_type": type_status,
