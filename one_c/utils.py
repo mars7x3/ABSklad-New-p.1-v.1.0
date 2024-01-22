@@ -54,7 +54,7 @@ def generate_products_data(products):
         result.append({'title': product.title, 'category': product.category, 'count': int(p.get('count')),
                        'ab_product': product, 'total_price': total_price, 'price': int(p.get('price')),
                        'cost_price': cost_price.price})
-
+    print("#result_data " + result)
     return result
 
 
@@ -459,6 +459,7 @@ def order_1c_to_crm(data):
     user = MyUser.objects.get(uid=data.get('user_uid'))
     city_stock = Stock.objects.filter(uid=data.get('stock_uid')).first()
     if user and city_stock:
+        print('#vhod')
         order_data['author'] = user.dealer_profile
         order_data['cost_price'] = total_cost_price(products)
         order_data['status'] = 'sent'
@@ -473,6 +474,7 @@ def order_1c_to_crm(data):
 
         order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
         if order:
+            print('#update')
             # update
             if order.is_active:
                 plus_quantity(order)
@@ -481,6 +483,7 @@ def order_1c_to_crm(data):
                 setattr(order, key, value)
 
             order.save()
+            print('#save')
 
             if order.is_active:
                 order.order_products.all().delete()
