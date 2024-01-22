@@ -35,14 +35,14 @@ def total_cost_price(products):
 
 
 def plus_quantity(order):
-    products_data = order.order_products.all().values_list('product_id', 'count')
+    products_data = order.order_products.all().values_list('ab_product_id', 'count')
     update_data = []
     for p_id, count in products_data:
-        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock)
+        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock).first()
         if quantity:
-            quantity.count += count
+            quantity.count_crm += count
             update_data.append(quantity)
-    ProductCount.objects.bulk_update(update_data, ['count'])
+    ProductCount.objects.bulk_update(update_data, ['count_crm'])
 
 
 def generate_products_data(products):
@@ -54,19 +54,18 @@ def generate_products_data(products):
         result.append({'title': product.title, 'category': product.category, 'count': int(p.get('count')),
                        'ab_product': product, 'total_price': total_price, 'price': int(p.get('price')),
                        'cost_price': cost_price.price})
-    print("#result_data " + result)
     return result
 
 
 def minus_quantity(order):
-    products_data = order.order_products.all().values_list('product_id', 'count')
+    products_data = order.order_products.all().values_list('ab_product_id', 'count')
     update_data = []
     for p_id, count in products_data:
-        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock)
+        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock).first()
         if quantity:
-            quantity.count -= count
+            quantity.count_crm -= count
             update_data.append(quantity)
-    ProductCount.objects.bulk_update(update_data, ['count'])
+    ProductCount.objects.bulk_update(update_data, ['count_crm'])
 
 
 def sync_prods_list():
@@ -457,9 +456,9 @@ def order_1c_to_crm(data):
     order_data = dict()
     products = data.get('products')
     user = MyUser.objects.get(uid=data.get('user_uid'))
-    city_stock = Stock.objects.filter(uid=data.get('stock_uid')).first()
+    city_stock = Stock.objects.filter(uid=data.get('cityUID')).first()
+
     if user and city_stock:
-        print('#vhod')
         order_data['author'] = user.dealer_profile
         order_data['cost_price'] = total_cost_price(products)
         order_data['status'] = 'sent'
@@ -474,7 +473,6 @@ def order_1c_to_crm(data):
 
         order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
         if order:
-            print('#update')
             # update
             if order.is_active:
                 plus_quantity(order)
@@ -483,7 +481,6 @@ def order_1c_to_crm(data):
                 setattr(order, key, value)
 
             order.save()
-            print('#save')
 
             if order.is_active:
                 order.order_products.all().delete()
