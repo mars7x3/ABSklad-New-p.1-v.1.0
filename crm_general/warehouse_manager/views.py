@@ -220,7 +220,7 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
                 "vendor_code": product.vendor_code,
                 "title": product.title,
                 "reserved": reserved,
-                "category": product.category.title,
+                "category": product.category.title if product.category else None,
                 "before": remains + sold + movement_delta,
                 "sold": sold,
                 "movements": movement_delta,
