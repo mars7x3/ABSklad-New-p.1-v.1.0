@@ -401,7 +401,7 @@ def sync_dealer_1C_to_back(request):
         "uid": request.data.get("UID"),
         "phone": request.data.get("Telephone"),
         "email": request.data.get("Email"),
-        'status': 'dealer_1c',
+        'status': 'dealer',
         'password': generate_pwd(),
         'is_active': bool(int(request.data.get('is_active')))
     }
