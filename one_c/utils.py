@@ -397,6 +397,7 @@ def sync_1c_money_doc_crud(data):
 def sync_dealer_1C_to_back(request):
     data = {
         "name": request.data.get("Name"),
+        "username": request.data.get("UID"),
         "uid": request.data.get("UID"),
         "phone": request.data.get("Telephone"),
         "email": request.data.get("Email"),
