@@ -173,6 +173,7 @@ def sync_money_doc_to_1C(order):
             response_data = json.loads(response.content)
             payment_doc_uid = response_data.get('result_uid')
             order.payment_doc_uid = payment_doc_uid
+            order.paid_at = timezone.now()
             order.save()
             MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
 
@@ -191,7 +192,7 @@ def sync_order_to_1C(order):
                 "user_uid": order.author.user.uid,
                 "created_at": f'{released_at}',
                 "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
-                "cityUID": order.city_stock.stocks.first().uid,
+                "cityUID": order.stock.stocks.first().uid,
                 "is_active": int(order.is_acitve),
                 "products": [
                     {"title": p.title,
@@ -212,6 +213,7 @@ def sync_order_to_1C(order):
 
             uid = response_data.get('result_uid')
             order.uid = uid
+            order.released_at = timezone.now()
             order.save()
     except Exception as e:
         raise TypeError
