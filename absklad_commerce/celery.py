@@ -15,6 +15,10 @@ app.conf.beat_schedule = {
         'task': 'crm_general.tasks.set_banner_false',
         'schedule': crontab(minute=1, hour=0),
     },
+    'sync_balance_1c_to_crm_task': {
+        'task': 'one_c.tasks.sync_balance_1c_to_crm',
+        'schedule': 7.0,
+    },
 }
 
 app.conf.timezone = settings.TIME_ZONE
