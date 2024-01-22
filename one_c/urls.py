@@ -17,8 +17,5 @@ urlpatterns = [
     path('crm/1c/sync/prod/count/', SyncProdCountCRUDView.as_view()),  # prod count crud
     path('crm/1c/sync/prod/price/', SyncProdPriceCRUDView.as_view()),  # prod price crud
 
-
-
-
     path('', include(router.urls)),
 ]

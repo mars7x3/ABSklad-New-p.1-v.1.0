@@ -428,6 +428,7 @@ def sync_dealer_1C_to_back(request):
         user.uid = data['uid']
         user.phone = data['phone']
         user.email = data['email']
+        user.is_active = data['is_active']
         user.save()
 
         profile = user.dealer_profile
