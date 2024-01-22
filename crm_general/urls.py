@@ -51,6 +51,7 @@ from .rop.views import (
     ProductPriceListAPIView as RopProductPriceListAPIView,
     ProductRetrieveAPIView as RopProductRetrieveAPIView,
     BalanceViewSet as BalanceViewSet,
+    ManagerShortListView as ManagerShortListView
 )
 
 from .director.views import *
@@ -321,6 +322,7 @@ crm_urlpatterns = [
     path("crm/price-type/list/", PriceTypeListView.as_view()),
     path("crm/staff/task/response/", TaskResponseView.as_view()),
     path("crm/villages/list/", VillageListView.as_view()),
+    path("crm/managers/list/", ManagerShortListView.as_view()),
 
     path("crm/user/image/cd", UserImageCDView.as_view()),
 

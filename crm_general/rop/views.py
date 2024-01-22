@@ -13,7 +13,7 @@ from product.models import Collection, Category, ProductPrice, AsiaProduct
 from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, DealerProfileDetailSerializer, \
     DealerBalanceHistorySerializer, DealerBasketProductSerializer, ShortOrderSerializer, CollectionSerializer, \
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
-    DealerStatusSerializer
+    DealerStatusSerializer, ManagerListSerializer
 from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin, BaseManagerMixin
 
 
@@ -347,4 +347,8 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
         data["current_balance_amount"] = dealer_profile.wallet.amount_crm
         return Response(data)
 
+
+class ManagerShortListView(generics.ListAPIView):
+    queryset = ManagerProfile.objects.select_related("user", "city").all()
+    serializer_class = ManagerListSerializer
 
