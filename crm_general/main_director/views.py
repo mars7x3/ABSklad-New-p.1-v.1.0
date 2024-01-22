@@ -47,7 +47,7 @@ class MainDirStaffCRUDView(viewsets.ModelViewSet):
 
 
 class MainDirectorStockListView(mixins.ListModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsMainDirector]
     queryset = Stock.objects.select_related('city').all()
     serializer_class = MainDirectorStockListSerializer
 
