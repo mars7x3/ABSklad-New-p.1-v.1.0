@@ -227,7 +227,10 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         avg_check = instance.order_products.filter(order__is_active=True,
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
-        rep['avg_check'] = sum(avg_check) / len(avg_check)
+        if len(avg_check) == 0:
+            rep['avg_check'] = 0
+        else:
+            rep['avg_check'] = sum(avg_check) / len(avg_check)
 
         return rep
 
@@ -1098,7 +1101,6 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
         product_prices = instance.prices.all()
         new_discount_amount = validated_data['discount']
         new_discount_amount = Decimal(new_discount_amount)
-        update_prices = []
         for product_price in product_prices:
             product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
                                                              city=product_price.city,
@@ -1106,11 +1108,8 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
             base_price = Decimal(product_base_price.price)
 
             discounted_price = base_price - (base_price * (new_discount_amount / 100))
-            update_prices.append(
-                ProductPrice(
-                    price=discounted_price,
-                    old_price=base_price,
-                )
-            )
-        ProductPrice.objects.bulk_update(update_prices)
+            product_price.price = discounted_price
+            product_price.old_price = base_price
+            product_price.save()
+
         return super().update(instance, validated_data)
