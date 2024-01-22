@@ -1117,3 +1117,9 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
             product_price.save()
 
         return super().update(instance, validated_data)
+
+
+class DirectorCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
