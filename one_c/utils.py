@@ -144,48 +144,46 @@ def sync_prods_list():
 
 
 def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
-    products = data.get('products')
     print('***Product CRUD***')
-    print(products)
+    print(data)
     dealer_statuses = DealerStatus.objects.all()
     cities = City.objects.all()
     p_types = PriceType.objects.all()
 
     price_create = []
 
-    for prod in products:
-        uid = prod.get('product_uid')
-        product = AsiaProduct.objects.filter(uid=uid).first()
-        if product:
-            product.title = prod.get('title')
-            product.is_active = bool(int(prod.get('is_active')))
-            product.vendor_code = prod.get('vendor_code')
+    uid = data.get('product_uid')
+    product = AsiaProduct.objects.filter(uid=uid).first()
+    if product:
+        product.title = data.get('title')
+        product.is_active = bool(int(data.get('is_active')))
+        product.vendor_code = data.get('vendor_code')
+        product.save()
+        if product.category:
+            if product.category.uid != data.get('category_uid'):
+                category = Category.objects.filter(uid=data.get('category_uid'))
+                if category:
+                    product.category = category.first()
+                    product.save()
+
+    else:
+        product = AsiaProduct.objects.create(uid=uid, title=data.get('title'),
+                                             is_active=bool(int(data.get('is_active'))),
+                                             vendor_code=data.get('vendor_code'))
+        category = Category.objects.filter(uid=data.get('category_uid')).first()
+        if category:
+            product.category = category
             product.save()
-            if product.category:
-                if product.category.uid != prod.get('category_uid'):
-                    category = Category.objects.filter(uid=prod.get('category_uid'))
-                    if category:
-                        product.category = category.first()
-                        product.save()
 
-        else:
-            product = AsiaProduct.objects.create(uid=uid, title=prod.get('title'),
-                                                 is_active=bool(int(prod.get('is_active'))),
-                                                 vendor_code=prod.get('vendor_code'))
-            category = Category.objects.filter(uid=prod.get('category_uid')).first()
-            if category:
-                product.category = category
-                product.save()
+        for d in dealer_statuses:
+            for c in cities:
+                price_create.append(ProductPrice(city=c, product=product, d_status=d))
 
-            for d in dealer_statuses:
-                for c in cities:
-                    price_create.append(ProductPrice(city=c, product=product, d_status=d))
+            for t in p_types:
+                price_create.append(ProductPrice(price_type=t, product=product, d_status=d))
 
-                for t in p_types:
-                    price_create.append(ProductPrice(price_type=t, product=product, d_status=d))
-
-            p_count_data = [ProductCount(stock=s, product=product) for s in Stock.objects.all()]
-            ProductCount.objects.bulk_create(p_count_data)
+        p_count_data = [ProductCount(stock=s, product=product) for s in Stock.objects.all()]
+        ProductCount.objects.bulk_create(p_count_data)
 
     ProductPrice.objects.bulk_create(price_create)
 

@@ -40,6 +40,7 @@ def sync_product_crm_to_1c(product):
         "NomenclatureUID": product.uid,
         "CategoryName": product.category.title,
         "CategoryUID": product.category.uid,
+        "is_active": int(product.is_active)
     })
     username = 'Директор'
     password = '757520ля***'
