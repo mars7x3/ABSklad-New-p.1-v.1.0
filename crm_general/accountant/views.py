@@ -27,6 +27,7 @@ from crm_general.paginations import GeneralPurposePagination
 from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
 from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
+from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
 from one_c.models import MoneyDoc
 from order.models import MyOrder, ReturnOrder, ReturnOrderProduct
 from crm_general.tasks import minus_quantity
@@ -261,8 +262,14 @@ class BalancePlusModerationView(APIView):
                 balance.is_moderation = True
                 balance.save()
                 if balance.is_success:
-                    pass
-                    # sync_balance_pay_to_1C(balance)
+                    data = {
+                        "status": type_status,
+                        "user": balance.dealer.user,
+                        "amount": balance.amount,
+                        "cash_box": balance.dealer.village.city.stocks.first().cash_box
+                    }
+                    money_doc = MoneyDoc.objects.create(**data)
+                    sync_1c_money_doc(money_doc)
 
                 return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
 
@@ -282,7 +289,7 @@ class AccountantOrderModerationView(APIView):
                     order.save()
                     if order.status == 'paid':
                         minus_quantity(order.id, order.stock.id)
-                        #sync_order_pay_to_1C(order)
+                        sync_money_doc_to_1C(order)
 
                     kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
                               'link_id': order.id, 'status': 'order'}

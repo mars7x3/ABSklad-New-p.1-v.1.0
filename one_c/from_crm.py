@@ -148,7 +148,7 @@ def sync_money_doc_to_1C(order):
             url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
             if 'cash' == order.type_status or order.type_status == 'kaspi':
                 type_status = 'Наличка'
-                cash_box_uid = order.author.city.cash_boxs.first().uid
+                cash_box_uid = order.author.village.city.stocks.first().cash_box.uid
             else:
                 type_status = 'Без нал'
                 cash_box_uid = ''
@@ -158,6 +158,7 @@ def sync_money_doc_to_1C(order):
                 "created_at": f'{timezone.localtime(order.created_at)}',
                 "order_type": type_status,
                 "cashbox_uid": cash_box_uid,
+                "is_active": 1
             })
             print('***ORDER PAY***')
             print('sync_order_pay_to_1C: ', payload)
@@ -170,7 +171,7 @@ def sync_money_doc_to_1C(order):
             payment_doc_uid = response_data.get('result_uid')
             order.payment_doc_uid = payment_doc_uid
             order.save()
-            MoneyDoc.objects.create(order=order, user=order.author, amount=order.price, uid=payment_doc_uid)
+            MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
 
     except Exception as e:
         raise TypeError
