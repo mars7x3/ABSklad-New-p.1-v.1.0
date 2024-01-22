@@ -129,6 +129,7 @@ def sync_1c_money_doc(money_doc):
         "order_type": money_doc.status,
         "cashbox_uid": cash_box_uid,
         "is_active": int(money_doc.is_active),
+        "uid": money_doc.uid
     })
     print('***Sync_order_pay_to_1C: ', payload)
 
@@ -159,7 +160,8 @@ def sync_money_doc_to_1C(order):
                 "created_at": f'{timezone.localtime(order.created_at)}',
                 "order_type": type_status,
                 "cashbox_uid": cash_box_uid,
-                "is_active": 1
+                "is_active": 1,
+                "uid": "00000000-0000-0000-0000-000000000000"
             })
             print('***ORDER PAY***')
             print('sync_order_pay_to_1C: ', payload)
