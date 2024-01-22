@@ -17,7 +17,7 @@ app.conf.beat_schedule = {
     },
     'sync_balance_1c_to_crm_task': {
         'task': 'one_c.tasks.sync_balance_1c_to_crm',
-        'schedule': 7.0,
+        'schedule': 3.0,
     },
 }
 
