@@ -436,6 +436,7 @@ def sync_dealer_1C_to_back(request):
         profile.save()
 
     else:
+        profile_data['is_active'] = False
         user = MyUser.objects.create_user(**data)
         profile = DealerProfile.objects.create(user=user, **profile_data)
 

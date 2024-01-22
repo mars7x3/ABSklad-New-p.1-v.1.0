@@ -69,6 +69,7 @@ def sync_dealer_back_to_1C(dealer):
         print(response.text)
     payload = json.dumps({
         "clients": [{
+            "is_active": int(dealer.is_active),
             'Name': dealer.name,
             'UID': dealer.uid,
             'Telephone': dealer.phone,
