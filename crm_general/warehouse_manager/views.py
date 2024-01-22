@@ -9,6 +9,7 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
+from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
 from order.models import MyOrder, OrderProduct
@@ -75,6 +76,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             if order.type_status == 'cash':
                 order.status = 'paid'
                 order.save()
+                sync_money_doc_to_1C(order)
                 return Response({'detail': 'Order type status successfully changed to "paid"'},
                                 status=status.HTTP_200_OK)
             return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
@@ -84,6 +86,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             if order.status == 'paid':
                 order.status = 'sent'
                 order.save()
+                sync_order_to_1C(order)
                 return Response({'detail': 'Order status successfully changed to "sent"'},
                                 status=status.HTTP_200_OK)
             return Response({'detail': 'Order status must be "paid" to change to "sent"'},
