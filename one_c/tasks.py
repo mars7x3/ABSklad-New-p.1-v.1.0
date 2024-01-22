@@ -18,15 +18,17 @@ def sync_balance_1c_to_crm():
     response = requests.request("GET", url, auth=(username.encode('utf-8'), password.encode('utf-8')))
     response_data = json.loads(response.content)
     response_wallets = response_data.get('wallets')
-
+    a = datetime.datetime.now()
     users_uid = {uid['user_uid']: uid['amount'] for uid in response_wallets}
-    users = MyUser.objects.filter(uid__in=users_uid.keys(), status='dealer')
+    users = MyUser.objects.filter(uid__in=users_uid.keys(), status='dealer').select_related('wallet')
     wallets = []
     for user in users:
         user.wallet.amount = users_uid[user.uid]
         wallets.append(user.wallet)
 
     Wallet.objects.bulk_update(wallets, ['amount'])
+    b = datetime.datetime.now() - a
+    print(b)
 
 
 @app.task
