@@ -20,7 +20,7 @@ def sync_balance_1c_to_crm():
     response_wallets = response_data.get('wallets')
     a = datetime.datetime.now()
     users_uid = {uid['user_uid']: uid['amount'] for uid in response_wallets}
-    users = MyUser.objects.filter(uid__in=users_uid.keys(), status='dealer').select_related('wallet')
+    users = MyUser.objects.filter(uid__in=users_uid.keys(), status='dealer').prefetch_related('wallet')
     wallets = []
     for user in users:
         user.wallet.amount = users_uid[user.uid]
