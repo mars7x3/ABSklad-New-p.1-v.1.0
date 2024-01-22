@@ -193,7 +193,7 @@ def sync_order_to_1C(order):
                 "created_at": f'{released_at}',
                 "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
                 "cityUID": order.stock.uid,
-                "is_active": int(order.is_acitve),
+                "is_active": int(order.is_active),
                 "products": [
                     {"title": p.title,
                      "uid": p.uid,
