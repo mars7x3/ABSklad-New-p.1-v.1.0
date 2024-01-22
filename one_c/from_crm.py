@@ -186,8 +186,9 @@ def sync_order_to_1C(order):
             payload = json.dumps({
                 "user_uid": order.author.uid,
                 "created_at": f'{released_at}',
-                "payment_doc_uid": money.uid,
+                "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
                 "cityUID": order.city_stock.stocks.first().uid,
+                "is_active": int(order.is_acitve),
                 "products": [
                     {"title": p.title,
                      "uid": p.uid,

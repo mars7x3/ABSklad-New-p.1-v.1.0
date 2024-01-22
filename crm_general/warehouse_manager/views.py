@@ -10,6 +10,7 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelV
 from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
+from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
 from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
@@ -76,6 +77,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             if order.type_status == 'cash':
                 order.status = 'paid'
                 order.save()
+                sync_money_doc_to_1C(order)
                 return Response({'detail': 'Order type status successfully changed to "paid"'},
                                 status=status.HTTP_200_OK)
             return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
@@ -85,8 +87,12 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             if order.status == 'paid':
                 order.status = order_status
                 order.save()
+
+                sync_order_to_1C(order)
+
                 minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
                 return Response({'detail': f'Order status successfully changed to {order_status}'},
+
                                 status=status.HTTP_200_OK)
             return Response({'detail': f'Order status must be "paid" to change to {order_status}'},
                             status=status.HTTP_400_BAD_REQUEST)
