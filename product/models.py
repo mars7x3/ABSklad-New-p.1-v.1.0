@@ -63,7 +63,7 @@ class AsiaProduct(models.Model):
         return f"{self.vendor_code}. {self.title}"
 
     class Meta:
-        ordering = ('-updated_at',)
+        ordering = ('-id',)
 
 
 class ProductCostPrice(models.Model):
