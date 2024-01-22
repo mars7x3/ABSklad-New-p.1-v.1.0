@@ -41,6 +41,7 @@ def sync_product_crm_to_1c(product):
         "CategoryName": product.category.title,
         "CategoryUID": product.category.uid,
         "is_active": int(product.is_active),
+        "vendor_code": product.vendor_code,
         "is_product": 1
     })
     username = 'Директор'
