@@ -18,9 +18,11 @@ def purchase_analysis(request):
     o_status = order_statuses.get((request.data.get('status')))
     start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
     end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
-    orders = (request.user.dealer_profile.orders.filter(created_at__gte=start_date, created_at__lte=end_date,
-                                                        is_active=True)
-              .select_related('stock__city').prefetch_related('order_products__category'))
+    orders = request.user.dealer_profile.orders.select_related(
+        'stock__city').prefetch_related('order_products__category').filter(
+        created_at__gte=start_date, created_at__lte=end_date, is_active=True
+    ).annotate('')
+
     if o_status:
         orders = orders.filter(status__in=o_status)
 
