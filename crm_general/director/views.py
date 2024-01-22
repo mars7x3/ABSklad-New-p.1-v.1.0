@@ -829,7 +829,7 @@ class DStockProductListView(mixins.ListModelMixin, GenericViewSet):
 
     def get_queryset(self):
         from django.db.models import F, Sum, IntegerField
-        stock_id = self.request.query_params.get('stock')
+        stock_id = int(self.request.query_params.get('stock'))
 
         return super().get_queryset().annotate(
             total_count=Sum(

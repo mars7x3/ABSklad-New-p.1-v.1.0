@@ -238,7 +238,21 @@ class BalanceHistoryListView(mixins.ListModelMixin, GenericViewSet):
         queryset = self.request.user.dealer_profile.balance_histories.all()
         return queryset
 
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
 
+        t_status = request.query_params.get('status')
+
+        if t_status:
+            kwargs['status'] = t_status
+
+        queryset = queryset.filter(**kwargs)
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 
