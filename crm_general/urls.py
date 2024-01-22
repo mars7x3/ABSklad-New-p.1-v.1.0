@@ -4,6 +4,7 @@ from rest_framework.routers import SimpleRouter
 from .accountant.views import AccountantOrderListView, AccountantProductListView, AccountantCollectionListView, \
     AccountantCategoryView, AccountantStockViewSet
 from .hr.views import HRStaffListView, StaffMagazineCreateView
+from .main_director.views import MainDirStaffCRUDView, MainDirectorStockListView
 
 from .manager.views import (
     OrderListAPIView as ManagerOrderListView,
@@ -69,9 +70,12 @@ from .warehouse_manager.views import (
 
 main_director_router = SimpleRouter()
 
+main_director_router.register('staff/crud', MainDirStaffCRUDView)
+main_director_router.register('stock/list', MainDirectorStockListView)
+
 main_director_urlpatterns = [
 
-    path('', include(main_director_router.urls)),
+    path('main_director/', include(main_director_router.urls)),
 ]
 
 
