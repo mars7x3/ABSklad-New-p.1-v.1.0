@@ -67,25 +67,30 @@ class OrderProduct(models.Model):
 
 
 class ReturnOrder(models.Model):
+    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='return_orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+
+class ReturnOrderProduct(models.Model):
     STATUS = (
         ('created', 'created'),
         ('success', 'success'),
         ('rejected', 'rejected'),
     )
-    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='returns')
-    status = models.CharField(max_length=10, choices=STATUS, default='rejected')
-    created_at = models.DateTimeField(auto_now_add=True)
-    moder_comment = models.TextField(blank=True, null=True)
+    return_order = models.ForeignKey(ReturnOrder, on_delete=models.CASCADE, related_name='products')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='returns')
+    status = models.CharField(max_length=8, choices=STATUS, default='created')
+    count = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=100, decimal_places=2)
+    comment = models.CharField(max_length=1000, null=True)
 
-    class Meta:
-        ordering = ('-id',)
 
-
-class ReturnOrderProduct(models.Model):
-    returns_order = models.ForeignKey(ReturnOrder, on_delete=models.CASCADE, related_name='return_products')
-    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='return_products')
-    count = models.IntegerField(default=0)
-    price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+class ReturnOrderProductFile(models.Model):
+    return_product = models.ForeignKey(ReturnOrderProduct, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='return-products')
 
 
 class Cart(models.Model):

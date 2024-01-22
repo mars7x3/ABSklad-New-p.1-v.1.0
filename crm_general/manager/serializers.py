@@ -5,7 +5,6 @@ from django.db import transaction
 from django.db.models import F, Q, Sum, Count, Value, DecimalField, FloatField
 from django.db.models.functions import Round
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import (
@@ -13,11 +12,11 @@ from account.models import (
     BalancePlus, BalancePlusFile
 )
 from crm_general.models import CRMTask
-from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer
+from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer, VillageSerializer
 from crm_general.utils import get_motivation_done
 from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
-from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, ReturnOrder, ReturnOrderProduct
+from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct
 from order.tasks import create_order_notification
 from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage, ProductCount
 
@@ -210,10 +209,10 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
         return instance.user.name
 
     def get_city(self, instance):
-        return instance.village.city.title
+        return instance.village.city.title if instance.village else None
 
     def get_village(self, instance):
-        return instance.village.title
+        return instance.village.title if instance.village else None
 
     def get_balance_amount(self, instance) -> Decimal:
         try:
@@ -247,13 +246,13 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 
 
 class DealerBirthdaySerializer(serializers.ModelSerializer):
-    city = CitySerializer(many=False, read_only=True)
+    village = VillageSerializer(many=False, read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
     name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DealerProfile
-        fields = ("id", "name", "birthday", "city", "dealer_status")
+        fields = ("id", "name", "birthday", "village", "dealer_status")
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
 
     def get_name(self, instance) -> str:
@@ -294,29 +293,26 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     )
     stores = DealerStoreSerializer(many=True, source="dealer_stores", read_only=True)
     liability = serializers.IntegerField(required=True)
-    price_type = PriceTypeSerializer(read_only=True, many=False)
+    price_type = PriceTypeSerializer(many=False, read_only=True)
     price_type_id = serializers.PrimaryKeyRelatedField(
         queryset=PriceType.objects.all(),
-        required=True,
-        write_only=True
+        required=False
     )
-    city = CitySerializer(read_only=True, many=False)
 
     class Meta:
         model = DealerProfile
-        fields = ("user", "address", "birthday", "city", "dealer_status", "wallet", "stores",
+        fields = ("user", "address", "birthday", "village", "dealer_status", "wallet", "stores",
                   "liability", "dealer_status_id", "price_type", "price_type_id", "motivations")
         user_status = "dealer"
         read_only_fields = ("motivations",)
 
     def validate(self, attrs):
-        view = self.context["view"]
-        manager_profile_city = view.manager_profile.city
-        attrs["city"] = manager_profile_city
-
         price_type = attrs.pop("price_type_id", None)
+        attrs['managers'] = [self.context['request'].user]
         if price_type:
             attrs["price_type"] = price_type
+        if price_type is None:
+            attrs['price_type'] = None
         dealer_status = attrs.pop("dealer_status_id", None)
         if dealer_status:
             attrs["dealer_status"] = dealer_status
@@ -425,13 +421,14 @@ class ShortCategorySerializer(serializers.ModelSerializer):
 class ShortProductSerializer(serializers.ModelSerializer):
     collection = serializers.SerializerMethodField(read_only=True)
     category = serializers.SerializerMethodField(read_only=True)
-    avg_receipt_amount = serializers.SerializerMethodField(read_only=True)
-    last_fifteen_days_ratio = serializers.SerializerMethodField(read_only=True)
+    # avg_receipt_amount = serializers.SerializerMethodField(read_only=True)
+    # last_fifteen_days_ratio = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AsiaProduct
         fields = ("id", "title", "vendor_code", "collection", "category", "is_discount", "is_active",
-                  "last_fifteen_days_ratio", "avg_receipt_amount", "created_at")
+                  "created_at", 'price')
 
     def get_collection(self, instance):
         return instance.collection.title if instance.collection else None
@@ -439,31 +436,37 @@ class ShortProductSerializer(serializers.ModelSerializer):
     def get_category(self, instance):
         return instance.category.title if instance.category else None
 
-    def get_last_fifteen_days_ratio(self, instance):
-        fifteen_days_ago = timezone.now() - timezone.timedelta(days=15)
-        return instance.order_products.aggregate(
-            last_fifteen_days_ratio=Round(
-                Sum(
-                    "count",
-                    filter=Q(
-                        order__is_active=True,
-                        order__created_at__gte=fifteen_days_ago,
-                        order__status__in=("paid", "success", "sent")
-                    ),
-                    output_field=FloatField()
-                ) / Value(15),
-                precision=2
-            )
-        )["last_fifteen_days_ratio"]
+    # def get_last_fifteen_days_ratio(self, instance):
+    #     fifteen_days_ago = timezone.now() - timezone.timedelta(days=15)
+    #     return instance.order_products.aggregate(
+    #         last_fifteen_days_ratio=Round(
+    #             Sum(
+    #                 "count",
+    #                 filter=Q(
+    #                     order__is_active=True,
+    #                     order__created_at__gte=fifteen_days_ago,
+    #                     order__status__in=("paid", "success", "sent")
+    #                 ),
+    #                 output_field=FloatField()
+    #             ) / Value(15),
+    #             precision=2
+    #         )
+    #     )["last_fifteen_days_ratio"]
+    #
+    # def get_avg_receipt_amount(self, instance):
+    #     return instance.order_products.aggregate(
+    #         avg_receipt_amount=Sum("total_price") / Sum("count")
+    #     )["avg_receipt_amount"]
 
-    def get_avg_receipt_amount(self, instance):
-        return instance.order_products.aggregate(
-            avg_receipt_amount=Sum("total_price") / Sum("count")
-        )["avg_receipt_amount"]
+    def get_price(self, instance):
+        user = self.context['request'].user
+        price = instance.prices.filter(city=user.manager_profile.city, d_status__discount=0).first()
+        if price:
+            return price.price
+        return price
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):
-    product = ShortProductSerializer(read_only=True, many=False)
     stock_count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -492,11 +495,19 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True)
     sizes = ProductSizeSerializer(many=True)
     collection = serializers.SlugRelatedField(slug_field="title", read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AsiaProduct
         fields = ("id", "images", "diagram", "title", "vendor_code", "description", "sizes", "collection",
-                  "weight", "package_count", "made_in", "created_at", "updated_at")
+                  "weight", "package_count", "made_in", "created_at", "updated_at", 'price')
+
+    def get_price(self, instance):
+        user = self.context['request'].user
+        price = instance.prices.filter(city=user.manager_profile.city, d_status__discount=0).first()
+        if price:
+            return price.price
+        return price
 
 
 # ------------------------------------------------- BALANCES
@@ -528,7 +539,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         )["amount"]
 
     def get_city(self, instance):
-        return instance.dealer.city.title
+        return instance.dealer.village.city.title
 
     def get_status(self, instance):
         return instance.dealer.dealer_status.title
@@ -537,55 +548,6 @@ class WalletListSerializer(serializers.ModelSerializer):
         last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
         if last_replenishment:
             return last_replenishment.created_at
-
-
-# -------------------------------------------------- RETURNS
-class ReturnOrderListSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField(read_only=True)
-    city = serializers.SerializerMethodField(read_only=True)
-    phone = serializers.SerializerMethodField(read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
-    email = serializers.SerializerMethodField(read_only=True)
-    stock_city = serializers.SerializerMethodField(read_only=True)
-    stock_name = serializers.SerializerMethodField(read_only=True)
-    stock_address = serializers.SerializerMethodField(read_only=True)
-    moderated = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = ReturnOrder
-        fields = ("id", "name", "city", "phone", "email", "stock_city", "price", "moderated", "moder_comment",
-                  "stock_name", "stock_address")
-
-    def get_name(self, instance) -> str:
-        return instance.order.name
-
-    def get_price(self, instance) -> float:
-        return instance.return_products.aggregate(price=Sum(F("price") * F("count")))["price"]
-
-    def get_city(self, instance) -> str | None:
-        if instance.order.author and instance.order.author.city:
-            return instance.order.author.city.title
-
-    def get_phone(self, instance) -> str:
-        return instance.order.phone
-
-    def get_email(self, instance) -> str:
-        return instance.order.gmail
-
-    def get_stock_city(self, instance) -> str | None:
-        if instance.order.stock:
-            return instance.order.stock.city.title
-
-    def get_stock_name(self, instance) -> str | None:
-        if instance.order.stock:
-            return instance.order.stock.title
-
-    def get_stock_address(self, instance) -> str | None:
-        if instance.order.stock:
-            return instance.order.stock.address
-
-    def get_moderated(self, instance) -> bool:
-        return instance.status != "Новый"
 
 
 class OrderStockInfoSerializer(serializers.ModelSerializer):
@@ -610,39 +572,6 @@ class OrderReturnOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
         fields = ("name", "gmail", "phone", "address", "type_status", "id", "created_at", "stock")
-
-
-class OrderReturnProductSerializer(serializers.ModelSerializer):
-    product_name = serializers.SerializerMethodField(read_only=True)
-    vendor_code = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = ReturnOrderProduct
-        fields = ("id", "product_name", "vendor_code", "price", "count")
-
-    def get_product_name(self, instance) -> str:
-        return instance.product.title
-
-    def get_vendor_code(self, instance) -> str:
-        return instance.product.vendor_code
-
-
-class ReturnOrderDetailSerializer(serializers.ModelSerializer):
-    order = OrderReturnOrderSerializer(many=False, read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
-    products = OrderReturnProductSerializer(many=True, read_only=True, source="return_products")
-    moder_comment = serializers.CharField(write_only=True, required=True)
-    status = serializers.ChoiceField(
-        choices=[(status, name) for status, name in ReturnOrder.STATUS if name != "Новый"],
-        required=True
-    )
-
-    class Meta:
-        model = ReturnOrder
-        fields = ("order", "price", "products", "moder_comment", "status", "created_at")
-
-    def get_price(self, instance) -> float:
-        return instance.return_products.aggregate(price=Sum(F("price") * F("count")))["price"]
 
 
 class BalancePlusSerializer(serializers.ModelSerializer):

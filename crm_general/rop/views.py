@@ -80,13 +80,13 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
         "end_date": {"by": "user__date_joined__date__lte", "type": "date", "pipline": string_date_to_date},
         "status": {"by": "user__is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
         "dealer_status": {"by": "dealer_status_id", "type": "number"},
-        "village__city_id": {"by": "city_id", "type": "number"}
+        "city_id": {"by": "village__city_id", "type": "number"}
     }
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(managers__city__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(village__city__in=self.rop_profile.cities.all())
 
     @decorators.action(['GET'], detail=False, url_path="amounts")
     def get_amounts(self, request):
@@ -304,10 +304,11 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
                        "pipline": string_date_to_date},
         "end_date": {"by": "dealer__balance_histories__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
+        "status": {"by": "dealer__dealer_status_id", "type": "number"}
     }
 
     def get_queryset(self):
-        return super().get_queryset().filter(dealer__managers__city_id__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(dealer__village__city__in=self.rop_profile.cities.all())
 
     @decorators.action(["GET"], detail=False, url_path="amounts")
     def get_amounts(self, request):

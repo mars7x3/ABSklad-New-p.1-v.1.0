@@ -8,7 +8,8 @@ from rest_framework import serializers
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
 from crm_general.director.tasks import create_product_prices
-from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director
+from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director, \
+    create_product_counts_for_stock
 from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
@@ -222,13 +223,15 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         last_15_days = timezone.now() - timezone.timedelta(days=15)
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
-                                                                  order__status__in=['sent', 'paid',
-                                                                                     'success'])
-                                   .values_list('count'))) / 15, 2)
+                                                                  order__status__in=['sent', 'paid', 'success'])
+                                   .values_list('count', flat=True))), 2) / 15
         avg_check = instance.order_products.filter(order__is_active=True,
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
-        rep['avg_check'] = sum(avg_check) / len(avg_check)
+        if len(avg_check) == 0:
+            rep['avg_check'] = 0
+        else:
+            rep['avg_check'] = sum(avg_check) / len(avg_check)
 
         return rep
 
@@ -254,7 +257,6 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
         rep['type_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
                                                                                        price_type__isnull=False),
                                                                 many=True, context=self.context).data
-
         return rep
 
     @staticmethod
@@ -746,7 +748,9 @@ class DirectorTaskCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         files = self.context['request'].FILES.getlist('files')
-        delete_files = self.context['request'].data.getlist('delete_files')
+        delete_files = self.context['request'].data.get('delete_files')
+        if delete_files:
+            delete_files = self.context['request'].data.getlist('delete_files')
         executors = validated_data.get('executors')
         if executors:
             executors = validated_data.pop('executors')
@@ -832,6 +836,7 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         phones = self.context['request'].data['phones']
         stock = Stock.objects.create(**validated_data)
+        create_product_counts_for_stock(stock=stock)
         phones_list = []
         for p in phones:
             phones_list.append(StockPhone(stock=stock, phone=p['phone']))
@@ -1100,7 +1105,6 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
         product_prices = instance.prices.all()
         new_discount_amount = validated_data['discount']
         new_discount_amount = Decimal(new_discount_amount)
-        update_prices = []
         for product_price in product_prices:
             product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
                                                              city=product_price.city,
@@ -1108,11 +1112,14 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
             base_price = Decimal(product_base_price.price)
 
             discounted_price = base_price - (base_price * (new_discount_amount / 100))
-            update_prices.append(
-                ProductPrice(
-                    price=discounted_price,
-                    old_price=base_price,
-                )
-            )
-        ProductPrice.objects.bulk_update(update_prices)
+            product_price.price = discounted_price
+            product_price.old_price = base_price
+            product_price.save()
+
         return super().update(instance, validated_data)
+
+
+class DirectorCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'

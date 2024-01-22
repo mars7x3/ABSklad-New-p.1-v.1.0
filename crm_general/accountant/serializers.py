@@ -5,10 +5,12 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus, BalancePlusFile
+from crm_general.accountant.utils import deduct_returned_product_from_order_and_stock
+from crm_general.models import Inventory, InventoryProduct
 
 from general_service.models import Stock
 
-from order.models import MyOrder, OrderReceipt, OrderProduct
+from order.models import MyOrder, OrderReceipt, OrderProduct, ReturnOrder, ReturnOrderProduct, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category
 
 
@@ -53,7 +55,7 @@ class MyOrderDetailSerializer(serializers.ModelSerializer):
 class OrderReceiptSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderReceipt
-        exclude = ('order', )
+        exclude = ('order',)
 
 
 class OrderProductSerializer(serializers.ModelSerializer):
@@ -149,13 +151,11 @@ class AccountantProductSerializer(serializers.ModelSerializer):
         rep['collection_name'] = instance.collection.title if instance.collection else None
         rep['category_name'] = instance.category.title if instance.category else None
         stocks_count_crm = sum(instance.counts.all().values_list('count_crm', flat=True))
-        stock = sum(instance.counts.all().values_list('count_norm', flat=True))
         rep['stocks_count_crm'] = stocks_count_crm
         rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
         price = instance.prices.filter().first()
         rep['price'] = price.price if price else '---'
         rep['total_price'] = sum(instance.prices.all().values_list('price', flat=True))
-        rep['stock'] = stocks_count_crm - stock
         return rep
 
 
@@ -222,6 +222,26 @@ class AccountantStockListSerializer(serializers.ModelSerializer):
         return rep
 
 
+class AccountantStockProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'vendor_code', 'title', 'is_active', 'is_discount')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        stock_id = self.context.get('stock_id')
+        rep['collection_name'] = instance.collection.title if instance.collection else None
+        rep['category_name'] = instance.category.title if instance.category else None
+        stocks_count_crm = sum(instance.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
+        rep['stocks_count_crm'] = stocks_count_crm
+        rep['stocks_count_1c'] = sum(instance.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+        price = instance.prices.filter(city__stocks__id=stock_id).first()
+        rep['price'] = price.price if price else '---'
+        rep['total_price'] = sum(instance.prices.filter(city__stocks__id=stock_id).
+                                 values_list('price', flat=True))
+        return rep
+
+
 class AccountantStockDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
@@ -231,6 +251,107 @@ class AccountantStockDetailSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         products = instance.counts.all().values_list('product', flat=True)
         asia_products = AsiaProduct.objects.filter(pk__in=products)
-        rep['products'] = AccountantProductSerializer(asia_products, read_only=True, many=True).data
+        stock_id = instance.id
+        rep['products'] = AccountantStockProductSerializer(asia_products, context={'stock_id': stock_id},
+                                                           read_only=True, many=True).data
         return rep
-      
+
+
+class InventorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Inventory
+        fields = ('id', 'status', 'is_active', 'created_at', 'updated_at', 'products', 'sender', 'receiver')
+        read_only_fields = ('sender', 'receiver', 'products')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['sender_name'] = instance.sender.name
+        rep['stock_title'] = instance.sender.warehouse_profile.stock.title
+        return rep
+
+
+class AccountantStockShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        fields = ('id', 'title')
+
+
+class InventoryProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InventoryProduct
+        fields = "__all__"
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['product'] = instance.product.id
+        rep['product_id'] = instance.product.title
+        return rep
+
+
+class InventoryDetailSerializer(serializers.ModelSerializer):
+    products = InventoryProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Inventory
+        fields = ('id', 'status', 'is_active', 'created_at', 'updated_at', 'products', 'sender', 'receiver')
+        read_only_fields = ('sender', 'receiver', 'products')
+
+    def update(self, instance, validated_data):
+        user = self.context['request'].user
+        instance = super().update(instance, validated_data)
+        instance.receiver = user
+        instance.save()
+        return instance
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['sender_name'] = instance.sender.name
+        rep['stock_title'] = instance.sender.warehouse_profile.stock.title
+        return rep
+
+
+class ReturnOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReturnOrder
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.order.author.user.name
+        rep['status'] = instance.order.status
+        return rep
+
+
+class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReturnOrderProductFile
+        fields = '__all__'
+
+
+class ReturnOrderProductSerializer(serializers.ModelSerializer):
+    files = ReturnOrderProductFileSerializer(many=True, read_only=True)
+    title = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ReturnOrderProduct
+        fields = '__all__'
+        read_only_fields = ('count', 'price', 'comment', 'created_at', 'product', 'return_order', 'title')
+
+    def update(self, instance, validated_data):
+        if validated_data['status'] == 'success':
+            deduct_returned_product_from_order_and_stock(order=instance.return_order.order,
+                                                         product_id=instance.product.id,
+                                                         count=instance.count)
+        return super().update(instance, validated_data)
+
+    def get_title(self, instance):
+        return instance.product.title
+
+
+class ReturnOrderDetailSerializer(serializers.ModelSerializer):
+    products = ReturnOrderProductSerializer(many=True, read_only=True)
+    order = MyOrderDetailSerializer(read_only=True)
+
+    class Meta:
+        model = ReturnOrder
+        fields = '__all__'

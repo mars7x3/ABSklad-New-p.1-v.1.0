@@ -4,8 +4,27 @@ from rest_framework import serializers
 
 from crm_general.models import CRMTask, CRMTaskFile, Inventory, InventoryProduct
 from crm_general.serializers import VerboseChoiceField
-from order.models import MyOrder, OrderProduct
+from crm_general.warehouse_manager.utils import create_order_return_product
+from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
+
+
+class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReturnOrderProductFile
+        fields = ('id', 'file')
+
+
+class ReturnOrderProductSerializer(serializers.ModelSerializer):
+    files = ReturnOrderProductFileSerializer(many=True)
+    title = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ReturnOrderProduct
+        fields = '__all__'
+
+    def get_title(self, instance):
+        return instance.product.title
 
 
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
@@ -25,10 +44,15 @@ class OrderListSerializer(serializers.ModelSerializer):
 class OrderDetailSerializer(serializers.ModelSerializer):
     order_products = WareHouseOrderProductSerializer(read_only=True, many=True)
     type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
+    return_orders = serializers.SerializerMethodField()
 
     class Meta:
         model = MyOrder
         fields = '__all__'
+
+    def get_return_orders(self, instance):
+        return_order_instances = instance.return_orders.all()
+        return ReturnOrderSerializer(return_order_instances, many=True).data
 
 
 class WareHouseCollectionListSerializer(serializers.ModelSerializer):
@@ -61,14 +85,15 @@ class WareHouseCategoryListSerializer(serializers.ModelSerializer):
 class WareHouseProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'is_discount', 'vendor_code', 'created_at', 'category', 'collection')
-        read_only_fields = ('is_active',)
+        fields = ('id', 'title', 'is_discount', 'vendor_code', 'created_at', 'category', 'collection', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        user = self.context['request'].user
+        stock_id = user.warehouse_profile.stock.id
         rep['collection_name'] = instance.collection.title if instance.collection else None
         rep['category_name'] = instance.category.title if instance.category else None
-        rep['stocks_count'] = sum(instance.counts.all().values_list('count_crm', flat=True))
+        rep['stocks_count'] = sum(instance.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
         cost_price = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_price.price if cost_price else '---'
 
@@ -76,7 +101,7 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
                                                                   order__status__in=['sent', 'paid', 'success'])
-                                   .values_list('count', flat=True))), 2) / 15
+                                   .values_list('count', flat=True)), 2) / 15)
         avg_check = instance.order_products.filter(order__is_active=True,
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
@@ -84,7 +109,7 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
         if len(avg_check) == 0:
             rep['avg_check'] = 0
         else:
-            rep['avg_check'] = sum(avg_check) / len(avg_check)
+            rep['avg_check'] = round(sum(avg_check) / len(avg_check))
 
         return rep
 
@@ -113,20 +138,6 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class WareHouseTaskFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CRMTaskFile
-        fields = ('id', 'file')
-
-
-class WareHouseTaskSerializer(serializers.ModelSerializer):
-    files = WareHouseTaskFileSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = CRMTask
-        fields = '__all__'
-
-
 class InventoryProductSerializer(serializers.ModelSerializer):
     product_title = serializers.SerializerMethodField(read_only=True)
     category_title = serializers.SerializerMethodField(read_only=True)
@@ -146,6 +157,7 @@ class InventoryProductSerializer(serializers.ModelSerializer):
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField(read_only=True)
+    receiver_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Inventory
@@ -176,12 +188,79 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
             rep['products'] = InventoryProductSerializer(instance.products.all(),  read_only=True, many=True).data
         return rep
 
+    def update(self, instance, validated_data):
+        products = self.context['request'].data.get('products')
+        instance = super().update(instance, validated_data)
+        if products:
+            for product in products:
+                inventory_product = InventoryProduct.objects.filter(product_id=product['product'],
+                                                                    inventory=instance).first()
+                if inventory_product:
+                    inventory_product.count = product['count']
+                    inventory_product.save()
+                else:
+                    ab_product = AsiaProduct.objects.filter(id=product['product'], is_active=True).first()
+                    if ab_product is None:
+                        raise serializers.ValidationError({'detail': 'Product not found'})
+                    InventoryProduct.objects.create(inventory=instance, product=ab_product, count=product['count'])
+        return instance
+
     @staticmethod
     def get_sender_name(obj):
         return obj.sender.name
+
+    @staticmethod
+    def get_receiver_name(obj):
+        return obj.receiver.name if obj.receiver else None
 
 
 class InventoryProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
         fields = ('id', 'title')
+
+
+class ReturnOrderSerializer(serializers.ModelSerializer):
+    products = ReturnOrderProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ReturnOrder
+        fields = '__all__'
+
+    def validate(self, attrs):
+        order_id = self.context['request'].data.get('order')
+        order = MyOrder.objects.get(id=order_id)
+        count = self.context['request'].data.get('count')
+        order_product_ids = order.order_products.filter().values_list('ab_product__id', flat=True)
+        product = int(self.context['request'].data.get('product'))
+        if product not in order_product_ids:
+            raise serializers.ValidationError({'detail': 'product not in order'})
+
+        order_product = order.order_products.filter(ab_product_id=product).first()
+        if int(count) > order_product.count:
+            raise serializers.ValidationError({'detail': 'count can not be more than in order'})
+
+        return attrs
+
+    def create(self, validated_data):
+        request_body = self.context['request'].data
+        order_id = request_body.get('order')
+        comment = request_body.get('comment')
+        count = request_body.get('count')
+        product_id = request_body.get('product')
+        files = self.context['request'].FILES.getlist('files')
+        return_order = ReturnOrder.objects.filter(order_id=order_id).first()
+        if return_order:
+            create_order_return_product(return_order, comment, int(count), files, product_id)
+            return return_order
+        else:
+            instance = super().create(validated_data)
+            create_order_return_product(instance, comment, int(count), files, product_id)
+            return instance
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.order.author.user.name
+        rep['status'] = instance.order.status
+        return rep
+

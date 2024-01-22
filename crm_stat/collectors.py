@@ -3,14 +3,15 @@ from logging import getLogger
 
 from django.db import models
 from django.db.models import functions
-from django.utils import timezone
 
+from account.models import MyUser
 from general_service.models import City, Stock
 from one_c.models import MoneyDoc
-from order.models import MyOrder, OrderProduct
+from order.models import MyOrder
+from product.models import AsiaProduct
 
 from .models import UserTransactionsStat, PurchaseStat, UserStat, ProductStat, StockStat, CityStat, StockGroupStat
-from .utils import stat_create_or_update, Builder, get_stock_grouped_stats
+from .utils import Builder, get_stock_grouped_stats
 
 logger = getLogger('statistics')
 city_builder = Builder(
@@ -104,142 +105,39 @@ stock_group_builder = Builder(
 )
 
 
-def save_city_stats():
-    processed_objs = stat_create_or_update(
-        queryset=City.objects.filter(is_active=True),
-        builder=city_builder,
-        match_field="city_id",
-        match_field_y="id",
-        update_ignore_fields=["city_id"]
-    )
-    logger.info(f"Successfully collected cities")
-    return set(map(lambda obj: obj.id, processed_objs))
-
-
-def save_stock_stats(city_relations):
-    processed_objs = stat_create_or_update(
-        queryset=Stock.objects.all(),
-        builder=stock_builder,
-        match_field="stock_id",
-        match_field_y="id",
-        update_ignore_fields=["stock_id"],
-        relations={"city_stat_id": city_relations}
-    )
-    logger.info(f"Successfully collected stocks")
-    return set(map(lambda obj: obj.id, processed_objs))
-
-
-def save_user_stats(date, city_relations: dict):
-    orders_query = (
-        MyOrder.objects.filter(
-            created_at__date=date,
-            status__in=("success", "sent"),
-            is_active=True,
-            author__village__city_id__in=list(city_relations.keys())
-        )
-    )
-
-    def on_save_users(queryset):
-        return (
-            queryset
-            .values(user_id=models.F("author__user_id"))
-            .annotate(
-                city_id=models.F("author__village__city_id"),
-                email=models.F("author__user__email"),
-                name=models.F("author__user__name")
-            )
-        )
-
-    processed_objs = stat_create_or_update(
-        queryset=orders_query,
-        builder=user_builder,
-        match_field="user_id",
-        match_field_y="author__user_id",
-        update_ignore_fields=["user_id"],
-        relations={"city_stat_id": city_relations},
-        on_create=on_save_users,
-        on_update=on_save_users
-    )
-    logger.info(f"Successfully collected users for date {date}")
-    return set(map(lambda obj: obj.id, processed_objs))
-
-
-def save_product_stats(date):
-    date_from_ts = datetime.fromtimestamp(date).date()
-    order_products = OrderProduct.objects.filter(
-        order__created_at__date=date_from_ts,
-        order__status__in=("success", "sent"),
-        order__is_active=True,
-        ab_product__isnull=False,
-        order__stock__isnull=False
-    )
-
-    def on_save_product(queryset):
-        return (
-            queryset
-            .values(product_id=models.F("ab_product_id"))
-            .annotate(
-                title=models.F("ab_product__title"),
-                vendor_code=models.F("ab_product__vendor_code"),
-                category_id=models.F("ab_product__category_id"),
-                collection_id=models.F("ab_product__collection_id")
-            )
-        )
-
-    processed_objs = stat_create_or_update(
-        queryset=order_products,
-        builder=product_builder,
-        match_field="product_id",
-        match_field_y="ab_product_id",
-        update_ignore_fields=["product_id"],
-        on_create=on_save_product,
-        on_update=on_save_product
-    )
-    logger.info(f"Successfully collected products for date {date_from_ts}")
-    return set(map(lambda obj: obj.id, processed_objs))
-
-
-def save_transaction_stats(date, user_relations, stock_relations, city_relations):
+def save_transaction_stats(date):
     transactions = MoneyDoc.objects.filter(
         is_active=True,
         created_at__date=date,
-        user__in=list(user_relations.keys()),
-        cash_box__stock__in=list(stock_relations.keys())
+        user__in=models.Subquery(UserStat.objects.values("user_id")),
+        cash_box__stock__in=models.Subquery(StockStat.objects.values("stock_id"))
     )
 
     if not transactions.exists():
         logger.error(f"Not found transactions for date {date}")
         return
 
-    users = transactions.filter(user__dealer_profile__village__city_id__in=list(city_relations.keys()))
-    saved_user_ids = UserStat.objects.values_list("user_id", flat=True)
-    if saved_user_ids:
-        users = users.exclude(user_id__in=saved_user_ids)
-
-    if users.exists():
-        new_users = user_builder.build_model_by_list(
-            items=(
-                users
-                .values("user_id")
-                .annotate(
-                    city_id=models.F("user__dealer_profile__village__city_id"),
-                    email=models.F("user__email"),
-                    name=models.F("user__name")
-                )
-            ),
-            match_field="user_id",
-            relations={"city_stat_id": city_relations}
+    stock_relations = {
+        stock_id: stock_stat_id
+        for stock_stat_id, stock_id in (
+            StockStat.objects
+            .filter(stock__in=transactions.values("cash_box__stock_id"))
+            .values_list("id", "stock_id")
         )
-
-        user_relations |= {
-            getattr(user_stat, "user_id"): user_stat.id
-            for user_stat in UserStat.objects.bulk_create(new_users)
-        }
+    }
+    user_relations = {
+        user_id: user_stat_id
+        for user_stat_id, user_id in (
+            UserStat.objects
+            .filter(user__in=models.Subquery(transactions.values("user_id")))
+            .values_list("id", "user_id")
+        )
+    }
 
     new_transaction_stats = user_transaction_builder.build_model_by_list(
         items=(
             transactions
-            .values("user_id")
+            .values("user_id", "cash_box__stock_id")
             .annotate(
                 stock_id=models.F("cash_box__stock_id"),
                 date=functions.TruncDate("created_at"),
@@ -275,17 +173,44 @@ def save_transaction_stats(date, user_relations, stock_relations, city_relations
     logger.info(f"Successfully collected user transactions for date {date}")
 
 
-def save_purchase_stats(date, user_relations, product_relations, stock_relations):
+def save_purchase_stats(date):
     purchases = MyOrder.objects.filter(
         created_at__date=date,
         status__in=("success", "sent"),
         is_active=True,
-        stock__isnull=False,
-        order_products__ab_product__isnull=False
+        author__user__in=models.Subquery(UserStat.objects.values("user_id")),
+        stock__in=models.Subquery(StockStat.objects.values("stock_id")),
+        order_products__ab_product__in=models.Subquery(ProductStat.objects.values("product_id"))
     )
     if not purchases.exists():
         logger.error(f"Not found purchases for date {date}")
         return
+
+    stock_relations = {
+        stock_id: stock_stat_id
+        for stock_stat_id, stock_id in (
+            StockStat.objects
+            .filter(stock__in=purchases.values("stock_id"))
+            .values_list("id", "stock_id")
+        )
+    }
+    user_relations = {
+        user_id: user_stat_id
+        for user_stat_id, user_id in (
+            UserStat.objects
+            .filter(user__in=models.Subquery(purchases.values("author__user_id")))
+            .values_list("id", "user_id")
+        )
+    }
+
+    product_relations = {
+        product_id: product_stat_id
+        for product_stat_id, product_id in (
+            ProductStat.objects
+            .filter(product__in=models.Subquery(purchases.values("order_products__ab_product_id")))
+            .values_list("id", "product_id")
+        )
+    }
 
     purchases = (
         purchases
@@ -319,59 +244,209 @@ def save_purchase_stats(date, user_relations, product_relations, stock_relations
     logger.info(f"Successfully collected products for date {date}")
 
 
-def collects_stats_for_date(time: datetime):
-    date = time.date()
+def collect_city_stats():
+    city_queryset = City.objects.only("id", "title", "is_active").all()
 
-    processed_city_stat_ids = save_city_stats()
+    update_cities = city_queryset.filter(id__in=models.Subquery(CityStat.objects.values("city_id")))
+    saved_city_stats = {
+        getattr(city_stat, "city_id"): city_stat.id
+        for city_stat in (
+            CityStat.objects.only("id", "city_id")
+            .filter(city__id__in=models.Subquery(city_queryset.values("id")))
+        )
+    }
+
+    to_update_city_stats = [
+        CityStat(
+            id=saved_city_stats[city.id],
+            title=city.title,
+            is_active=city.is_active
+        )
+        for city in update_cities
+    ]
+
+    if to_update_city_stats:
+        CityStat.objects.bulk_update(to_update_city_stats, fields=["title", "is_active"])
+
+    new_cities = city_queryset.exclude(id__in=models.Subquery(CityStat.objects.values("city_id")))
+    new_city_stats = [
+        CityStat(
+            city_id=city.id,
+            title=city.title,
+            is_active=city.is_active
+        )
+        for city in new_cities
+    ]
+    if new_city_stats:
+        CityStat.objects.bulk_create(new_city_stats)
+
+    logger.info(f"Successfully collected cities")
+
+
+def collect_stock_stats():
+    stock_queryset = Stock.objects.only("id", "city_id", "title", "address", "is_active").all()
+
+    update_stocks = stock_queryset.filter(id__in=models.Subquery(StockStat.objects.values("stock_id")))
     city_relations = {
         city_id: city_stat_id
         for city_stat_id, city_id in (
-            CityStat.objects.filter(id__in=processed_city_stat_ids).values_list("id", "city_id")
+            CityStat.objects.filter(city__in=models.Subquery(stock_queryset.values("city_id")))
+            .values_list("id", "city_id")
         )
     }
-    if not city_relations:
-        raise ValueError("Not found cities stats!")
-
-    processed_stock_stat_ids = save_stock_stats(city_relations)
-    processed_user_stat_ids = save_user_stats(date, city_relations=city_relations)
-    processed_product_stat_ids = save_product_stats(date)
-
-    stock_relations = {
-        stock_id: stock_stat_id
-        for stock_stat_id, stock_id in (
-            StockStat.objects.filter(id__in=processed_stock_stat_ids).values_list("id", "stock_id")
-        )
-    }
-    user_relations = {
-        user_id: user_stat_id
-        for user_stat_id, user_id in (
-            UserStat.objects.filter(id__in=processed_user_stat_ids).values_list("id", "user_id")
+    saved_stock_stats = {
+        getattr(stock_stat, "stock_id"): stock_stat.id
+        for stock_stat in (
+            StockStat.objects.only("id", "stock_id")
+            .filter(stock__in=models.Subquery(stock_queryset.values("id")))
         )
     }
 
-    if not stock_relations or not user_relations:
-        raise ValueError("Not fount stock or user stats!")
+    to_update_stock_stats = [
+        StockStat(
+            id=saved_stock_stats[stock.id],
+            title=stock.title,
+            is_active=stock.is_active,
+            address=stock.address,
+            city_stat_id=city_relations[getattr(stock, "city_id")] if getattr(stock, "city_id") else None
+        )
+        for stock in update_stocks
+    ]
 
+    if to_update_stock_stats:
+        StockStat.objects.bulk_update(to_update_stock_stats, fields=["title", "is_active", "address", "city_stat_id"])
+
+    new_stocks = stock_queryset.exclude(id__in=models.Subquery(StockStat.objects.values("stock_id")))
+    new_stock_stats = [
+        StockStat(
+            id=saved_stock_stats[stock.id],
+            title=stock.title,
+            is_active=stock.is_active,
+            address=stock.address,
+            city_stat_id=city_relations[getattr(stock, "city_id")] if getattr(stock, "city_id") else None
+        )
+        for stock in new_stocks
+    ]
+    if new_stock_stats:
+        StockStat.objects.bulk_create(new_stock_stats)
+
+    logger.info(f"Successfully collected stocks")
+
+
+def collect_user_stats():
+    users_queryset = (
+        MyUser.objects.only("id", "email", "name")
+        .select_related("dealer_profile")
+        .filter(status="dealer", dealer_profile__isnull=False)
+    )
+
+    update_users = users_queryset.filter(id__in=models.Subquery(UserStat.objects.values("user_id")))
+    city_relations = {
+        city_id: city_stat_id
+        for city_stat_id, city_id in (
+            CityStat.objects.filter(city__in=models.Subquery(users_queryset.values("dealer_profile__village__city_id")))
+            .values_list("id", "city_id")
+        )
+    }
+
+    saved_user_stats = {
+        getattr(user_stat, "user_id"): user_stat.id
+        for user_stat in (
+            UserStat.objects.only("id", "user_id")
+            .filter(user__in=models.Subquery(users_queryset.values("id")))
+        )
+    }
+
+    to_update_user_stats = [
+        UserStat(
+            id=saved_user_stats[user.id],
+            name=user.name,
+            email=user.email,
+            city_stat_id=city_relations[getattr(user.dealer_profile.village, "city_id")]
+            if getattr(user.dealer_profile, "village")
+            else None
+        )
+        for user in update_users
+    ]
+
+    if to_update_user_stats:
+        UserStat.objects.bulk_update(to_update_user_stats, fields=["name", "email", "city_stat_id"])
+
+    new_users = users_queryset.exclude(id__in=models.Subquery(UserStat.objects.values("user_id")))
+    new_user_stats = [
+        UserStat(
+            user_id=user.id,
+            name=user.name,
+            email=user.email,
+            city_stat_id=city_relations[getattr(user.dealer_profile.village, "city_id")]
+            if getattr(user.dealer_profile, "village")
+            else None
+        )
+        for user in new_users
+    ]
+    if new_user_stats:
+        UserStat.objects.bulk_create(new_user_stats)
+
+    logger.info(f"Successfully collected users")
+
+
+def collect_product_stats(date: datetime = None):
+    query = {}
+    if date:
+        query["order_products__order__created_at__date"] = date.date()
+
+    product_queryset = AsiaProduct.objects.filter(order_products__isnull=False, **query)
+
+    update_products = product_queryset.filter(id__in=models.Subquery(ProductStat.objects.values("product_id")))
+    saved_product_stats = {
+        getattr(product_stat, "product_id"): product_stat.id
+        for product_stat in (
+            ProductStat.objects.only("id", "product_id")
+            .filter(product__in=models.Subquery(product_queryset.values("id")))
+        )
+    }
+
+    to_update_product_stats = [
+        ProductStat(
+            id=saved_product_stats[product.id],
+            title=product.title,
+            vendor_code=product.vendor_code,
+            category_id=getattr(product, "category_id", None),
+            collection_id=getattr(product, "collection_id", None)
+        )
+        for product in update_products.order_by("id").distinct("id")
+    ]
+
+    if to_update_product_stats:
+        ProductStat.objects.bulk_update(
+            to_update_product_stats,
+            fields=["title", "vendor_code", "category_id", "collection_id"]
+        )
+
+    new_products = product_queryset.exclude(id__in=models.Subquery(ProductStat.objects.values("product_id")))
+    new_product_stats = [
+        ProductStat(
+            product=product,
+            title=product.title,
+            vendor_code=product.vendor_code,
+            category_id=getattr(product, "category_id", None),
+            collection_id=getattr(product, "collection_id", None)
+        )
+        for product in new_products.order_by("id").distinct("id")
+    ]
+    if new_product_stats:
+        ProductStat.objects.bulk_create(new_product_stats)
+
+    logger.info(f"Successfully collected products")
+
+
+def collects_stats_for_date(date: datetime):
+    date = date.date()
     UserTransactionsStat.objects.filter(date=date).delete()
-    save_transaction_stats(date, city_relations=city_relations, stock_relations=stock_relations,
-                           user_relations=user_relations)
-
-    product_relations = {
-        product_id: product_stat_id
-        for product_stat_id, product_id in (
-            ProductStat.objects.filter(id__in=processed_product_stat_ids).values_list("id", "product_id")
-        )
-    }
-    if not product_relations:
-        raise ValueError("Not found product relations!")
+    save_transaction_stats(date=date)
 
     PurchaseStat.objects.filter(date=date).delete()
-    save_purchase_stats(
-        date,
-        user_relations=user_relations,
-        product_relations=product_relations,
-        stock_relations=stock_relations
-    )
+    save_purchase_stats(date)
 
 
 def save_stock_group_stats(filter_type: str, months: list[datetime] = None,

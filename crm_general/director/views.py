@@ -22,9 +22,10 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorTaskListSerializer, DirectorMotivationListSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
     DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, \
-    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer
+    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer, DirectorCategorySerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
+from crm_general.permissions import IsStaff
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
@@ -188,10 +189,10 @@ class BalanceListView(mixins.ListModelMixin, GenericViewSet):
                 kwargs['amount_1c__lte'] = 50000
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-
-        return self.get_paginated_response(serializer)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = BalanceListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class BalanceListTotalView(APIView):
@@ -466,9 +467,10 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
             kwargs['user__is_active'] = bool(int(is_active))
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DirectorDealerSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class DirectorDealerCRUDView(mixins.CreateModelMixin,
@@ -784,9 +786,10 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
             kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DirectorTaskListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class DirectorStockCRUDView(viewsets.ModelViewSet):
@@ -992,7 +995,6 @@ class StockListView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = StockListSerializer
 
 
-
 class MaxatTestView(APIView):
     def get(self, request):
         month = request.query_params.get('month')
@@ -1013,9 +1015,21 @@ class MaxatTestView(APIView):
             )
         return Response({'result': data}, status=status.HTTP_200_OK)
 
-      
+
 class DealerStatusModelViewSet(viewsets.ModelViewSet):
     queryset = DealerStatus.objects.all()
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsStaff]
     serializer_class = DirectorDealerStatusSerializer
+
+
+class DirectorCategoryModelViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    permission_classes = [IsAuthenticated, IsDirector]
+    serializer_class = DirectorCategorySerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 

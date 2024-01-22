@@ -40,7 +40,7 @@ class BaseDealerMixin:
         return self.request.user.rop_profile
 
     def get_queryset(self):
-        return super().get_queryset().filter(managers__city__in=self.rop_profile.cities.all())
+        return super().get_queryset().filter(village__city__in=self.rop_profile.cities.all())
 
 
 class BaseDealerRelationViewMixin:
