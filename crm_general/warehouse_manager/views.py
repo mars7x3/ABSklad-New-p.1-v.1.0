@@ -81,15 +81,16 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if order_status == 'sent':
+        if order_status == 'sent' or order_status == 'wait':
             if order.status == 'paid':
-                order.status = 'sent'
+                order.status = order_status
                 order.save()
                 minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
-                return Response({'detail': 'Order status successfully changed to "sent"'},
+                return Response({'detail': f'Order status successfully changed to {order_status}'},
                                 status=status.HTTP_200_OK)
-            return Response({'detail': 'Order status must be "paid" to change to "sent"'},
+            return Response({'detail': f'Order status must be "paid" to change to {order_status}'},
                             status=status.HTTP_400_BAD_REQUEST)
+
         return Response({'detail': 'Incorrect order status'}, status=status.HTTP_400_BAD_REQUEST)
 
 
