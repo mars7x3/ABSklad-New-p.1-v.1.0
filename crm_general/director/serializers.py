@@ -8,7 +8,8 @@ from rest_framework import serializers
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
 from crm_general.director.tasks import create_product_prices
-from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director
+from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director, \
+    create_product_counts_for_stock
 from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
@@ -833,6 +834,7 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         phones = self.context['request'].data['phones']
         stock = Stock.objects.create(**validated_data)
+        create_product_counts_for_stock(stock=stock)
         phones_list = []
         for p in phones:
             phones_list.append(StockPhone(stock=stock, phone=p['phone']))
