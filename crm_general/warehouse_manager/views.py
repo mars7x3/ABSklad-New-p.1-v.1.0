@@ -27,7 +27,7 @@ from ..tasks import minus_quantity
 
 
 class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
-    queryset = MyOrder.objects.all()
+    queryset = MyOrder.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     pagination_class = GeneralPurposePagination
     serializer_class = OrderListSerializer

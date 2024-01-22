@@ -35,10 +35,14 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
 
 class OrderListSerializer(serializers.ModelSerializer):
     type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
+    name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyOrder
         fields = '__all__'
+
+    def get_name(self, instance):
+        return instance.author.user.name
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
@@ -53,6 +57,11 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     def get_return_orders(self, instance):
         return_order_instances = instance.return_orders.all()
         return ReturnOrderSerializer(return_order_instances, many=True).data
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.author.user.name
+        return rep
 
 
 class WareHouseCollectionListSerializer(serializers.ModelSerializer):

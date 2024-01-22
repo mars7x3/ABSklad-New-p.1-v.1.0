@@ -137,6 +137,6 @@ class ProductListKPISerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['collection__title'] = instance.collection.title
-        rep['category__title'] = instance.category.title
+        rep['collection__title'] = instance.collection.title if instance.collection else None
+        rep['category__title'] = instance.category.title if instance.category else None
         return rep
