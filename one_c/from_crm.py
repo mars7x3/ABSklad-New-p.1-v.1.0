@@ -118,7 +118,7 @@ def sync_1c_money_doc(money_doc):
         cash_box_uid = ''
     else:
         city = money_doc.user.dealer_profile.village.city
-        cash_box = city.stocks.first().cash_boxs.first()
+        cash_box = city.stocks.first().cash_box
         cash_box_uid = cash_box.uid
     # TODO: если в регионе будет больше 1 склада, то надо будет логику кассы поменять.
 
@@ -150,7 +150,7 @@ def sync_money_doc_to_1C(order):
             url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
             if 'cash' == order.type_status or order.type_status == 'kaspi':
                 type_status = 'Наличка'
-                cash_box_uid = order.author.village.city.stocks.first().cash_box.uid
+                cash_box_uid = order.stock.cash_box.uid
             else:
                 type_status = 'Без нал'
                 cash_box_uid = ''
@@ -192,7 +192,7 @@ def sync_order_to_1C(order):
                 "user_uid": order.author.user.uid,
                 "created_at": f'{released_at}',
                 "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
-                "cityUID": order.stock.stocks.first().uid,
+                "cityUID": order.stock.uid,
                 "is_active": int(order.is_acitve),
                 "products": [
                     {"title": p.title,
