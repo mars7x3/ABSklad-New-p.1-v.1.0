@@ -97,7 +97,7 @@ def sync_return_order_to_1C(returns_order):
     products = returns_order.return_products.all()
     payload = json.dumps({
         "uid": returns_order.order.uid,
-        "created_at": f'{timezone.localtime(returns_order.created_at)}',
+        "created_at": f'{timezone.localtime(returns_order.created_at) + datetime.timedelta(hours=6)}',
         "products_return": [
             {
                 "uid": p.product.uid,
@@ -125,7 +125,7 @@ def sync_1c_money_doc(money_doc):
     payload = json.dumps({
         "user_uid": money_doc.user.uid,
         "amount": int(money_doc.amount),
-        "created_at": f'{money_doc.created_at}',
+        "created_at": f'{timezone.localtime(money_doc.created_at) + datetime.timedelta(hours=6)}',
         "order_type": money_doc.status,
         "cashbox_uid": cash_box_uid,
         "is_active": int(money_doc.is_active),
@@ -157,7 +157,7 @@ def sync_money_doc_to_1C(order):
             payload = json.dumps({
                 "user_uid": order.author.user.uid,
                 "amount": int(order.price),
-                "created_at": f'{order.created_at}',
+                "created_at": f'{timezone.localtime(order.created_at) + datetime.timedelta(hours=6)}',
                 "order_type": type_status,
                 "cashbox_uid": cash_box_uid,
                 "is_active": 1,
@@ -186,7 +186,7 @@ def sync_order_to_1C(order):
         with transaction.atomic():
             url = "http://91.211.251.134/testcrm/hs/asoi/CreateSale"
             products = order.order_products.all()
-            released_at = order.released_at
+            released_at = timezone.localtime(order.released_at) + datetime.timedelta(hours=6)
             money = order.money_docs.filter(is_active=True).first()
             payload = json.dumps({
                 "user_uid": order.author.user.uid,
