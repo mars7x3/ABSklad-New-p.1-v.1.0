@@ -2,6 +2,7 @@ import datetime
 import json
 
 import requests
+from django.db.models import Case, F, When
 
 from absklad_commerce.celery import app
 from account.models import MyUser, Wallet
@@ -20,13 +21,12 @@ def sync_balance_1c_to_crm():
     response_wallets = response_data.get('wallets')
     a = datetime.datetime.now()
     users_uid = {uid['user_uid']: uid['amount'] for uid in response_wallets}
-    users = MyUser.objects.filter(uid__in=users_uid.keys(), status='dealer')
-    wallets = []
-    for user in users:
-        user.wallet.amount = users_uid[user.uid]
-        wallets.append(user.wallet)
 
-    Wallet.objects.bulk_update(wallets, ['amount'])
+    cases = [When(uid=user_uid, then=amount) for user_uid, amount in users_uid.items()]
+
+    MyUser.objects.filter(uid__in=users_uid.keys(), status='dealer').update(
+        dealer_profile__wallet__amount=Case(*cases, default=F('dealer_profile__wallet__amount'))
+    )
     b = datetime.datetime.now() - a
     print(b)
 
