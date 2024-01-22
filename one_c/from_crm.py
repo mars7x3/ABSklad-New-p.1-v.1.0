@@ -196,7 +196,7 @@ def sync_order_to_1C(order):
                 "is_active": int(order.is_active),
                 "products": [
                     {"title": p.title,
-                     "uid": p.uid,
+                     "uid": p.ab_product.uid,
                      "count": int(p.count),
                      'price': int(p.price)}
                     for p in products
