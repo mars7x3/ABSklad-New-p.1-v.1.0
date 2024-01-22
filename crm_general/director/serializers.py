@@ -14,7 +14,7 @@ from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone, PriceType
-from one_c.from_crm import sync_dealer_back_to_1C
+from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c
 from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
 
@@ -305,7 +305,9 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                 product_price = ProductPrice.objects.get(id=price.get('id'))
                 product_price.price = price.get('price')
                 product_price.save()
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        sync_product_crm_to_1c(instance)
+        return instance
 
 
 class DirectorProductSizeSerializer(serializers.ModelSerializer):
