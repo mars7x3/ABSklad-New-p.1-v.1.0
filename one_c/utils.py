@@ -252,7 +252,7 @@ def sync_dealer():
                     price_city=city
                 )
             )
-                wallet_data.append(user)
+            wallet_data.append(user)
 
     DealerProfile.objects.bulk_create(dealer_data)
 
