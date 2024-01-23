@@ -92,17 +92,17 @@ def get_kpi_info(user):
     tmz = sum(kpi.kpi_products.all().values_list('count', flat=True))
     fact_tmz = sum(kpi.kpi_products.all().values_list('fact_count', flat=True))
     data = {
-        'pds': kpi.pds,
-        'tmz': tmz,
-        'fact_pds': kpi.fact_pds,
-        'fact_tmz': fact_tmz,
+        'pds': round(kpi.pds),
+        'tmz': round(tmz),
+        'fact_pds': round(kpi.fact_pds),
+        'fact_tmz': round(fact_tmz),
     }
     if kpi.fact_pds > 0:
-        data['tmz_percent'] = kpi.fact_pds / kpi.pds * 100,
+        data['tmz_percent'] = round(kpi.fact_pds / kpi.pds * 100)
     else:
-        data['tmz_percent'] = 0,
+        data['tmz_percent'] = 0
     if fact_tmz > 0:
-        data['pds_percent'] = fact_tmz / tmz * 100,
+        data['pds_percent'] = round(fact_tmz / tmz * 100)
     else:
         data['pds_percent'] = 0
 
