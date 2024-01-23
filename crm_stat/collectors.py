@@ -216,7 +216,7 @@ def save_purchase_stats(date):
         purchases
         .values(user_id=models.F("author__user_id"))
         .annotate(
-            date=functions.TruncDate("created_at"),
+            date=functions.TruncDate("released_at"),
             product_id=models.F("order_products__ab_product_id"),
             stock_id=models.F("stock_id"),
             spent_amount=models.Sum("order_products__total_price"),
