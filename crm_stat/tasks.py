@@ -9,7 +9,7 @@ from order.models import MyOrder
 
 from .collectors import collects_stats_for_date, save_stock_group_for_day, save_stock_group_for_month, \
     collect_city_stats, collect_stock_stats, collect_user_stats, collect_product_stats
-from .models import PurchaseStat
+from .models import PurchaseStat, UserTransactionsStat
 
 
 @app.task
@@ -55,6 +55,7 @@ def collect_today_stock_groups():
 @app.task
 def collect_stock_groups_for_all():
     dates = set(PurchaseStat.objects.values_list("date", flat=True))
+    dates |= set(UserTransactionsStat.objects.values_list("date", flat=True))
     processed_months = set()
 
     for date in dates:
