@@ -319,6 +319,7 @@ def collect_stock_stats():
     new_stocks = stock_queryset.exclude(id__in=models.Subquery(StockStat.objects.values("stock_id")))
     new_stock_stats = [
         StockStat(
+            stock_id=stock.id,
             title=stock.title,
             is_active=stock.is_active,
             address=stock.address,
