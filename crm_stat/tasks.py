@@ -29,7 +29,7 @@ def collect_today_stats():
 def collect_for_all_dates():
     collect_stat_objects()
 
-    dates = set(order["date"] for order in MyOrder.objects.filter(is_active=True).values(date=TruncDate("created_at")))
+    dates = set(order["date"] for order in MyOrder.objects.filter(is_active=True).values(date=TruncDate("released_at")))
     for date in dates:
         collects_stats_for_date(datetime(month=date.month, year=date.year, day=date.day))
 
