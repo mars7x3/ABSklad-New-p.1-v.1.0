@@ -54,13 +54,12 @@ def collect_stock_groups_for_all():
 
 @app.task()
 def day_stat_task():
-    today = timezone.now()
-
+    yesterday = timezone.now() - timezone.timedelta(days=1)
     collect_stat_objects()
 
     # collect today stats
-    collects_stats_for_date(today)
+    collects_stats_for_date(yesterday)
 
     # collect stock group stats
-    save_stock_group_for_day(today.date())
-    save_stock_group_for_month(today.date())
+    save_stock_group_for_day(yesterday.date())
+    save_stock_group_for_month(yesterday.date())
