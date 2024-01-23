@@ -115,31 +115,39 @@ def sync_prods_list():
         ProductCount.objects.bulk_update(prod_count_data, ['count_1c', 'count_crm', 'count_norm'])
 
         price_types = []
-        for pri in PriceType.objects.all():
-            for sta in DealerStatus.objects.all():
+        city_price = []
+        for sta in DealerStatus.objects.all():
+            for pri in PriceType.objects.all():
                 price_types.append(
                     ProductPrice(
                         price_type=pri, product=product,
                         d_status=sta
                     )
                 )
+            for cit in City.objects.all():
+                city_price.append(
+                    ProductPrice(
+                        city=cit, product=product,
+                        d_status=sta
+                    )
+                )
         ProductPrice.objects.bulk_create(price_types)
 
-        prod_price_data = []
-        for c in p.get('Prices'):
-            price_type = PriceType.objects.filter(uid=c.get('PricetypesUID')).first()
-            if price_type:
-                dealer_statuses = DealerStatus.objects.all()
-
-                for status in dealer_statuses:
-                    prod_price = ProductPrice.objects.filter(price_type=price_type, product=product,
-                                                             d_status=status).first()
-                    amount = int(c.get('PriceAmount'))
-                    prod_price.price = amount
-
-                    prod_price_data.append(prod_price)
-
-        ProductPrice.objects.bulk_update(prod_price_data, ['price'])
+        # prod_price_data = []
+        # for c in p.get('Prices'):
+        #     price_type = PriceType.objects.filter(uid=c.get('PricetypesUID')).first()
+        #     if price_type:
+        #         dealer_statuses = DealerStatus.objects.all()
+        #
+        #         for status in dealer_statuses:
+        #             prod_price = ProductPrice.objects.filter(price_type=price_type, product=product,
+        #                                                      d_status=status).first()
+        #             amount = int(c.get('PriceAmount'))
+        #             prod_price.price = amount
+        #
+        #             prod_price_data.append(prod_price)
+        #
+        # ProductPrice.objects.bulk_update(prod_price_data, ['price'])
 
 
 def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
