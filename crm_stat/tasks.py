@@ -1,4 +1,5 @@
 from datetime import datetime
+from logging import getLogger
 
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -10,6 +11,9 @@ from order.models import MyOrder
 from .collectors import collects_stats_for_date, save_stock_group_for_day, save_stock_group_for_month, \
     collect_city_stats, collect_stock_stats, collect_user_stats, collect_product_stats
 from .models import PurchaseStat, UserTransactionsStat
+
+
+logger = getLogger("statistics")
 
 
 @app.task
@@ -35,6 +39,10 @@ def collect_for_all_dates():
     )
 
     for date in dates | tx_dates:
+        if not date:
+            logger.error("Found empty date!")
+            continue
+
         collects_stats_for_date(datetime(month=date.month, year=date.year, day=date.day))
 
 
