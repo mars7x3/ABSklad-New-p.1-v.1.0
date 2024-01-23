@@ -21,15 +21,8 @@ def collect_stat_objects():
 
 
 @app.task
-def collect_today_stats():
-    collect_stat_objects()
-    collects_stats_for_date(timezone.now())
-
-
-@app.task
 def collect_for_all_dates():
     collect_stat_objects()
-
     dates = set(
         order["date"]
         for order in MyOrder.objects.filter(is_active=True)
@@ -43,13 +36,6 @@ def collect_for_all_dates():
 
     for date in dates | tx_dates:
         collects_stats_for_date(datetime(month=date.month, year=date.year, day=date.day))
-
-
-@app.task
-def collect_today_stock_groups():
-    today = timezone.now().date()
-    save_stock_group_for_day(today)
-    save_stock_group_for_month(today)
 
 
 @app.task
@@ -67,6 +53,14 @@ def collect_stock_groups_for_all():
 
 
 @app.task()
-def day_stat_task():  # TODO: add to schedule
-    collect_today_stats()  # without delay important!
-    collect_today_stock_groups()
+def day_stat_task():
+    today = timezone.now()
+
+    collect_stat_objects()
+
+    # collect today stats
+    collects_stats_for_date(today)
+
+    # collect stock group stats
+    save_stock_group_for_day(today.date())
+    save_stock_group_for_month(today.date())
