@@ -175,7 +175,7 @@ def save_transaction_stats(date):
 
 def save_purchase_stats(date):
     purchases = MyOrder.objects.filter(
-        created_at__date=date,
+        released_at__date=date,
         status__in=("success", "sent"),
         is_active=True,
         author__user__in=models.Subquery(UserStat.objects.values("user_id")),
