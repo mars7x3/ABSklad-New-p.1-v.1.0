@@ -242,9 +242,10 @@ def sync_dealer():
             dealer_data.append(
                 DealerProfile(
                     user=user,
-                    village=city.first(),
+                    village=city.villages.first(),
                     dealer_status=dealer_status,
-                    price_type=price_type
+                    price_type=price_type,
+                    price_city=city
                 )
             )
             wallet_data.append(user)
