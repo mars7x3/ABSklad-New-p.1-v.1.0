@@ -21,8 +21,20 @@ def create_notifications(notifications: list, image_url, dispatch_date):
 @app.task()
 def set_banner_false():
     current_date = timezone.now()
-    banners = Banner.objects.filter(is_active=True)
+    banners = Banner.objects.filter(is_active=True, end_time__month=current_date.month,
+                                    end_time__day=current_date.day, end_time__year=current_date.year)
     for banner in banners:
         if banner.end_time < current_date:
             banner.is_active = False
+            banner.save()
+
+
+@app.task()
+def set_banner_true():
+    current_date = timezone.now()
+    banners = Banner.objects.filter(is_active=False, end_time__month=current_date.month,
+                                    end_time__day=current_date.day, end_time__year=current_date.year)
+    for banner in banners:
+        if banner.start_time <= current_date:
+            banner.is_active = True
             banner.save()
