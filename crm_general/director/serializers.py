@@ -246,7 +246,7 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        cost_prices = instance.cost_prices.filter(product__is_active=True).first()
+        cost_prices = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_prices.price if cost_prices else '---'
         rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
         rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
