@@ -146,7 +146,7 @@ class MarketerBannerModelViewSet(ListModelMixin,
     @action(methods=['GET'], detail=False, url_path='products/add')
     def get_products_for_banner(self, request, *args, **kwargs):
         category_id = self.request.query_params.get('category_id')
-        products = AsiaProduct.objects.filter(category=category_id)
+        products = AsiaProduct.objects.filter(category=category_id, is_active=True)
         serializer = ShortProductSerializer(products, many=True, context=self.get_renderer_context())
         return Response(serializer.data, status=status.HTTP_200_OK)
 

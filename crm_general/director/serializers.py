@@ -16,7 +16,8 @@ from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABSto
 from general_service.models import Stock, City, StockPhone, PriceType
 from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c
 from order.models import MyOrder, Cart, CartProduct
-from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
+from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount, \
+    ProductCostPrice
 
 from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
     ConditionProduct
@@ -309,7 +310,11 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
 
         if cost_price:
             product_cost_price = instance.cost_prices.filter(is_active=True).first()
-            product_cost_price.save()
+            if product_cost_price:
+                product_cost_price.price = cost_price
+                product_cost_price.save()
+            else:
+                ProductCostPrice.objects.create(product=instance, price=cost_price, is_active=True)
 
         instance = super().update(instance, validated_data)
         sync_product_crm_to_1c(instance)
