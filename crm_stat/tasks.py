@@ -4,6 +4,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from absklad_commerce.celery import app
+from one_c.models import MoneyDoc
 from order.models import MyOrder
 
 from .collectors import collects_stats_for_date, save_stock_group_for_day, save_stock_group_for_month, \
@@ -30,7 +31,9 @@ def collect_for_all_dates():
     collect_stat_objects()
 
     dates = set(order["date"] for order in MyOrder.objects.filter(is_active=True).values(date=TruncDate("released_at")))
-    for date in dates:
+    tx_dates = set(MoneyDoc.objects.filter(is_active=True, cash_box__isnull=False).values(date=TruncDate("created_at")))
+
+    for date in dates | tx_dates:
         collects_stats_for_date(datetime(month=date.month, year=date.year, day=date.day))
 
 
