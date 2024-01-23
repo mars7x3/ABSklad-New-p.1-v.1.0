@@ -277,6 +277,7 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         request = self.context['request']
         stocks = request.data.get('stocks')
+        cost_price = request.data.get('cost_price')
         type_prices = request.data.get('type_prices')
         city_prices = request.data.get('city_prices')
         is_active = validated_data.get('is_active', True)
@@ -305,6 +306,11 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                 product_price = ProductPrice.objects.get(id=price.get('id'))
                 product_price.price = price.get('price')
                 product_price.save()
+
+        if cost_price:
+            product_cost_price = instance.cost_prices.filter(is_active=True).first()
+            product_cost_price.save()
+
         instance = super().update(instance, validated_data)
         sync_product_crm_to_1c(instance)
         return instance
@@ -1102,9 +1108,12 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
         return dealer_status
 
     def update(self, instance, validated_data):
+        if instance.discount == 0:
+            raise serializers.ValidationError({'detail': 'Permission denied!'})
         product_prices = instance.prices.all()
         new_discount_amount = validated_data['discount']
         new_discount_amount = Decimal(new_discount_amount)
+
         for product_price in product_prices:
             product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
                                                              city=product_price.city,
