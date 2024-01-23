@@ -98,13 +98,13 @@ def get_kpi_info(user):
         'fact_tmz': round(fact_tmz),
     }
     if kpi.fact_pds > 0:
-        data['tmz_percent'] = round(kpi.fact_pds / kpi.pds * 100)
-    else:
-        data['tmz_percent'] = 0
-    if fact_tmz > 0:
-        data['pds_percent'] = round(fact_tmz / tmz * 100)
+        data['pds_percent'] = round(kpi.fact_pds / kpi.pds * 100)
     else:
         data['pds_percent'] = 0
+    if fact_tmz > 0:
+        data['tmz_percent'] = round(fact_tmz / tmz * 100)
+    else:
+        data['tmz_percent'] = 0
 
     return data
 
