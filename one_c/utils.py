@@ -237,12 +237,16 @@ def sync_dealer():
 
             price_type = PriceType.objects.filter(title__icontains=city).first()
             city = d.pop('city')
+            if city:
+                village = city.villages.first()
+            else:
+                village = None
             dealer_status = d.pop('dealer_status')
             user = MyUser.objects.create_user(**d)
             dealer_data.append(
                 DealerProfile(
                     user=user,
-                    village=city.villages.first(),
+                    village=village,
                     dealer_status=dealer_status,
                     price_type=price_type,
                     price_city=city
