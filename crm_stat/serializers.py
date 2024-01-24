@@ -40,7 +40,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyOrder
-        fields = ("id", "user", "price", "count")
+        fields = ("user", "price", "count")
 
     def get_user(self, obj):
         if obj.author:

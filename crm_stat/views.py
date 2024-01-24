@@ -305,6 +305,7 @@ class ProductSalesView(views.APIView):
                     title=F("product_stat__title")
                 ),
                 sales_amount=Sum("spent_amount"),
+                sales_count=Sum("purchases_count"),
                 date=Value(str(date.date()))
             )
             .annotate(
@@ -322,10 +323,6 @@ class ProductSalesView(views.APIView):
         include_users_count = request.query_params.get("include_users_count", "")
         if include_users_count == "true":
             items = items.annotate(sales_users_count=Count("user_stat__user_id", distinct=True))
-
-        include_sales_count = request.query_params.get("include_sales_count", "")
-        if include_sales_count == "true":
-            items = items.annotate(sales_count=Sum("purchases_count"))
 
         for item in items:
             item.pop("product_stat_id", None)
@@ -499,22 +496,37 @@ class OrderView(views.APIView):
         filter_type = request.query_params.get("type", "day")
         format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
         date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date, "created_at__date")
+        query = date_filters(filter_type, date)
+
         product_id = request.query_params.get("product_id")
         if product_id:
-            query["order_products__ab_product_id"] = product_id
+            query["product_stat__product_id"] = product_id
 
         user_id = request.query_params.get("user_id")
         if user_id:
-            query["author__user_id"] = user_id
+            query["user_stat__user_id"] = user_id
 
         stock_id = request.query_params.get("stock_id")
         if stock_id:
-            query["stock_id"] = stock_id
+            query["stock_stat__stock_id"] = stock_id
 
-        queryset = MyOrder.objects.filter(**query).order_by("-created_at", "id").distinct()
-        serializer = OrderSerializer(instance=queryset, many=True, context={"request": request, "view": self})
-        return response.Response(serializer.data)
+        items = (
+            PurchaseStat.objects.filter(**query)
+            .values("user_stat_id")
+            .annotate(
+                user=JSONObject(
+                    id=F("user_stat__user_id"),
+                    name=F("user_stat__name")
+                ),
+                price=Sum("spent_amount"),
+                count=Sum("count")
+            )
+        )
+        collected_items = []
+        for item in items:
+            item.pop("user_stat_id", None)
+            collected_items.append(item)
+        return response.Response(collected_items)
 
 
 class OrderDetailsView(views.APIView):
