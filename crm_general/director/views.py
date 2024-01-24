@@ -255,6 +255,7 @@ class BalanceHistoryListView(APIView):
         if start_date and end_date:
             start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
             end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+            end_date = end_date + timezone.timedelta(days=1)
             kwargs['created_at__gte'] = start_date
             kwargs['created_at__lte'] = end_date
 
@@ -504,6 +505,7 @@ class DirectorBalanceHistoryListView(APIView):
         end = request.data.get('end')
         start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+        end_date = end_date + timezone.timedelta(days=1)
         user = MyUser.objects.filter(id=user_id).first()
         balance_histories = user.dealer_profile.balance_histories.filter(created_at__gte=start_date,
                                                                          created_at__lte=end_date)

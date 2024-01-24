@@ -18,6 +18,7 @@ def purchase_analysis(request):
     kwargs = {}
     start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
     end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+    end_date = end_date + datetime.timedelta(days=1)
     o_status = order_statuses.get((request.data.get('status')))
     if o_status:
         kwargs['status__in'] = o_status
