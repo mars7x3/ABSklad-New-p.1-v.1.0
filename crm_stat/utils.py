@@ -239,7 +239,7 @@ def update_stat_group_by_order(order: MyOrder) -> None:
     ).values_list("product_id", flat=True)
 
     for product in order.order_products.all():
-        if product.ab_product.id in saved_purchase_stats:
+        if product.ab_product.id not in saved_purchase_stats:
             new_purchase_stats.append(
                 PurchaseStat(
                     date=order.released_at.date(),
