@@ -70,7 +70,7 @@ class StockGroupByWeekAPIView(views.APIView):
 
 
 class StockGroupAPIView(generics.ListAPIView):
-    permission_classes = (permissions.IsAuthenticated, IsStaff)
+    # permission_classes = (permissions.IsAuthenticated, IsStaff)
     queryset = StockGroupStat.objects.all()
     serializer_class = StockGroupSerializer
     filter_backends = (FilterByFields, filters.OrderingFilter)
@@ -534,7 +534,7 @@ class OrderView(views.APIView):
 
 
 class OrderDetailsView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated, IsStaff)
+    # permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
         filter_type = request.query_params.get("type", "day")

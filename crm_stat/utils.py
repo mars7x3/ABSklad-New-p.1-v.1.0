@@ -50,7 +50,7 @@ def sum_and_collect_by_map(queryset, fields_map) -> Iterable[dict]:
         yield collected_data
 
 
-def date_filters(filter_type: str, date: datetime, date_field: str = "date") -> None:
+def date_filters(filter_type: str, date: datetime, date_field: str = "date") -> dict:
     query = {}
     match filter_type:
         case "month":
@@ -197,7 +197,7 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
             product=order_product.ab_product,
             count=0,
             spent_amount=0,
-            purchases_count=1,
+            purchases_count=0,
             avg_check=0
         )
 
