@@ -125,3 +125,9 @@ def get_kpi_products(user):
         )
     return prods_data
 
+
+def calculate_discount(price: int, discount: int):
+    decimal_percent = int(discount) / 100.0
+    discount_amount = price * decimal_percent
+    final_price = price - discount_amount
+    return final_price

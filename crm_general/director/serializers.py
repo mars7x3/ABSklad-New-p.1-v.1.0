@@ -13,7 +13,7 @@ from crm_general.director.utils import get_motivation_margin, kpi_info, get_moti
 from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
-from crm_general.tasks import calculate_discount
+from promotion.utils import calculate_discount
 from crm_general.utils import change_dealer_profile_status_after_deactivating_dealer_status
 from general_service.models import Stock, City, StockPhone, PriceType
 from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c, sync_stock_1c_2_crm
