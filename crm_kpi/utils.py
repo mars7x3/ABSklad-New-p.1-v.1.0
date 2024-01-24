@@ -535,7 +535,10 @@ def kpi_main_3lvl(stat_type: str, manager_id: int, date: datetime):
             return kpi_svd_3lvl(manager_id, date)
 
 
-def update_dealer_kpi_product(order_product: OrderProduct) -> bool:
+def update_dealer_kpi_product(order_product: OrderProduct) -> None:
+    if order_product.is_checked:
+        return False
+
     order = order_product.order
     dealer_kpi = DealerKPIProduct.objects.filter(
         product_id=order.product.id,
@@ -545,7 +548,7 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> bool:
     ).first()
 
     if not dealer_kpi:
-        return False
+        return
 
     if order.is_active:
         dealer_kpi.fact_count += order.product.count
@@ -557,10 +560,7 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> bool:
     return True
 
 
-def update_dealer_kpi_by_order(order: MyOrder):
-    if order.is_checked:
-        return
-
+def update_dealer_kpi_by_order(order: MyOrder) -> None:
     dealer_kpi = DealerKPI.objects.filter(
         month__month=order.released_at.month,
         month__year=order.released_at.year,
@@ -590,7 +590,7 @@ def update_dealer_kpi_by_order(order: MyOrder):
         DealerKPIProduct.objects.bulk_create(new_products_kpi)
 
 
-def update_dealer_kpi_by_tx(tx: MoneyDoc):
+def update_dealer_kpi_by_tx(tx: MoneyDoc) -> None:
     if tx.is_checked:
         return
 
