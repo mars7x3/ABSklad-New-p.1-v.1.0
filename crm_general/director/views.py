@@ -29,6 +29,7 @@ from crm_general.permissions import IsStaff
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
+from one_c.from_crm import sync_category_crm_to_1c
 from one_c.models import MoneyDoc
 from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
@@ -1031,5 +1032,6 @@ class DirectorCategoryModelViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         instance.is_active = not instance.is_active
         instance.save()
+        sync_category_crm_to_1c(instance)
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 

@@ -14,7 +14,7 @@ from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone, PriceType
-from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c, sync_stock_1c_2_crm
+from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c, sync_stock_1c_2_crm, sync_category_crm_to_1c
 from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount, \
     ProductCostPrice
@@ -1142,3 +1142,13 @@ class DirectorCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = '__all__'
+
+    def create(self, validated_data):
+        category = Category.objects.create(**validated_data)
+        sync_category_crm_to_1c(category)
+        return category
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        sync_category_crm_to_1c(instance)
+        return instance

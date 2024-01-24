@@ -10,6 +10,7 @@ from transliterate import translit
 
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
+from crm_kpi.utils import update_dealer_kpi_by_tx
 from general_service.models import Stock, City, PriceType, CashBox
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
@@ -19,8 +20,13 @@ from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Co
 def sync_category_crm_to_1c(category):
     url = "http://91.211.251.134/testcrm/hs/asoi/CategoryGoodsCreate"
     payload = json.dumps({
-        "category_title": category.title,
-        "category_uid": category.uid,
+        "NomenclatureName": '',
+        "NomenclatureUID": '',
+        "CategoryName": category.title,
+        "CategoryUID": category.uid,
+        "is_active": int(category.is_active),
+        "vendor_code": '',
+        "is_product": 0
     })
 
     username = 'Директор'
@@ -142,6 +148,7 @@ def sync_1c_money_doc(money_doc):
 
     money_doc.uid = uid
     money_doc.save()
+    update_dealer_kpi_by_tx(money_doc)
 
 
 def sync_money_doc_to_1C(order):
@@ -175,8 +182,8 @@ def sync_money_doc_to_1C(order):
             order.payment_doc_uid = payment_doc_uid
             order.paid_at = timezone.now()
             order.save()
-            MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
-
+            m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
+            update_dealer_kpi_by_tx(m_d)
     except Exception as e:
         raise TypeError
 
