@@ -3,7 +3,7 @@ from django.urls import path, re_path
 from .views import (
     StockGroupAPIView, StockGroupByWeekAPIView,
     DealerFundsView, DealerView, DealerSalesView, DealerProductView, ProductSalesView, ProductDealersView, ProductView,
-    TransactionView, OrderView, TransactionUserView
+    TransactionView, OrderView, TransactionUserView, OrderDetailsView
 )
 
 urlpatterns = [
@@ -22,5 +22,5 @@ urlpatterns = [
     re_path("^grouped-transactions/(?P<date>.+)/$", TransactionUserView.as_view()),
     re_path("^transactions/(?P<date>.+)/$", TransactionView.as_view()),
     re_path("^orders/(?P<date>.+)/$", OrderView.as_view()),
-
+    re_path("^order-details/(?P<date>.+)/$", OrderDetailsView.as_view()),
 ]
