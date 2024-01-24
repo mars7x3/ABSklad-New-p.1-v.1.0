@@ -9,12 +9,12 @@ from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile,
     DealerStatus, DealerStore
 from crm_general.director.tasks import create_product_prices
 from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director, \
-    create_product_counts_for_stock
+    create_product_counts_for_stock, create_prod_counts
 from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone, PriceType
-from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c
+from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c, sync_stock_1c_2_crm
 from order.models import MyOrder, Cart, CartProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount, \
     ProductCostPrice
@@ -852,6 +852,9 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
         for p in phones:
             phones_list.append(StockPhone(stock=stock, phone=p['phone']))
         StockPhone.objects.bulk_create(phones_list)
+        sync_stock_1c_2_crm(stock)
+        create_prod_counts(stock)
+
         return stock
 
     def update(self, instance, validated_data):
@@ -866,7 +869,9 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
             instance.phones.all().delete()
             StockPhone.objects.bulk_create(phones_list)
             return instance
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        sync_stock_1c_2_crm(instance)
+        return instance
 
 
 class StockPhoneSerializer(serializers.ModelSerializer):

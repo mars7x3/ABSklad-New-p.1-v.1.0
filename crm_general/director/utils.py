@@ -219,3 +219,15 @@ def create_product_counts_for_stock(stock: Stock):
         )
     ProductCount.objects.bulk_create(product_counts)
     return True
+
+
+def create_prod_counts(stock):
+    create_data = []
+    for p in AsiaProduct.objects.all():
+        create_data.append(
+            ProductCount(
+                product=p,
+                stock=stock
+            )
+        )
+    ProductCount.objects.bulk_create(create_data)
