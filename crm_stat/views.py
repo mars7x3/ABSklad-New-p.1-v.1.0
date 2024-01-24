@@ -105,7 +105,7 @@ class DealerFundsView(views.APIView):
         query = date_filters(filter_type, date)
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
-            query["stock_stat__stock_id"] = stock_id
+            query["stock_id"] = stock_id
 
         data = []
         for item in (
@@ -230,7 +230,7 @@ class DealerView(views.APIView):
             query["stock_id"] = stock_id
 
         queryset = (
-            PurchaseStat.objects.filter(user_stat__user_id=user_id, **query)
+            PurchaseStat.objects.filter(user_id=user_id, **query)
             .values("stock_id")
             .annotate(
                 stock=JSONObject(
@@ -261,7 +261,7 @@ class DealerView(views.APIView):
         if include_funds == "true":
             queryset = (
                 queryset
-                .annotate_funds(stock_stat__stock_id=stock_id, user_stat__user_id=user_id)
+                .annotate_funds(stock_id=stock_id, user_id=user_id)
                 .annotate(
                     dealers_incoming_funds=F("incoming_bank_amount") + F("incoming_cash_amount"),
                 )
