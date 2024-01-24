@@ -96,9 +96,14 @@ def create_dealer_kpi():
     if last_kpi:
         pds_percent = last_kpi.per_cent_pds / 100
         tmz_percent = last_kpi.per_cent_tmz / 100
+        last_kpi_percent_pds = last_kpi.per_cent_pds
+        last_kpi_percent_tmz = last_kpi.per_cent_tmz
+
     else:
         pds_percent = 0.25
         tmz_percent = 0.25
+        last_kpi_percent_pds = last_kpi.per_cent_pds
+        last_kpi_percent_tmz = last_kpi.per_cent_tmz
     created_dealer_kpi = DealerKPI.objects.filter(month=current_date).values_list('user__id', flat=True)
 
     for user in users:
@@ -107,8 +112,8 @@ def create_dealer_kpi():
                 new_kpi = DealerKPI.objects.create(
                     user=user,
                     month=current_date,
-                    per_cent_pds=last_kpi.per_cent_pds,
-                    per_cent_tmz=last_kpi.per_cent_tmz
+                    per_cent_pds=last_kpi_percent_pds,
+                    per_cent_tmz=last_kpi_percent_tmz
                 )
 
                 user_tmz_data = get_tmz_of_user_for_kpi(3, user.id)
