@@ -1,12 +1,12 @@
 from django.db.models import F, Sum, Value, Count, Case, When, DecimalField
-from django.db.models.functions import JSONObject, Round
+from django.db.models.functions import JSONObject, Round, TruncDate
 from rest_framework import views, generics, filters, permissions, exceptions, response
 
 from crm_general.filters import FilterByFields
 from crm_general.permissions import IsStaff
 from crm_general.utils import string_date_to_date, list_of_date_stings, string_datetime_datetime
 from one_c.models import MoneyDoc
-from order.models import MyOrder
+from order.models import MyOrder, OrderProduct
 
 from .models import StockGroupStat, PurchaseStat, UserTransactionsStat
 from .serializers import StockGroupSerializer, TransactionSerializer, OrderSerializer
@@ -141,7 +141,7 @@ class DealerSalesView(views.APIView):
             query["stock_stat__stock_id"] = stock_id
 
         data = []
-        for item in (
+        items = (
             PurchaseStat.objects.filter(**query)
             .values("user_stat_id")
             .annotate(
@@ -149,7 +149,6 @@ class DealerSalesView(views.APIView):
                     id=F("user_stat__user_id"),
                     name=F("user_stat__name")
                 ),
-                sales_products_count=Count("product_stat_id", distinct=True),
                 sales_amount=Sum("spent_amount"),
                 sales_count=Sum("purchases_count"),
                 date=Value(str(date.date()))
@@ -164,7 +163,12 @@ class DealerSalesView(views.APIView):
                     output_field=DecimalField()
                 )
             )
-        ):
+        )
+        include_products_count = request.query_params.get("include_products_count", "")
+        if include_products_count == "true":
+            items = items.annotate(sales_products_count=Count("product_stat__product_id", distinct=True))
+
+        for item in items:
             item.pop("user_stat_id", None)
             data.append(item)
         return response.Response(data)
@@ -292,7 +296,7 @@ class ProductSalesView(views.APIView):
             query["stock_stat__stock_id"] = stock_id
 
         data = []
-        for item in (
+        items = (
             PurchaseStat.objects.filter(**query)
             .values("product_stat_id")
             .annotate(
@@ -301,7 +305,6 @@ class ProductSalesView(views.APIView):
                     title=F("product_stat__title")
                 ),
                 sales_amount=Sum("spent_amount"),
-                sales_count=Sum("purchases_count"),
                 date=Value(str(date.date()))
             )
             .annotate(
@@ -314,7 +317,17 @@ class ProductSalesView(views.APIView):
                     output_field=DecimalField()
                 )
             )
-        ):
+        )
+
+        include_users_count = request.query_params.get("include_users_count", "")
+        if include_users_count == "true":
+            items = items.annotate(sales_users_count=Count("user_stat__user_id", distinct=True))
+
+        include_sales_count = request.query_params.get("include_sales_count", "")
+        if include_sales_count == "true":
+            items = items.annotate(sales_count=Sum("purchases_count"))
+
+        for item in items:
             item.pop("product_stat_id", None)
             data.append(item)
         return response.Response(data)
@@ -502,3 +515,43 @@ class OrderView(views.APIView):
         queryset = MyOrder.objects.filter(**query).order_by("-created_at", "id").distinct()
         serializer = OrderSerializer(instance=queryset, many=True, context={"request": request, "view": self})
         return response.Response(serializer.data)
+
+
+class OrderDetailsView(views.APIView):
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
+
+    def get(self, request, date):
+        filter_type = request.query_params.get("type", "day")
+        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
+        query = date_filters(filter_type, date)
+
+        product_id = request.query_params.get("product_id")
+        if product_id:
+            query["product_stat__product_id"] = product_id
+
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            query["user_stat__user_id"] = user_id
+
+        stock_id = request.query_params.get("stock_id")
+        if stock_id:
+            query["stock_stat__stock_id"] = stock_id
+
+        items = (
+            PurchaseStat.objects.filter(**query)
+            .values("product_stat_id", "date")
+            .annotate(
+                product=JSONObject(
+                    id=F("product_stat__product_id"),
+                    title=F("product_stat__title")
+                ),
+                total_count=Sum("count"),
+                total_amount=Sum("spent_amount")
+            )
+        )
+        collected_items = []
+        for item in items:
+            item.pop("product_stat_id", None)
+            collected_items.append(item)
+        return response.Response(collected_items)
