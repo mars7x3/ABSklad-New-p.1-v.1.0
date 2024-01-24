@@ -295,6 +295,10 @@ class ProductSalesView(views.APIView):
         if stock_id:
             query["stock_stat__stock_id"] = stock_id
 
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            query["user_stat__user_id"] = user_id
+
         data = []
         items = (
             PurchaseStat.objects.filter(**query)
