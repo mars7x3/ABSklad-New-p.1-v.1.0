@@ -159,7 +159,7 @@ def update_transaction_stat(tx: MoneyDoc) -> None:
             cash_income=0
         )
 
-    update_field = "cash_income" if tx.status == "Без нал" else "bank_income"
+    update_field = "cash_income" if tx.status != "Без нал" else "bank_income"
     if tx.is_active:
         setattr(tx_stat, update_field, tx.amount + getattr(tx_stat, update_field))
     else:
@@ -232,26 +232,8 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
 
 def update_stat_group_by_order(order: MyOrder) -> None:
     new_purchase_stats = []
-    saved_purchase_stats = PurchaseStat.objects.filter(
-        date=order.released_at.date(),
-        user=order.author.user,
-        stock=order.stock
-    ).values_list("product_id", flat=True)
 
     for product in order.order_products.all():
-        if product.ab_product.id not in saved_purchase_stats:
-            new_purchase_stats.append(
-                PurchaseStat(
-                    date=order.released_at.date(),
-                    user=order.author.user,
-                    product=product.ab_product,
-                    stock=order.stock,
-                    spent_amount=product.total_price,
-                    count=product.count,
-                    avg_check=product.total_price
-                )
-            )
-            continue
         update_purchase_stat(product)
 
     if new_purchase_stats:
