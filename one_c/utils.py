@@ -10,7 +10,7 @@ from transliterate import translit
 
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
-from crm_kpi.utils import update_dealer_kpi
+from crm_kpi.utils import update_dealer_kpi_by_order
 from general_service.models import Stock, City, PriceType, CashBox
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
@@ -523,7 +523,7 @@ def order_1c_to_crm(data):
             Notification.objects.create(**kwargs)
 
             # change_dealer_status.delay(user.id)
-        update_dealer_kpi(order)
+
 
 
 def sync_test_nurs():
