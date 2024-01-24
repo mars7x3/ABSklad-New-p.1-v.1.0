@@ -2,7 +2,7 @@ from django.db import models
 
 from account.models import DealerProfile, DealerStatus, MyUser
 from general_service.compress import WEBPField, banner_image_folder
-from general_service.models import City
+from general_service.models import City, PriceType
 from product.models import AsiaProduct, Category
 
 
@@ -104,3 +104,14 @@ class Banner(models.Model):
 
     class Meta:
         ordering = ('-created_at',)
+
+
+class DiscountPrice(models.Model):
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='discount_prices')
+    discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='discount_prices')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='discount_prices')
+    city = models.ForeignKey(City, on_delete=models.SET_NULL, related_name='discount_prices', null=True)
+    price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, related_name='discount_prices', null=True)
+    price = models.DecimalField(max_digits=100, decimal_places=2)
+    old_price = models.DecimalField(max_digits=100, decimal_places=2)
+    is_active = models.BooleanField(default=False)
