@@ -1,73 +1,91 @@
 from datetime import datetime
-from logging import getLogger
-
-from django.db.models.functions import TruncDate
-from django.utils import timezone
 
 from absklad_commerce.celery import app
-from one_c.models import MoneyDoc
-from order.models import MyOrder
 
-from .collectors import collects_stats_for_date, save_stock_group_for_day, save_stock_group_for_month, \
-    collect_city_stats, collect_stock_stats, collect_user_stats, collect_product_stats
-from .models import PurchaseStat, UserTransactionsStat
-
-
-logger = getLogger("statistics")
-
-
-@app.task
-def collect_stat_objects():
-    collect_city_stats()
-    collect_stock_stats()
-    collect_user_stats()
-    collect_product_stats()
-
-
-@app.task
-def collect_for_all_dates():
-    collect_stat_objects()
-    dates = set(
-        order["date"]
-        for order in MyOrder.objects.filter(is_active=True)
-                                    .values(date=TruncDate("released_at"))
-    )
-    tx_dates = set(
-        tx["date"]
-        for tx in MoneyDoc.objects.filter(is_active=True, cash_box__isnull=False)
-                                  .values(date=TruncDate("created_at"))
-    )
-
-    for date in dates | tx_dates:
-        if not date:
-            logger.error("Found empty date!")
-            continue
-
-        collects_stats_for_date(datetime(month=date.month, year=date.year, day=date.day))
-
-
-@app.task
-def collect_stock_groups_for_all():
-    dates = set(PurchaseStat.objects.values_list("date", flat=True))
-    dates |= set(UserTransactionsStat.objects.values_list("date", flat=True))
-    processed_months = set()
-
-    for date in dates:
-        if (date.month, date.year) not in processed_months:
-            save_stock_group_for_month(date)
-            processed_months.add((date.month, date.year))
-
-        save_stock_group_for_day(date)
+from .models import UserTransactionsStat, PurchaseStat, StockGroupStat
+from .utils import create_empty_group_stat, update_purchase_stat_group, update_tx_stat_group
 
 
 @app.task()
-def day_stat_task():
-    yesterday = timezone.now() - timezone.timedelta(days=1)
-    collect_stat_objects()
+def task_update_tx_stat_group(tx_stat_id):
+    tx_stat = UserTransactionsStat.objects.get(id=tx_stat_id)
 
-    # collect today stats
-    collects_stats_for_date(yesterday)
+    day_group_stat = StockGroupStat.objects.filter(
+        date=tx_stat.date,
+        stat_type=StockGroupStat.StatType.day
+    ).first()
 
-    # collect stock group stats
-    save_stock_group_for_day(yesterday.date())
-    save_stock_group_for_month(yesterday.date())
+    if not day_group_stat:
+        day_group_stat = create_empty_group_stat(
+            date=tx_stat.date,
+            stat_type=StockGroupStat.StatType.day,
+            stock=tx_stat.stock
+        )
+
+    update_tx_stat_group(
+        group=day_group_stat,
+        queryset=UserTransactionsStat.objects.filter(date=tx_stat.date, stock=tx_stat.stock)
+    )
+
+    month_group_stat = StockGroupStat.objects.filter(
+        date__month=tx_stat.date.month,
+        date__year=tx_stat.date.year,
+        type=StockGroupStat.StatType.month
+    ).first()
+    if not month_group_stat:
+        month_group_stat = create_empty_group_stat(
+            date=datetime(year=tx_stat.date.year, month=tx_stat.date.month, day=1),
+            stat_type=StockGroupStat.StatType.month,
+            stock=tx_stat.stock
+        )
+
+    update_tx_stat_group(
+        group=month_group_stat,
+        queryset=UserTransactionsStat.objects.filter(
+            date__month=tx_stat.date.month,
+            date__year=tx_stat.date.year,
+            stock=tx_stat.stock
+        )
+    )
+
+
+@app.task()
+def task_update_purchase_stat_group(purchase_stat_id):
+    purchase_stat = PurchaseStat.objects.get(id=purchase_stat_id)
+    day_group_stat = StockGroupStat.objects.filter(
+        date=purchase_stat.date,
+        stat_type=StockGroupStat.StatType.day
+    ).first()
+
+    if not day_group_stat:
+        day_group_stat = create_empty_group_stat(
+            date=purchase_stat.date,
+            stat_type=StockGroupStat.StatType.day,
+            stock=purchase_stat.stock
+        )
+
+    update_purchase_stat_group(
+        group=day_group_stat,
+        queryset=PurchaseStat.objects.filter(date=purchase_stat.date, stock=purchase_stat.stock)
+    )
+
+    month_group_stat = StockGroupStat.objects.filter(
+        date__month=purchase_stat.date.month,
+        date__year=purchase_stat.date.year,
+        type=StockGroupStat.StatType.month
+    ).first()
+    if not month_group_stat:
+        month_group_stat = create_empty_group_stat(
+            date=datetime(year=purchase_stat.date.year, month=purchase_stat.date.month, day=1),
+            stat_type=StockGroupStat.StatType.month,
+            stock=purchase_stat.stock
+        )
+
+    update_purchase_stat_group(
+        group=month_group_stat,
+        queryset=PurchaseStat.objects.filter(
+            date__month=purchase_stat.date.month,
+            date__year=purchase_stat.date.year,
+            stock=purchase_stat.stock
+        )
+    )

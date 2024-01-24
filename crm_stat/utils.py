@@ -1,182 +1,31 @@
-import logging
 from datetime import datetime
-from typing import Iterable, Any, Callable
+from logging import getLogger
 
-from django.db import models
-from django.db.models import functions
+from django.db.models import F, Sum, Count, Case, When, Subquery, Value, DecimalField
 from django.utils import timezone
 
-from crm_stat.models import StockGroupStat, PurchaseStat
+from one_c.models import MoneyDoc
+from order.models import MyOrder, OrderProduct
+
+from .models import UserTransactionsStat, PurchaseStat, StockGroupStat
 
 
-class Builder:
-    def __init__(
-        self,
-        model,
-        fields_map: dict[str, str],
-        default_map: dict[str, Callable | str | int | float] = None
-    ):
-        assert issubclass(model, models.Model)
-        self.model = model
-        self.fields_map = fields_map
-        self.default_map = default_map or {}
-
-    def build_dict(self, item: dict, relations: dict[str | int, str | int] = None, ignore_fields: list[str] = None):
-        collected_data = {}
-        ignore_fields = ignore_fields or []
-
-        for source, field in self.fields_map.items():
-            if source in ignore_fields:
-                continue
-
-            if field not in item:
-                continue
-
-            value = item[field]
-
-            if relations and value and source in relations:
-                value = relations[source][value]
-
-            collected_data[source] = value
-
-        for source, value in self.default_map.items():
-            if callable(value):
-                value = value()
-            collected_data[source] = value
-        return collected_data
-
-    def build_model_object(self, item: dict, relations: dict[str | int, str | int] = None):
-        data = self.build_dict(item, relations=relations)
-        if data:
-            return self.model(**data)
-
-    @staticmethod
-    def _get_match_value(item, match_field: str | tuple[str]):
-        if isinstance(match_field, str):
-            return item[match_field]
-        return tuple([item[field] for field in match_field])
-
-    def build_model_by_list(
-            self,
-            items: Iterable[dict[str, Any]],
-            match_field: str | tuple[str],
-            from_keys: Iterable[str] = None,
-            relations: dict[str, dict[str | int, str | int]] = None
-    ):
-        new = []
-        processed = set()
-        for data in items:
-            item = [data[key] for key in from_keys] if from_keys else data
-            if isinstance(item, dict):
-                match_value = self._get_match_value(item, match_field)
-                if match_value in processed:
-                    continue
-
-                instance = self.build_model_object(item, relations=relations)
-                new.append(instance)
-                processed.add(match_value)
-
-            elif isinstance(item, list):
-                for item_data in item:
-                    match_value = self._get_match_value(item_data, match_field)
-                    if match_value in processed:
-                        continue
-
-                    instance = self.build_model_object(item_data, relations=relations)
-                    new.append(instance)
-                    processed.add(match_value)
-        return new
+logger = getLogger('statistics')
 
 
-def stock_date_filters(
-        stat_type: str,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        months: list[datetime] = None
-) -> tuple[Callable, list, dict]:
-    args, kwargs = [], {}
-
-    if stat_type == StockGroupStat.StatType.month:
-        assert months, months
-        month_conditions = models.Q()
-        for month_datetime in months:
-            month_conditions |= models.Q(date__year=month_datetime.year, date__month=month_datetime.month)
-
-        args.append(month_conditions)
-        date_trunc = functions.TruncMonth
-    else:
-        kwargs["date__gte"] = start_date
-        kwargs["date__lte"] = end_date
-        date_trunc = functions.TruncWeek if stat_type == "week" else functions.TruncDate
-    return date_trunc, args, kwargs
-
-
-def get_stock_grouped_stats(
-        stat_type: str,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        months: list[datetime] = None
-):
-    date_trunc, args, kwargs = stock_date_filters(
+def create_empty_group_stat(date, stat_type, stock):
+    return StockGroupStat.objects.create(
+        date=date,
         stat_type=stat_type,
-        start_date=start_date,
-        end_date=end_date,
-        months=months
+        stock=stock,
     )
-    return (
-        PurchaseStat.objects.filter(*args, **kwargs)
-        .group_by_date("stock_stat_id", date_trunc=date_trunc)
-        .annotate_month_and_year()
-        .annotate_funds(date_trunc=date_trunc, stock_stat_id=models.OuterRef("stock_stat_id"))
-        .annotate_sales()
-        .annotate(
-            stat_type=models.Value(stat_type),
-            dealers_incoming_funds=models.F("incoming_bank_amount") + models.F("incoming_cash_amount"),
-            dealers_products_count=models.F("sales_products_count"),
-            dealers_amount=models.F("sales_amount"),
-            dealers_avg_check=models.F("sales_avg_check"),
-            products_amount=models.F("sales_amount"),
-            products_user_count=models.F("sales_users_count"),
-            products_avg_check=models.F("sales_avg_check")
-        )
-    )
-
-
-def get_grouped_user_funds(
-        stat_type: str,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        months: list[datetime] = None,
-        **filters
-):
-    date_trunc, args, kwargs = stock_date_filters(
-        stat_type=stat_type,
-        start_date=start_date,
-        end_date=end_date,
-        months=months
-    )
-    for data in (
-        PurchaseStat.objects.filter(*args, **kwargs)
-        .group_by_date("user_stat__user_id", date_trunc=date_trunc)
-        .annotate(
-            user=functions.JSONObject(
-                id=models.F("user_stat__user_id"),
-                name=models.F("user_stat__name")
-            )
-        )
-        .annotate_funds(date_trunc=date_trunc, user_stat_id=models.OuterRef("user_stat_id"), **filters)
-    ):
-        data.pop("user_stat__user_id", None)
-        data.pop("bank_amount", None)
-        data.pop("cash_amount", None)
-        data.pop("incoming_users_count", None)
-        yield data
 
 
 def divide_into_weeks(start, end):
     weeks_count = round(end.day / 7)
     delta = timezone.timedelta(days=7)
     end_date = start + delta
+
     for week_num in range(1, weeks_count + 1):
         yield start, end_date
         start += delta
@@ -184,7 +33,7 @@ def divide_into_weeks(start, end):
 
 
 def sum_and_collect_by_map(queryset, fields_map):
-    data = queryset.annotate(**{field: models.Sum(source) for field, source in fields_map.items()})
+    data = queryset.annotate(**{field: Sum(source) for field, source in fields_map.items()})
 
     for item in data:
         collected_data = {}
@@ -212,3 +61,164 @@ def date_filters(filter_type: str, date: datetime, date_field: str = "date"):
         case _:
             query[date_field] = date
     return query
+
+
+def update_purchase_stat_group(group: StockGroupStat, queryset):
+    orders_query = dict(
+        stock=group.stock,
+        is_active=True,
+        status__in=("success", "sent"),
+    )
+    if group.stat_type == StockGroupStat.StatType.month:
+        orders_query["released_at__month"] = group.date.month
+        orders_query["released_at__year"] = group.date.year
+    else:
+        orders_query["released_at__date"] = group.date
+
+    update_data = (
+        queryset
+        .values("stock_id")
+        .annotate(
+            sales_products_count=Count("product_id", distinct=True),
+            sales_amount=Sum("spent_amount", default=Value(0.0)),
+            sales_count=Subquery(
+                MyOrder.objects.filter(**orders_query)
+                .annotate(count=Count("id", distinct=True))[:1]
+            ),
+            sales_users_count=Count("user_id", distinct=True),
+        )
+        .annotate(
+            sales_avg_check=Case(
+                When(
+                    sales_amount__gt=0,
+                    sales_count__gt=0,
+                    then=F("sales_amount") / F("sales_count")
+                ),
+                default=Value(0.0),
+                output_field=DecimalField()
+            )
+        )[0]
+    )
+    # sales
+    group.sales_products_count = update_data["sales_products_count"]
+    group.sales_amount = update_data["sales_amount"]
+    group.sales_count = update_data["sales_count"]
+    group.sales_users_count = update_data["sales_users_count"]
+    group.sales_avg_check = update_data["sales_avg_check"]
+    # dealers
+    group.dealers_amount = update_data["sales_amount"]
+    group.dealers_products_count = update_data["sales_products_count"]
+    group.dealers_avg_check = update_data["sales_avg_check"]
+    # products
+    group.products_amount = update_data["sales_amount"]
+    group.products_user_count = update_data["sales_users_count"]
+    group.products_avg_check = update_data["sales_avg_check"]
+    group.save()
+
+
+def update_tx_stat_group(group: StockGroupStat, queryset):
+    update_data = (
+        queryset
+        .aggregate(
+            incoming_bank_amount=Sum("bank_income"),
+            incoming_cash_amount=Sum("cash_income"),
+            incoming_users_count=Count("user_id"),
+            dealers_incoming_funds=Sum("bank_income") + Sum("cash_income")
+        )
+    )
+    group.incoming_bank_amount = update_data["incoming_bank_amount"] or 0
+    group.incoming_cash_amount = update_data["incoming_cash_amount"] or 0
+    group.incoming_users_count = update_data["incoming_users_count"]
+    group.dealers_incoming_funds = update_data["dealers_incoming_funds"] or 0
+    group.save()
+
+
+def update_transaction_stat(tx: MoneyDoc):
+    if not tx.cash_box:
+        logger.error("MoneyDoc ID: %s must have cash_box for founding stock!")
+        return
+
+    if tx.is_checked:
+        logger.debug("MoneyDoc ID: %s was used in stats!")
+        return
+
+    tx_stat = UserTransactionsStat.objects.filter(
+        date=tx.created_at.date(),
+        user=tx.user,
+        stock=tx.cash_box.stock
+    ).first()
+
+    if not tx_stat:
+        tx_stat = UserTransactionsStat(
+            date=tx.created_at.date(),
+            user=tx.user,
+            stock=tx.cash_box.stock,
+            bank_income=0,
+            cash_income=0
+        )
+
+    update_field = "cash_income" if tx.status == "Без нал" else "bank_income"
+    if tx.is_active:
+        setattr(tx_stat, update_field, tx.amount + getattr(tx_stat, update_field))
+    else:
+        saved_amount = getattr(tx_stat, update_field)
+        if saved_amount < tx.amount:
+            setattr(tx_stat, update_field, 0)
+        else:
+            setattr(tx_stat, update_field, saved_amount - tx.amount)
+
+    tx_stat.save()
+
+
+def update_purchase_stat(order_product: OrderProduct):
+    if not order_product.ab_product:
+        logger.error("OrderProduct.ab_product must have!")
+        return
+
+    order = order_product.order
+    purchase_stat = PurchaseStat.objects.filter(
+        date=order.created_at.date(),
+        user=order.author.user,
+        stock=order.stock,
+        product=order_product.ab_product
+    ).first()
+
+    if not purchase_stat:
+        purchase_stat = PurchaseStat(
+            date=order.created_at.date(),
+            user=order.author.user,
+            stock=order.stock,
+            product=order_product.ab_product,
+            count=0,
+            spent_amount=0,
+            purchases_count=1,
+            avg_check=0
+        )
+
+    if order.is_active:
+        purchase_stat.count += order_product.count
+        purchase_stat.spent_amount += order_product.total_price
+        purchase_stat.purchases_count += 1
+        purchase_stat.avg_check = purchase_stat.spent_amount / purchase_stat.purchases_count
+    else:
+        if order_product.count > purchase_stat.count:
+            purchase_stat.count = 0
+        else:
+            purchase_stat.count -= order_product.count
+
+        if order_product.total_price > purchase_stat.spent_amount:
+            purchase_stat.spent_amount = 0
+        else:
+            purchase_stat.spent_amount -= order_product.total_price
+
+        if purchase_stat.purchases_count > 0:
+            purchase_stat.purchases_count -= 1
+        else:
+            purchase_stat.purchases_count = 0
+
+        if purchase_stat.spent_amount > 0 and purchase_stat.purchases_count > 0:
+            purchase_stat.avg_check = purchase_stat.spent_amount / purchase_stat.purchases_count
+        else:
+            purchase_stat.avg_check = 0
+
+    purchase_stat.save()
