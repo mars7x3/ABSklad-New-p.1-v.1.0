@@ -218,3 +218,24 @@ def sync_order_to_1C(order):
             order.save()
     except Exception as e:
         raise TypeError
+
+
+def sync_stock_1c_2_crm(stock):
+    url = "http://91.211.251.134/testcrm/hs/asoi/Warehouses"
+
+    payload = json.dumps({
+        "CategoryUID": stock.uid,
+        "title": stock.title,
+        "is_active": int(stock.is_active)
+    })
+
+    username = 'Директор'
+    password = '757520ля***'
+    print(payload)
+    response = requests.request("POST", url, data=payload,
+                                auth=(username.encode('utf-8'), password.encode('utf-8')))
+    print(response.text)
+    response_data = json.loads(response.content)
+    uid = response_data.get('result_uid')
+    stock.uid = uid
+    stock.save()

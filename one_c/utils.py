@@ -10,10 +10,11 @@ from transliterate import translit
 
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
+from crm_kpi.utils import update_dealer_kpi
 from general_service.models import Stock, City, PriceType, CashBox
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
-from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Collection
+from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Collection, ProductCostPrice
 
 
 def total_cost_price(products):
@@ -80,7 +81,7 @@ def sync_prods_list():
     x = 0
 
     collection = Collection.objects.filter(slug='asiabrand').first()
-
+    cost_price_create = []
     for p in products:
         x += 1
         print(x)
@@ -96,6 +97,7 @@ def sync_prods_list():
             if category:
                 product = AsiaProduct.objects.create(uid=p.get('NomenclatureUID'), title=p.get('NomenclatureName'),
                                                      category=category, collection=collection)
+                cost_price_create.append(ProductCostPrice(product=product))
             else:
                 continue
 
@@ -132,6 +134,7 @@ def sync_prods_list():
                     )
                 )
         ProductPrice.objects.bulk_create(price_types)
+    ProductCostPrice.objects.bulk_create(product=product)
 
         # prod_price_data = []
         # for c in p.get('Prices'):
@@ -158,7 +161,7 @@ def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
     p_types = PriceType.objects.all()
 
     price_create = []
-
+    cost_price_create = []
     uid = data.get('product_uid')
     product = AsiaProduct.objects.filter(uid=uid).first()
     if product:
@@ -177,6 +180,7 @@ def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
         product = AsiaProduct.objects.create(uid=uid, title=data.get('title'),
                                              is_active=bool(int(data.get('is_active'))),
                                              vendor_code=data.get('vendor_code'))
+        ProductCostPrice.objects.create(product=product)
         category = Category.objects.filter(uid=data.get('category_uid')).first()
         if category:
             product.category = category
@@ -519,6 +523,7 @@ def order_1c_to_crm(data):
             Notification.objects.create(**kwargs)
 
             # change_dealer_status.delay(user.id)
+        update_dealer_kpi(order)
 
 
 def sync_test_nurs():

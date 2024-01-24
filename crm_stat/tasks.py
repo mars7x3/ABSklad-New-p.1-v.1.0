@@ -1,4 +1,5 @@
 from datetime import datetime
+from logging import getLogger
 
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -9,7 +10,10 @@ from order.models import MyOrder
 
 from .collectors import collects_stats_for_date, save_stock_group_for_day, save_stock_group_for_month, \
     collect_city_stats, collect_stock_stats, collect_user_stats, collect_product_stats
-from .models import PurchaseStat
+from .models import PurchaseStat, UserTransactionsStat
+
+
+logger = getLogger("statistics")
 
 
 @app.task
@@ -21,15 +25,8 @@ def collect_stat_objects():
 
 
 @app.task
-def collect_today_stats():
-    collect_stat_objects()
-    collects_stats_for_date(timezone.now())
-
-
-@app.task
 def collect_for_all_dates():
     collect_stat_objects()
-
     dates = set(
         order["date"]
         for order in MyOrder.objects.filter(is_active=True)
@@ -42,19 +39,17 @@ def collect_for_all_dates():
     )
 
     for date in dates | tx_dates:
+        if not date:
+            logger.error("Found empty date!")
+            continue
+
         collects_stats_for_date(datetime(month=date.month, year=date.year, day=date.day))
-
-
-@app.task
-def collect_today_stock_groups():
-    today = timezone.now().date()
-    save_stock_group_for_day(today)
-    save_stock_group_for_month(today)
 
 
 @app.task
 def collect_stock_groups_for_all():
     dates = set(PurchaseStat.objects.values_list("date", flat=True))
+    dates |= set(UserTransactionsStat.objects.values_list("date", flat=True))
     processed_months = set()
 
     for date in dates:
@@ -66,6 +61,13 @@ def collect_stock_groups_for_all():
 
 
 @app.task()
-def day_stat_task():  # TODO: add to schedule
-    collect_today_stats()  # without delay important!
-    collect_today_stock_groups()
+def day_stat_task():
+    yesterday = timezone.now() - timezone.timedelta(days=1)
+    collect_stat_objects()
+
+    # collect today stats
+    collects_stats_for_date(yesterday)
+
+    # collect stock group stats
+    save_stock_group_for_day(yesterday.date())
+    save_stock_group_for_month(yesterday.date())

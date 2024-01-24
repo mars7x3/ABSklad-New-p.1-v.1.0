@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from account.models import MyUser
 from crm_kpi.models import DealerKPI, ManagerKPISVD, ManagerKPI, DealerKPIProduct
+from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
 
 
@@ -556,7 +557,7 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> bool:
     return True
 
 
-def update_dealer_kpi(order: MyOrder):
+def update_dealer_kpi_by_order(order: MyOrder):
     dealer_kpi = DealerKPI.objects.filter(
         month__month=order.released_at.month,
         month__year=order.released_at.year,
@@ -584,3 +585,20 @@ def update_dealer_kpi(order: MyOrder):
 
     if new_products_kpi:
         DealerKPIProduct.objects.bulk_create(new_products_kpi)
+
+
+def update_dealer_kpi_by_tx(tx: MoneyDoc):
+    dealer_kpi = DealerKPI.objects.filter(
+        month__month=tx.created_at.month,
+        month__year=tx.created_at.year,
+        user=tx.user
+    ).first()
+
+    if not dealer_kpi:
+        return
+
+    if tx.is_active:
+        dealer_kpi.pds += tx.amount
+    else:
+        dealer_kpi.pds -= tx.amount
+    dealer_kpi.save()
