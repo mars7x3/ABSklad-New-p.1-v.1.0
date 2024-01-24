@@ -1,3 +1,5 @@
+import re
+
 import requests
 import json
 from django.utils.crypto import get_random_string
@@ -71,4 +73,15 @@ def sync_balance_history(data, type_status):
 
         )
 
+
+def username_is_valid(username):
+    if re.match("^[a-zA-Z0-9]+$", username) and len(username) < 5:
+        return True
+    return False
+
+
+def pwd_is_valid(username):
+    if re.match("^[a-zA-Z0-9]+$", username) and len(username) < 6:
+        return True
+    return False
 

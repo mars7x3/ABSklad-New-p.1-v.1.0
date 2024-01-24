@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
+from account.utils import username_is_valid, pwd_is_valid
 from crm_general.director.tasks import create_product_prices
 from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director, \
     create_product_counts_for_stock, create_prod_counts
@@ -43,6 +44,15 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         with transaction.atomic():
+            username = validated_data.get('username')
+            pwd = validated_data.get('password')
+            if username:
+                if not username_is_valid(username):
+                    raise serializers.ValidationError({"text": "Некорректный username"})
+            if pwd:
+                if not pwd_is_valid(pwd):
+                    raise serializers.ValidationError({"text": "Некорректный password"})
+
             request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
 
@@ -60,6 +70,15 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         with transaction.atomic():
+            username = validated_data.get('username')
+            pwd = validated_data.get('password')
+            if username:
+                if not username_is_valid(username):
+                    raise serializers.ValidationError({"text": "Некорректный username"})
+            if pwd:
+                if not pwd_is_valid(pwd):
+                    raise serializers.ValidationError({"text": "Некорректный password"})
+
             request = self.context['request']
             for key, value in validated_data.items():
                 setattr(instance, key, value)
@@ -435,6 +454,15 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         with transaction.atomic():
+            username = validated_data.get('username')
+            pwd = validated_data.get('password')
+            if username:
+                if not username_is_valid(username):
+                    raise serializers.ValidationError({"text": "Некорректный username"})
+            if pwd:
+                if not pwd_is_valid(pwd):
+                    raise serializers.ValidationError({"text": "Некорректный password"})
+
             profile = self.context.get('request').data.get('profile')
             user = MyUser.objects.create_user(**validated_data)
             profile_serializer = DirectorDealerProfileSerializer(data=profile)
@@ -445,6 +473,15 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         with transaction.atomic():
+            username = validated_data.get('username')
+            pwd = validated_data.get('password')
+            if username:
+                if not username_is_valid(username):
+                    raise serializers.ValidationError({"text": "Некорректный username"})
+            if pwd:
+                if not pwd_is_valid(pwd):
+                    raise serializers.ValidationError({"text": "Некорректный password"})
+
             profile = self.context.get('request').data.get('profile')
             for key, value in validated_data.items():
                 setattr(instance, key, value)
