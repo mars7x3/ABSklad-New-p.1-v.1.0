@@ -172,7 +172,6 @@ class PriceTypeListView(generics.ListAPIView):
 
 
 class DealersFilterAPIView(APIView):
-    @query_debugger
     def post(self, request):
         cities = self.request.data.get('cities', [])
         categories = self.request.data.get('categories', [])
@@ -185,7 +184,7 @@ class DealersFilterAPIView(APIView):
             base_query &= Q(village__city__in=cities)
 
         if categories:
-            base_query &= Q(dealer_status__in=categories)
+            base_query &= (Q(dealer_status__in=categories), Q(user__is_active=True))
 
         dealers = DealerProfile.objects.filter(base_query)
 

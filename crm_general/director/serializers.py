@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -239,6 +240,20 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         return rep
 
 
+class StockProductCountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        exclude = ('is_show', 'is_active', 'uid', 'schedule')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        product_id = self.context.get('product_id')
+        rep['city_title'] = instance.city.title
+        rep['product_count'] = (ProductCount.objects.filter(stock=instance, product_id=product_id)
+                                .aggregate(total_count=Sum('count_crm')))
+        return rep
+
+
 class DirectorProductCRUDSerializer(serializers.ModelSerializer):
     stocks = serializers.SerializerMethodField()
 
@@ -260,6 +275,8 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
         rep['type_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
                                                                                        price_type__isnull=False),
                                                                 many=True, context=self.context).data
+        rep['stock_counts'] = StockProductCountSerializer(Stock.objects.all(), many=True,
+                                                          context={'product_id': instance.id}).data
         return rep
 
     @staticmethod
