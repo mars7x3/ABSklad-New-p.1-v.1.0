@@ -75,13 +75,13 @@ def sync_balance_history(data, type_status):
 
 
 def username_is_valid(username):
-    if re.match("^[a-zA-Z0-9]+$", username) and len(username) < 5:
+    if re.match("^[a-zA-Z0-9]+$", username) and len(username) > 5:
         return True
     return False
 
 
 def pwd_is_valid(username):
-    if re.match("^[a-zA-Z0-9]+$", username) and len(username) < 6:
+    if re.match("^[a-zA-Z0-9]+$", username) and len(username) > 6:
         return True
     return False
 
