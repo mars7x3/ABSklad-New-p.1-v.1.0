@@ -3,10 +3,11 @@ import logging
 from typing import Callable
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import F, Q, Count, Value, Case, When, Sum, FloatField, ExpressionWrapper, DecimalField
+from django.db.models import F, Q, Count, Value, Case, When, Sum, FloatField, ExpressionWrapper, DecimalField, QuerySet
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from account.models import DealerStatus, DealerProfile
 from order.models import MyOrder
 
 
@@ -190,3 +191,10 @@ def collect_orders_data_for_kpi_plan(check_months_ago, increase_threshold: float
             )
         )
     )
+
+
+def change_dealer_profile_status_after_deactivating_dealer_status(dealers: QuerySet[DealerProfile]):
+    base_dealer_status = DealerStatus.objects.filter(discount=0).first()
+    for dealer in dealers:
+        dealer.dealer_status = base_dealer_status
+        dealer.save()
