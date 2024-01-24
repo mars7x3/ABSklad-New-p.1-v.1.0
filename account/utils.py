@@ -2,7 +2,7 @@ import requests
 import json
 from django.utils.crypto import get_random_string
 from decouple import config
-from account.models import MyUser
+from account.models import MyUser, BalanceHistory
 
 
 def random_code():
@@ -62,6 +62,13 @@ def send_push_notification(users, title, text, link_id, status):
     print(response.text)
 
 
+def sync_balance_history(data, type_status):
+    if type_status == 'order':
+        BalanceHistory.objects.create(
+            dealer=data.author,
+            amount=data.price,
+            balance=data.author.wallet.amount_crm,
 
+        )
 
 

@@ -61,7 +61,7 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
         if start_date and end_date:
             start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
             end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
-            # end_date = end_date + datetime.timedelta(days=1)
+            end_date = end_date + datetime.timedelta(days=1)
             kwargs['created_at__gte'] = start_date
             kwargs['created_at__lte'] = end_date
 
