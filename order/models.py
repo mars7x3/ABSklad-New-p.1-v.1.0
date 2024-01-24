@@ -37,7 +37,6 @@ class MyOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
     is_active = models.BooleanField(default=True)
-    is_checked = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-created_at',)
@@ -65,6 +64,7 @@ class OrderProduct(models.Model):
     discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)  # сумма скидки
     image = models.FileField(upload_to='order-product', blank=True, null=True)
     cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    is_checked = models.BooleanField(default=False)
 
 
 class ReturnOrder(models.Model):
