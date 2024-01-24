@@ -1,10 +1,17 @@
+import re
+
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.utils.translation import gettext_lazy
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
+from django.core.validators import validate_email
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.validators import ASCIIUsernameValidator
 from general_service.models import Stock, StockPhone
 from .models import *
+from .utils import username_is_valid, pwd_is_valid
 
 
 class UserLoginSerializer(TokenObtainPairSerializer):
@@ -119,6 +126,15 @@ class DealerProfileUpdateSerializer(serializers.ModelSerializer):
         fields = ['email', 'pwd', 'name', 'phone', 'image', 'id', 'firebase_token']
 
     def update(self, instance, validated_data):
+        username = validated_data.get('username')
+        pwd = validated_data.get('pwd')
+        if username:
+            if not username_is_valid(username):
+                raise serializers.ValidationError({"text": "Некорректный username"})
+        if pwd:
+            if not pwd_is_valid(pwd):
+                raise serializers.ValidationError({"text": "Некорректный pwd"})
+
         for key, value in validated_data.items():
             setattr(instance, key, value)
         pwd = validated_data.get('pwd')
