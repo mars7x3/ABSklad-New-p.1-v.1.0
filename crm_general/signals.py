@@ -2,6 +2,8 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils.timezone import now
 
+from account.models import DealerStatus
+from general_service.models import City, PriceType
 from one_c.models import MoneyDoc
 from order.models import OrderProduct
 from product.models import AsiaProduct
@@ -73,8 +75,13 @@ def on_delete_order_product(sender, instance, **kwargs):
 def check_product_before_activation(sender, instance, **kwargs):
     count = 0
 
-    prices = instance.prices.filter(price=0)
-    if prices is None:
+    d_status_city_counts = DealerStatus.objects.all().count() * City.objects.filter(is_active=True).count()
+    d_status_type_counts = DealerStatus.objects.all().count() * PriceType.objects.filter(is_active=True).count()
+    final_price_count = d_status_city_counts + d_status_type_counts
+
+    product_price_count = instance.prices.all().count()
+
+    if final_price_count == product_price_count:
         count += 1
 
     cost_prices = instance.cost_prices.filter(price=0)

@@ -20,6 +20,7 @@ class MoneyDoc(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     order = models.ForeignKey(MyOrder, on_delete=models.SET_NULL, blank=True, null=True, related_name='money_docs')
+    is_checked = models.BooleanField(default=False)
 
 
 class MovementProduct1C(models.Model):

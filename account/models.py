@@ -8,6 +8,7 @@ from general_service.models import City, Stock, PriceType, Village
 class DealerStatus(models.Model):
     title = models.CharField(max_length=50, blank=True, null=True)
     discount = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title

@@ -13,6 +13,8 @@ from crm_general.director.utils import get_motivation_margin, kpi_info, get_moti
 from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
+from crm_general.tasks import calculate_discount
+from crm_general.utils import change_dealer_profile_status_after_deactivating_dealer_status
 from general_service.models import Stock, City, StockPhone, PriceType
 from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c, sync_stock_1c_2_crm, sync_category_crm_to_1c
 from order.models import MyOrder, Cart, CartProduct
@@ -248,8 +250,8 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         cost_prices = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_prices.price if cost_prices else '---'
-        rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
-        rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
+        # rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
+        # rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
 
         rep['city_prices'] = DirectorProductPriceListSerializer(instance.prices.filter(d_status__discount=0,
                                                                                        city__isnull=False),
@@ -298,15 +300,32 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                 product_count.save()
 
         if city_prices:
+            dealer_statuses = DealerStatus.objects.all()
             for price in city_prices:
-                product_price = ProductPrice.objects.get(id=price.get('id'))
-                product_price.price = price.get('price')
-                product_price.save()
+                for d_status in dealer_statuses:
+                    product_price = ProductPrice.objects.get(id=price.get('id'))
+                    product_d_status_price = ProductPrice.objects.filter(city_id=price.get('city'),
+                                                                         product=instance,
+                                                                         d_status=d_status).first()
+                    discount_price = calculate_discount(price.get('price'), d_status.discount)
+                    product_d_status_price.price = discount_price
+                    product_d_status_price.save()
+                    product_price.price = price.get('price')
+                    product_price.save()
         if type_prices:
+            dealer_statuses = DealerStatus.objects.all()
             for price in type_prices:
-                product_price = ProductPrice.objects.get(id=price.get('id'))
-                product_price.price = price.get('price')
-                product_price.save()
+                for d_status in dealer_statuses:
+                    product_price = ProductPrice.objects.get(id=price.get('id'))
+                    product_d_status_price = ProductPrice.objects.filter(price_type_id=price.get('price_type'),
+                                                                         product=instance,
+                                                                         d_status=d_status).first()
+                    if product_d_status_price:
+                        discount_price = calculate_discount(price.get('price'), d_status.discount)
+                        product_d_status_price.price = discount_price
+                        product_d_status_price.save()
+                    product_price.price = price.get('price')
+                    product_price.save()
 
         if cost_price:
             product_cost_price = instance.cost_prices.filter(is_active=True).first()
@@ -1093,9 +1112,12 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         cities = City.objects.all()
+        price_types = PriceType.objects.all()
 
         dealer_status = super().create(validated_data)
         discount_amount = Decimal(dealer_status.discount)
+
+        product_prices_to_create = []
 
         for city in cities:
             for product in AsiaProduct.objects.all():
@@ -1106,15 +1128,38 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
 
                 discounted_price = base_price - (base_price * (discount_amount / 100))
 
-                ProductPrice.objects.create(
-                    product=product,
-                    city=city,
-                    d_status=dealer_status,
-                    price=discounted_price,
-                    old_price=base_price,
-                    price_type=None
-                )
+                product_price_data = {
+                    'product': product,
+                    'city': city,
+                    'd_status': dealer_status,
+                    'price': discounted_price,
+                    'old_price': base_price,
+                    'price_type': None,
+                }
+                product_prices_to_create.append(product_price_data)
+        ProductPrice.objects.bulk_create([ProductPrice(**data) for data in product_prices_to_create])
 
+        product_type_prices_to_create = []
+
+        for price_type in price_types:
+            for product in AsiaProduct.objects.all():
+                product_base_price = ProductPrice.objects.filter(product=product,
+                                                                 price_type=price_type,
+                                                                 d_status__discount=0).first()
+                base_price = Decimal(product_base_price.price)
+
+                discounted_price = base_price - (base_price * (discount_amount / 100))
+
+                product_price_data = {
+                    'product': product,
+                    'city': None,
+                    'd_status': dealer_status,
+                    'price': discounted_price,
+                    'old_price': base_price,
+                    'price_type': price_type,
+                }
+                product_type_prices_to_create.append(product_price_data)
+        ProductPrice.objects.bulk_create([ProductPrice(**data) for data in product_type_prices_to_create])
         return dealer_status
 
     def update(self, instance, validated_data):
@@ -1125,9 +1170,14 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
         new_discount_amount = Decimal(new_discount_amount)
 
         for product_price in product_prices:
-            product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
-                                                             city=product_price.city,
-                                                             d_status__discount=0).first()
+            if product_price.price_type:
+                product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
+                                                                 price_type=product_price.price_type,
+                                                                 d_status__discount=0).first()
+            else:
+                product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
+                                                                 city=product_price.city,
+                                                                 d_status__discount=0).first()
             base_price = Decimal(product_base_price.price)
 
             discounted_price = base_price - (base_price * (new_discount_amount / 100))
@@ -1135,7 +1185,11 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
             product_price.old_price = base_price
             product_price.save()
 
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        if not instance.is_active:
+            dealers = DealerProfile.objects.filter(dealer_status=instance)
+            change_dealer_profile_status_after_deactivating_dealer_status(dealers)
+        return instance
 
 
 class DirectorCategorySerializer(serializers.ModelSerializer):
