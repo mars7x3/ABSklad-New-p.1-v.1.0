@@ -1,70 +1,7 @@
 from typing import Callable
 
 from django.db import models
-from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate
 from django.utils.translation import gettext_lazy as _
-
-from account.models import MyUser
-from general_service.models import City, Stock
-from product.models import Category, Collection, AsiaProduct
-
-
-class CityStat(models.Model):
-    objects = models.Manager()
-
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True)
-    title = models.CharField(max_length=100)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"ID: {getattr(self, 'id')} City: {getattr(self.city, 'id') if self.city else None}.{self.title}"
-
-
-class UserStat(models.Model):
-    objects = models.Manager()
-
-    city_stat = models.ForeignKey(CityStat, on_delete=models.SET_NULL, null=True, related_name='users')
-    user = models.ForeignKey(MyUser, on_delete=models.SET_NULL, null=True)
-    email = models.EmailField(max_length=100)
-    name = models.CharField(max_length=50, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"ID: {getattr(self, 'id')} User: {getattr(self.user, 'id') if self.user else None}.{self.name}"
-
-
-class StockStat(models.Model):
-    objects = models.Manager()
-
-    stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True)
-    title = models.CharField(max_length=100)
-    address = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=False)
-    city_stat = models.ForeignKey(CityStat, on_delete=models.SET_NULL, null=True, related_name='stocks')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"ID: {getattr(self, 'id')} User: {getattr(self.stock, 'id') if self.stock else None}.{self.title}"
-
-
-class ProductStat(models.Model):
-    objects = models.Manager()
-
-    product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, null=True)
-    title = models.CharField(max_length=500)
-    vendor_code = models.CharField(max_length=50, blank=True, null=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
-    collection = models.ForeignKey(Collection, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return (f"ID: {getattr(self, 'id')} "
-                f"Product: {getattr(self.product, 'id') if self.product else None}.{self.title}")
 
 
 class BaseStatistics(models.Model):
@@ -80,43 +17,13 @@ class BaseStatistics(models.Model):
 
 
 class UserTransactionsStat(BaseStatistics):
-    user_stat = models.ForeignKey(UserStat, on_delete=models.CASCADE, related_name='transactions')
-    stock_stat = models.ForeignKey(StockStat, on_delete=models.CASCADE, related_name="transactions")
+    user = models.ForeignKey("account.MyUser", on_delete=models.CASCADE, related_name='transactions')
+    stock = models.ForeignKey("general_service.Stock", on_delete=models.CASCADE, related_name="transactions")
     bank_income = models.DecimalField(max_digits=20, decimal_places=2)
     cash_income = models.DecimalField(max_digits=20, decimal_places=2)
 
 
 class PurchasesQuerySet(models.QuerySet):
-    def group_by_date(self, by_field: str, date_trunc: Callable = TruncDate):
-        return self.values(by_field, stat_date=date_trunc("date"))
-
-    def annotate_month_and_year(self):
-        return self.annotate(month=ExtractMonth('date'), year=ExtractYear('date'))
-
-    def annotate_sales(self):
-        return (
-            self.annotate(
-                sales_products_count=models.Count(
-                    "product_stat__product_id",
-                    distinct=True
-                ),
-                sales_amount=models.Sum(
-                    "spent_amount",
-                    default=models.Value(0.0)
-                ),
-                sales_count=models.Count("id"),
-                sales_users_count=models.Count("user_stat__user_id", distinct=True)
-            )
-            .annotate(
-                sales_avg_check=models.Case(
-                    models.When(sales_amount__gt=0, sales_count__gt=0,
-                                then=models.F("sales_amount") / models.F("sales_count")),
-                    default=models.Value(0.0),
-                    output_field=models.DecimalField()
-                ),
-            )
-        )
-
     def annotate_funds(self, date_trunc: Callable = None, **sub_filters):
         tx_base_query = UserTransactionsStat.objects.filter(**sub_filters)
         if date_trunc:
@@ -149,7 +56,7 @@ class PurchasesQuerySet(models.QuerySet):
                 ),
                 users_count=models.Subquery(
                     incoming_users_query
-                    .annotate(users_count=models.Count("user_stat__user_id", distinct=True))
+                    .annotate(users_count=models.Count("user_id", distinct=True))
                     .values("users_count")[:1]
                 )
             )
@@ -176,9 +83,9 @@ class PurchasesQuerySet(models.QuerySet):
 class PurchaseStat(BaseStatistics):
     objects = PurchasesQuerySet.as_manager()
 
-    user_stat = models.ForeignKey(UserStat, on_delete=models.CASCADE, related_name='purchases')
-    product_stat = models.ForeignKey(ProductStat, on_delete=models.CASCADE, related_name='purchases')
-    stock_stat = models.ForeignKey(StockStat, on_delete=models.CASCADE, related_name='purchases')
+    user = models.ForeignKey("account.MyUser", on_delete=models.CASCADE, related_name='purchases')
+    product = models.ForeignKey("product.AsiaProduct", on_delete=models.CASCADE, related_name='purchases')
+    stock = models.ForeignKey("general_service.Stock", on_delete=models.CASCADE, related_name='purchases')
     spent_amount = models.DecimalField(max_digits=20, decimal_places=2)
     count = models.PositiveIntegerField()
     purchases_count = models.PositiveIntegerField(default=0)
@@ -191,7 +98,7 @@ class StockGroupStat(BaseStatistics):
         day = "day", _("Day")
 
     stat_type = models.CharField(max_length=10, choices=StatType.choices)
-    stock_stat = models.ForeignKey(StockStat, on_delete=models.CASCADE, related_name="group_stats")
+    stock = models.ForeignKey("general_service.Stock", on_delete=models.CASCADE, related_name="group_stats")
 
     incoming_bank_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)
     incoming_cash_amount = models.DecimalField(decimal_places=2, max_digits=20, default=0)
@@ -213,4 +120,4 @@ class StockGroupStat(BaseStatistics):
     products_avg_check = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 
     class Meta:
-        unique_together = ["stat_type", "stock_stat", "date"]
+        unique_together = ["stat_type", "stock", "date"]

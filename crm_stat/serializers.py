@@ -1,20 +1,28 @@
 from django.db.models import Sum, IntegerField
 from rest_framework import serializers
 
+from account.models import MyUser
+from general_service.models import Stock
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
-from .models import StockGroupStat, StockStat
+
+from .models import StockGroupStat
 
 
 class StockSerializer(serializers.ModelSerializer):
     class Meta:
-        model = StockStat
+        model = Stock
         fields = ("id", "title")
-        extra_kwargs = {"id": {"source": "stock_id"}}
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ("id", "name")
 
 
 class StockGroupSerializer(serializers.ModelSerializer):
-    stock = StockSerializer(read_only=True, many=False, source="stock_stat")
+    stock = StockSerializer(read_only=True, many=False)
 
     class Meta:
         model = StockGroupStat
@@ -22,33 +30,21 @@ class StockGroupSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    user_name = serializers.SerializerMethodField(read_only=True)
+    user = UserSerializer(many=False, read_only=True)
 
     class Meta:
         model = MoneyDoc
-        fields = ("id", "user_name", "status", "amount", "created_at")
-
-    def get_user_name(self, obj):
-        if obj.user:
-            return obj.user.name
+        fields = ("id", "user", "status", "amount", "created_at")
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    user = serializers.SerializerMethodField(read_only=True)
+    user = UserSerializer(many=False, read_only=True)
     price = serializers.SerializerMethodField(read_only=True)
     count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyOrder
         fields = ("user", "price", "count")
-
-    def get_user(self, obj):
-        if obj.author:
-            user = obj.author.user
-            return {
-                "id": user.id,
-                "name": user.name
-            }
 
     @property
     def product_id(self):
