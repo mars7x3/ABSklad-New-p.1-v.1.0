@@ -294,12 +294,15 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                     )
 
         if stocks:
+            stock_norm_counts_to_update = []
             for s in stocks:
                 product_count = ProductCount.objects.get(product=instance, stock=s['stock_id'])
                 product_count.count_norm = s['count_norm']
-                product_count.save()
+                stock_norm_counts_to_update.append(product_count)
+            ProductCount.objects.bulk_update(stock_norm_counts_to_update, ['count_norm'])
 
         if city_prices:
+            city_prices_to_update = []
             dealer_statuses = DealerStatus.objects.all()
             for price in city_prices:
                 for d_status in dealer_statuses:
@@ -309,10 +312,12 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                                                                          d_status=d_status).first()
                     discount_price = calculate_discount(price.get('price'), d_status.discount)
                     product_d_status_price.price = discount_price
-                    product_d_status_price.save()
                     product_price.price = price.get('price')
-                    product_price.save()
+                    city_prices_to_update.append(product_price)
+                    city_prices_to_update.append(product_d_status_price)
+            ProductPrice.objects.bulk_update(city_prices_to_update, ['price'])
         if type_prices:
+            type_prices_to_update = []
             dealer_statuses = DealerStatus.objects.all()
             for price in type_prices:
                 for d_status in dealer_statuses:
@@ -323,9 +328,10 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                     if product_d_status_price:
                         discount_price = calculate_discount(price.get('price'), d_status.discount)
                         product_d_status_price.price = discount_price
-                        product_d_status_price.save()
+                        type_prices_to_update.append(product_d_status_price)
                     product_price.price = price.get('price')
-                    product_price.save()
+                    type_prices_to_update.append(product_price)
+            ProductPrice.objects.bulk_update(type_prices_to_update, ['price'])
 
         if cost_price:
             product_cost_price = instance.cost_prices.filter(is_active=True).first()
@@ -1169,6 +1175,7 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
         new_discount_amount = validated_data['discount']
         new_discount_amount = Decimal(new_discount_amount)
 
+        product_prices_to_update = []
         for product_price in product_prices:
             if product_price.price_type:
                 product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
@@ -1183,7 +1190,8 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
             discounted_price = base_price - (base_price * (new_discount_amount / 100))
             product_price.price = discounted_price
             product_price.old_price = base_price
-            product_price.save()
+            product_prices_to_update.append(product_price)
+        ProductPrice.objects.bulk_update(product_prices_to_update, ['price', 'old_price'])
 
         instance = super().update(instance, validated_data)
         if not instance.is_active:
