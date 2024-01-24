@@ -598,7 +598,7 @@ def update_dealer_kpi_by_tx(tx: MoneyDoc):
         return
 
     if tx.is_active:
-        dealer_kpi.pds += tx.amount
+        dealer_kpi.fact_pds += tx.amount
     else:
-        dealer_kpi.pds -= tx.amount
+        dealer_kpi.fact_pds -= tx.amount
     dealer_kpi.save()
