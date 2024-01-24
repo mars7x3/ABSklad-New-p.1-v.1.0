@@ -22,8 +22,8 @@ def sync_category_crm_to_1c(category):
     payload = json.dumps({
         "NomenclatureName": '',
         "NomenclatureUID": '',
-        "CategoryName": category.title,
-        "CategoryUID": category.uid,
+        "category_title": category.title,
+        "category_uid": category.uid,
         "is_active": int(category.is_active),
         "vendor_code": '',
         "is_product": 0
@@ -35,7 +35,7 @@ def sync_category_crm_to_1c(category):
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
     print(response.text)
     response_data = json.loads(response.content)
-    uid = response_data.get('result_uid')
+    uid = response_data.get('category_uid')
 
     category.uid = uid
     category.save()
