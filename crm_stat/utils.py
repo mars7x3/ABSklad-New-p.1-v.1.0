@@ -268,6 +268,6 @@ def collect_stats_for_all() -> None:
     for order in orders:
         update_stat_group_by_order(order)
 
-    txs = MoneyDoc.objects.filter(user_isnull=False, cash_box__isnull=False, is_active=True)
+    txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False, is_active=True)
     for tx in txs:
         update_transaction_stat(tx)
