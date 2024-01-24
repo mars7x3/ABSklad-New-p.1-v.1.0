@@ -411,3 +411,12 @@ class WalletListSerializer(serializers.ModelSerializer):
             return last_replenishment.created_at
 
 
+class ManagerListSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ManagerProfile
+        fields = ('user', 'city', 'name')
+
+    def get_name(self, instance):
+        return instance.user.name

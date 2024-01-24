@@ -40,6 +40,9 @@ def sync_product_crm_to_1c(product):
         "NomenclatureUID": product.uid,
         "CategoryName": product.category.title,
         "CategoryUID": product.category.uid,
+        "is_active": int(product.is_active),
+        "vendor_code": product.vendor_code,
+        "is_product": 1
     })
     username = 'Директор'
     password = '757520ля***'
@@ -66,6 +69,7 @@ def sync_dealer_back_to_1C(dealer):
         print(response.text)
     payload = json.dumps({
         "clients": [{
+            "is_active": int(dealer.is_active),
             'Name': dealer.name,
             'UID': dealer.uid,
             'Telephone': dealer.phone,
@@ -93,7 +97,7 @@ def sync_return_order_to_1C(returns_order):
     products = returns_order.return_products.all()
     payload = json.dumps({
         "uid": returns_order.order.uid,
-        "created_at": f'{timezone.localtime(returns_order.created_at)}',
+        "created_at": f'{timezone.localtime(returns_order.created_at) + datetime.timedelta(hours=6)}',
         "products_return": [
             {
                 "uid": p.product.uid,
@@ -114,17 +118,18 @@ def sync_1c_money_doc(money_doc):
         cash_box_uid = ''
     else:
         city = money_doc.user.dealer_profile.village.city
-        cash_box = city.stocks.first().cash_boxs.first()
+        cash_box = city.stocks.first().cash_box
         cash_box_uid = cash_box.uid
     # TODO: если в регионе будет больше 1 склада, то надо будет логику кассы поменять.
 
     payload = json.dumps({
         "user_uid": money_doc.user.uid,
         "amount": int(money_doc.amount),
-        "created_at": f'{timezone.localtime(money_doc.created_at)}',
+        "created_at": f'{timezone.localtime(money_doc.created_at) + datetime.timedelta(hours=6)}',
         "order_type": money_doc.status,
         "cashbox_uid": cash_box_uid,
         "is_active": int(money_doc.is_active),
+        "uid": money_doc.uid
     })
     print('***Sync_order_pay_to_1C: ', payload)
 
@@ -145,16 +150,18 @@ def sync_money_doc_to_1C(order):
             url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
             if 'cash' == order.type_status or order.type_status == 'kaspi':
                 type_status = 'Наличка'
-                cash_box_uid = order.author.city.cash_boxs.first().uid
+                cash_box_uid = order.stock.cash_box.uid
             else:
                 type_status = 'Без нал'
                 cash_box_uid = ''
             payload = json.dumps({
-                "user_uid": order.author.uid,
+                "user_uid": order.author.user.uid,
                 "amount": int(order.price),
-                "created_at": f'{timezone.localtime(order.created_at)}',
+                "created_at": f'{timezone.localtime(order.created_at) + datetime.timedelta(hours=6)}',
                 "order_type": type_status,
                 "cashbox_uid": cash_box_uid,
+                "is_active": 1,
+                "uid": "00000000-0000-0000-0000-000000000000"
             })
             print('***ORDER PAY***')
             print('sync_order_pay_to_1C: ', payload)
@@ -166,8 +173,9 @@ def sync_money_doc_to_1C(order):
             response_data = json.loads(response.content)
             payment_doc_uid = response_data.get('result_uid')
             order.payment_doc_uid = payment_doc_uid
+            order.paid_at = timezone.now()
             order.save()
-            MoneyDoc.objects.create(order=order, user=order.author, amount=order.price, uid=payment_doc_uid)
+            MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
 
     except Exception as e:
         raise TypeError
@@ -178,16 +186,18 @@ def sync_order_to_1C(order):
         with transaction.atomic():
             url = "http://91.211.251.134/testcrm/hs/asoi/CreateSale"
             products = order.order_products.all()
-            released_at = timezone.localtime(order.released_at)
+            released_at = timezone.localtime(order.released_at) + datetime.timedelta(hours=6)
             money = order.money_docs.filter(is_active=True).first()
             payload = json.dumps({
-                "user_uid": order.author.uid,
+                "user_uid": order.author.user.uid,
                 "created_at": f'{released_at}',
-                "payment_doc_uid": money.uid,
-                "cityUID": order.city_stock.stocks.first().uid,
+                "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
+                "cityUID": order.stock.uid,
+                "is_active": int(order.is_active),
+                "uid": order.uid,
                 "products": [
                     {"title": p.title,
-                     "uid": p.uid,
+                     "uid": p.ab_product.uid,
                      "count": int(p.count),
                      'price': int(p.price)}
                     for p in products
@@ -204,6 +214,28 @@ def sync_order_to_1C(order):
 
             uid = response_data.get('result_uid')
             order.uid = uid
+            order.released_at = timezone.now()
             order.save()
     except Exception as e:
         raise TypeError
+
+
+def sync_stock_1c_2_crm(stock):
+    url = "http://91.211.251.134/testcrm/hs/asoi/Warehouses"
+
+    payload = json.dumps({
+        "CategoryUID": stock.uid,
+        "title": stock.title,
+        "is_active": int(stock.is_active)
+    })
+
+    username = 'Директор'
+    password = '757520ля***'
+    print(payload)
+    response = requests.request("POST", url, data=payload,
+                                auth=(username.encode('utf-8'), password.encode('utf-8')))
+    print(response.text)
+    response_data = json.loads(response.content)
+    uid = response_data.get('result_uid')
+    stock.uid = uid
+    stock.save()

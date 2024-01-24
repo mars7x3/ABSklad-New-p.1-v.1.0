@@ -175,7 +175,7 @@ def save_transaction_stats(date):
 
 def save_purchase_stats(date):
     purchases = MyOrder.objects.filter(
-        created_at__date=date,
+        released_at__date=date,
         status__in=("success", "sent"),
         is_active=True,
         author__user__in=models.Subquery(UserStat.objects.values("user_id")),
@@ -216,7 +216,7 @@ def save_purchase_stats(date):
         purchases
         .values(user_id=models.F("author__user_id"))
         .annotate(
-            date=functions.TruncDate("created_at"),
+            date=functions.TruncDate("released_at"),
             product_id=models.F("order_products__ab_product_id"),
             stock_id=models.F("stock_id"),
             spent_amount=models.Sum("order_products__total_price"),
@@ -319,7 +319,7 @@ def collect_stock_stats():
     new_stocks = stock_queryset.exclude(id__in=models.Subquery(StockStat.objects.values("stock_id")))
     new_stock_stats = [
         StockStat(
-            id=saved_stock_stats[stock.id],
+            stock_id=stock.id,
             title=stock.title,
             is_active=stock.is_active,
             address=stock.address,

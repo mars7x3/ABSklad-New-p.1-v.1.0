@@ -52,7 +52,7 @@ class CollectionListView(viewsets.ReadOnlyModelViewSet):
 
 class HitProductListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = AsiaProduct.objects.filter(is_active=True, is_show=True, is_hit=True)
+    queryset = AsiaProduct.objects.filter(is_active=True, is_hit=True)
     serializer_class = ProductListSerializer
     pagination_class = AppProductPaginationClass
 
@@ -65,7 +65,7 @@ class HitProductListView(viewsets.ReadOnlyModelViewSet):
 
 class ProductListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = AsiaProduct.objects.filter(is_active=True, is_show=True)
+    queryset = AsiaProduct.objects.filter(is_active=True)
     serializer_class = ProductListSerializer
     pagination_class = AppProductPaginationClass
 
@@ -145,5 +145,5 @@ class FilterMaxMinView(APIView):
 
 
 class ProductLinkView(mixins.RetrieveModelMixin, GenericViewSet):
-    queryset = AsiaProduct.objects.filter(is_active=True, is_show=True)
+    queryset = AsiaProduct.objects.filter(is_active=True)
     serializer_class = ProductLinkSerializer

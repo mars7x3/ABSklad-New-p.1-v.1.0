@@ -8,14 +8,16 @@ from rest_framework import serializers
 from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
     DealerStatus, DealerStore
 from crm_general.director.tasks import create_product_prices
-from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director
+from crm_general.director.utils import get_motivation_margin, kpi_info, get_motivation_done, verified_director, \
+    create_product_counts_for_stock, create_prod_counts
 from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
 from general_service.models import Stock, City, StockPhone, PriceType
-from one_c.from_crm import sync_dealer_back_to_1C
+from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c, sync_stock_1c_2_crm
 from order.models import MyOrder, Cart, CartProduct
-from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount
+from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount, \
+    ProductCostPrice
 
 from promotion.models import Discount, Motivation, MotivationPresent, MotivationCondition, ConditionCategory, \
     ConditionProduct
@@ -227,7 +229,10 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         avg_check = instance.order_products.filter(order__is_active=True,
                                                    order__status__in=['sent', 'success', 'paid', 'wait']
                                                    ).values_list('total_price', flat=True)
-        rep['avg_check'] = sum(avg_check) / len(avg_check)
+        if len(avg_check) == 0:
+            rep['avg_check'] = 0
+        else:
+            rep['avg_check'] = sum(avg_check) / len(avg_check)
 
         return rep
 
@@ -241,7 +246,7 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        cost_prices = instance.cost_prices.filter(product__is_active=True).first()
+        cost_prices = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_prices.price if cost_prices else '---'
         rep['sizes'] = DirectorProductSizeSerializer(instance.sizes.all(), many=True, context=self.context).data
         rep['images'] = DirectorProductImageSerializer(instance.images.all(), many=True, context=self.context).data
@@ -273,6 +278,7 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         request = self.context['request']
         stocks = request.data.get('stocks')
+        cost_price = request.data.get('cost_price')
         type_prices = request.data.get('type_prices')
         city_prices = request.data.get('city_prices')
         is_active = validated_data.get('is_active', True)
@@ -301,7 +307,18 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                 product_price = ProductPrice.objects.get(id=price.get('id'))
                 product_price.price = price.get('price')
                 product_price.save()
-        return super().update(instance, validated_data)
+
+        if cost_price:
+            product_cost_price = instance.cost_prices.filter(is_active=True).first()
+            if product_cost_price:
+                product_cost_price.price = cost_price
+                product_cost_price.save()
+            else:
+                ProductCostPrice.objects.create(product=instance, price=cost_price, is_active=True)
+
+        instance = super().update(instance, validated_data)
+        sync_product_crm_to_1c(instance)
+        return instance
 
 
 class DirectorProductSizeSerializer(serializers.ModelSerializer):
@@ -830,10 +847,14 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         phones = self.context['request'].data['phones']
         stock = Stock.objects.create(**validated_data)
+        create_product_counts_for_stock(stock=stock)
         phones_list = []
         for p in phones:
             phones_list.append(StockPhone(stock=stock, phone=p['phone']))
         StockPhone.objects.bulk_create(phones_list)
+        sync_stock_1c_2_crm(stock)
+        create_prod_counts(stock)
+
         return stock
 
     def update(self, instance, validated_data):
@@ -848,7 +869,9 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
             instance.phones.all().delete()
             StockPhone.objects.bulk_create(phones_list)
             return instance
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        sync_stock_1c_2_crm(instance)
+        return instance
 
 
 class StockPhoneSerializer(serializers.ModelSerializer):
@@ -1095,10 +1118,12 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
         return dealer_status
 
     def update(self, instance, validated_data):
+        if instance.discount == 0:
+            raise serializers.ValidationError({'detail': 'Permission denied!'})
         product_prices = instance.prices.all()
         new_discount_amount = validated_data['discount']
         new_discount_amount = Decimal(new_discount_amount)
-        update_prices = []
+
         for product_price in product_prices:
             product_base_price = ProductPrice.objects.filter(product__id=product_price.product.id,
                                                              city=product_price.city,
@@ -1106,11 +1131,14 @@ class DirectorDealerStatusSerializer(serializers.ModelSerializer):
             base_price = Decimal(product_base_price.price)
 
             discounted_price = base_price - (base_price * (new_discount_amount / 100))
-            update_prices.append(
-                ProductPrice(
-                    price=discounted_price,
-                    old_price=base_price,
-                )
-            )
-        ProductPrice.objects.bulk_update(update_prices)
+            product_price.price = discounted_price
+            product_price.old_price = base_price
+            product_price.save()
+
         return super().update(instance, validated_data)
+
+
+class DirectorCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'

@@ -198,6 +198,7 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = BalancePlus.objects.all()
     serializer_class = BalancePlusSerializer
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         queryset = self.request.user.dealer_profile.balances.all()
@@ -221,18 +222,37 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
             kwargs['is_success'] = bool(int(is_success))
 
         queryset = queryset.filter(**kwargs)
-        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class BalanceHistoryListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     queryset = BalanceHistory.objects.filter(is_active=True)
     serializer_class = BalanceHistorySerializer
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         queryset = self.request.user.dealer_profile.balance_histories.all()
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        t_status = request.query_params.get('status')
+
+        if t_status:
+            kwargs['status'] = t_status
+
+        queryset = queryset.filter(**kwargs)
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 

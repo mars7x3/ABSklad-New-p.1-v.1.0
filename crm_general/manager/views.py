@@ -30,7 +30,7 @@ class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
         MyOrder.objects.select_related("author__village__city", "stock__city")
                        .only("author__village__city", "stock__city", "id", "price", "type_status",
                              "created_at", "paid_at", "released_at", "is_active")
-                       .all()
+                       .filter(is_active=True)
     )
     serializer_class = ShortOrderSerializer
     pagination_class = GeneralPurposePagination

@@ -82,8 +82,8 @@ class BaseStatistics(models.Model):
 class UserTransactionsStat(BaseStatistics):
     user_stat = models.ForeignKey(UserStat, on_delete=models.CASCADE, related_name='transactions')
     stock_stat = models.ForeignKey(StockStat, on_delete=models.CASCADE, related_name="transactions")
-    bank_income = models.DecimalField(max_digits=10, decimal_places=2)
-    cash_income = models.DecimalField(max_digits=10, decimal_places=2)
+    bank_income = models.DecimalField(max_digits=20, decimal_places=2)
+    cash_income = models.DecimalField(max_digits=20, decimal_places=2)
 
 
 class PurchasesQuerySet(models.QuerySet):

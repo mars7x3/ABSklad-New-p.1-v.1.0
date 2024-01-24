@@ -5,9 +5,9 @@ from django.db.models.functions import Coalesce, Round
 from django.utils import timezone
 
 from account.models import DealerStatus
-from general_service.models import City
+from general_service.models import City, Stock
 from order.models import MyOrder
-from product.models import AsiaProduct, ProductPrice
+from product.models import AsiaProduct, ProductPrice, ProductCount
 
 
 def get_motivation_margin(motivation):
@@ -205,3 +205,29 @@ def verified_director(product):
     if number == len(prices):
         n1 += 1
     return f'{n1}/{n2}'
+
+
+def create_product_counts_for_stock(stock: Stock):
+    product_counts = []
+    products = AsiaProduct.objects.all()
+    for product in products:
+        product_counts.append(
+            ProductCount(
+                product=product,
+                stock=stock
+            )
+        )
+    ProductCount.objects.bulk_create(product_counts)
+    return True
+
+
+def create_prod_counts(stock):
+    create_data = []
+    for p in AsiaProduct.objects.all():
+        create_data.append(
+            ProductCount(
+                product=p,
+                stock=stock
+            )
+        )
+    ProductCount.objects.bulk_create(create_data)

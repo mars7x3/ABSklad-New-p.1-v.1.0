@@ -17,6 +17,7 @@ def get_tmz_of_user_for_kpi(check_months, user_id):
     user_order_products = MyOrder.objects.filter(
         author__user__id=user_id,
         created_at__gte=start_date,
+        order_products__ab_product__is_active=True,
         status__in=['paid', 'sent', 'success', 'wait']
     ).values(
         'author__user',

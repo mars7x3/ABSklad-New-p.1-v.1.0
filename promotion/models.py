@@ -18,6 +18,9 @@ class Story(models.Model):
     products = models.ManyToManyField(AsiaProduct, related_name='stories')
     dealer_profiles = models.ManyToManyField(DealerProfile, related_name='stories')
 
+    class Meta:
+        ordering = ('-id',)
+
 
 class Motivation(models.Model):
     title = models.CharField(max_length=300)
@@ -78,6 +81,9 @@ class Discount(models.Model):
     products = models.ManyToManyField(AsiaProduct, related_name='discount_products')
     dealer_profiles = models.ManyToManyField(DealerProfile, related_name='discount_d_profiles')
 
+    class Meta:
+        ordering = ('-created_at',)
+
 
 class Banner(models.Model):
     title = models.CharField(max_length=255)
@@ -95,3 +101,6 @@ class Banner(models.Model):
     show_date = models.BooleanField(default=False)
     products = models.ManyToManyField(AsiaProduct, related_name='banners', blank=True)
     dealer_profiles = models.ManyToManyField(DealerProfile, related_name='banners', blank=True)
+
+    class Meta:
+        ordering = ('-created_at',)

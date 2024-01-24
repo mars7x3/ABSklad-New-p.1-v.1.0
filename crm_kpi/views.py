@@ -13,6 +13,8 @@ from rest_framework.viewsets import GenericViewSet
 
 from account.models import ManagerProfile, MyUser
 from crm_general.director.permissions import IsDirector
+from crm_general.main_director.permissions import IsMainDirector
+from crm_general.permissions import IsStaff
 from crm_kpi.models import DealerKPIProduct, DealerKPI
 from crm_kpi.paginations import DealerKPIPagination
 from crm_kpi.serializers import DealerKPISerializer, DealerListSerializer, ProductListKPISerializer, \
@@ -93,7 +95,7 @@ class ManagerKPITMZDetailView(APIView):
 
 class DealerKPIView(viewsets.ModelViewSet):
     queryset = DealerKPI.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated | IsDirector | IsMainDirector]
     serializer_class = DealerKPISerializer
     retrieve_serializer_class = DealerKPIDetailSerializer
 
@@ -166,12 +168,12 @@ class DealerKPIView(viewsets.ModelViewSet):
 
 class DeleteKPIProductView(DestroyModelMixin, GenericViewSet):
     queryset = DealerKPIProduct.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated | IsDirector | IsMainDirector]
     serializer_class = DealerKPIProductSerializer
 
 
 class KPITotalView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsStaff]
 
     def get(self, request):
         month = request.query_params.get('month')
@@ -187,7 +189,7 @@ class KPITotalView(APIView):
 
 
 class KPITotalMain2lvlView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsStaff]
 
     def get(self, request):
         month = request.query_params.get('month')
@@ -200,7 +202,7 @@ class KPITotalMain2lvlView(APIView):
 
 
 class KPITotalMain3lvlView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated, IsStaff]
 
     def get(self, request, manager_id):
         month = request.query_params.get('month')

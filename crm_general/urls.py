@@ -4,6 +4,7 @@ from rest_framework.routers import SimpleRouter
 from .accountant.views import AccountantOrderListView, AccountantProductListView, AccountantCollectionListView, \
     AccountantCategoryView, AccountantStockViewSet
 from .hr.views import HRStaffListView, StaffMagazineCreateView
+from .main_director.views import MainDirStaffCRUDView, MainDirectorStockListView
 
 from .manager.views import (
     OrderListAPIView as ManagerOrderListView,
@@ -50,6 +51,7 @@ from .rop.views import (
     ProductPriceListAPIView as RopProductPriceListAPIView,
     ProductRetrieveAPIView as RopProductRetrieveAPIView,
     BalanceViewSet as BalanceViewSet,
+    ManagerShortListView as ManagerShortListView
 )
 
 from .director.views import *
@@ -69,9 +71,12 @@ from .warehouse_manager.views import (
 
 main_director_router = SimpleRouter()
 
+main_director_router.register('staff/crud', MainDirStaffCRUDView)
+main_director_router.register('stock/list', MainDirectorStockListView)
+
 main_director_urlpatterns = [
 
-    path('', include(main_director_router.urls)),
+    path('main_director/', include(main_director_router.urls)),
 ]
 
 
@@ -108,6 +113,7 @@ director_router.register("director/stock/product/list", DStockProductListView)
 # director_router.register("director/kpi/list", DirectorKPIListView)
 director_router.register("director/price-type/crud", PriceTypeCRUDView)
 director_router.register("director/dealer-status/crud", DealerStatusModelViewSet)
+director_router.register("director/category/crud", DirectorCategoryModelViewSet)
 
 
 director_urlpatterns = [
@@ -316,6 +322,7 @@ crm_urlpatterns = [
     path("crm/price-type/list/", PriceTypeListView.as_view()),
     path("crm/staff/task/response/", TaskResponseView.as_view()),
     path("crm/villages/list/", VillageListView.as_view()),
+    path("crm/managers/list/", ManagerShortListView.as_view()),
 
     path("crm/user/image/cd", UserImageCDView.as_view()),
 

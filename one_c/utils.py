@@ -10,10 +10,11 @@ from transliterate import translit
 
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
+from crm_kpi.utils import update_dealer_kpi
 from general_service.models import Stock, City, PriceType, CashBox
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
-from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Collection
+from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Collection, ProductCostPrice
 
 
 def total_cost_price(products):
@@ -35,14 +36,14 @@ def total_cost_price(products):
 
 
 def plus_quantity(order):
-    products_data = order.order_products.all().values_list('product_id', 'count')
+    products_data = order.order_products.all().values_list('ab_product_id', 'count')
     update_data = []
     for p_id, count in products_data:
-        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock)
+        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock).first()
         if quantity:
-            quantity.count += count
+            quantity.count_crm += count
             update_data.append(quantity)
-    ProductCount.objects.bulk_update(update_data, ['count'])
+    ProductCount.objects.bulk_update(update_data, ['count_crm'])
 
 
 def generate_products_data(products):
@@ -54,19 +55,18 @@ def generate_products_data(products):
         result.append({'title': product.title, 'category': product.category, 'count': int(p.get('count')),
                        'ab_product': product, 'total_price': total_price, 'price': int(p.get('price')),
                        'cost_price': cost_price.price})
-
     return result
 
 
 def minus_quantity(order):
-    products_data = order.order_products.all().values_list('product_id', 'count')
+    products_data = order.order_products.all().values_list('ab_product_id', 'count')
     update_data = []
     for p_id, count in products_data:
-        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock)
+        quantity = ProductCount.objects.filter(product_id=p_id, stock=order.stock).first()
         if quantity:
-            quantity.count -= count
+            quantity.count_crm -= count
             update_data.append(quantity)
-    ProductCount.objects.bulk_update(update_data, ['count'])
+    ProductCount.objects.bulk_update(update_data, ['count_crm'])
 
 
 def sync_prods_list():
@@ -81,7 +81,7 @@ def sync_prods_list():
     x = 0
 
     collection = Collection.objects.filter(slug='asiabrand').first()
-
+    cost_price_create = []
     for p in products:
         x += 1
         print(x)
@@ -97,6 +97,7 @@ def sync_prods_list():
             if category:
                 product = AsiaProduct.objects.create(uid=p.get('NomenclatureUID'), title=p.get('NomenclatureName'),
                                                      category=category, collection=collection)
+                cost_price_create.append(ProductCostPrice(product=product))
             else:
                 continue
 
@@ -116,76 +117,84 @@ def sync_prods_list():
         ProductCount.objects.bulk_update(prod_count_data, ['count_1c', 'count_crm', 'count_norm'])
 
         price_types = []
-        for pri in PriceType.objects.all():
-            for sta in DealerStatus.objects.all():
+        city_price = []
+        for sta in DealerStatus.objects.all():
+            for pri in PriceType.objects.all():
                 price_types.append(
                     ProductPrice(
                         price_type=pri, product=product,
                         d_status=sta
                     )
                 )
+            for cit in City.objects.all():
+                city_price.append(
+                    ProductPrice(
+                        city=cit, product=product,
+                        d_status=sta
+                    )
+                )
         ProductPrice.objects.bulk_create(price_types)
+    ProductCostPrice.objects.bulk_create(product=product)
 
-        prod_price_data = []
-        for c in p.get('Prices'):
-            price_type = PriceType.objects.filter(uid=c.get('PricetypesUID')).first()
-            if price_type:
-                dealer_statuses = DealerStatus.objects.all()
-
-                for status in dealer_statuses:
-                    prod_price = ProductPrice.objects.filter(price_type=price_type, product=product,
-                                                             d_status=status).first()
-                    amount = int(c.get('PriceAmount'))
-                    prod_price.price = amount
-
-                    prod_price_data.append(prod_price)
-
-        ProductPrice.objects.bulk_update(prod_price_data, ['price'])
+        # prod_price_data = []
+        # for c in p.get('Prices'):
+        #     price_type = PriceType.objects.filter(uid=c.get('PricetypesUID')).first()
+        #     if price_type:
+        #         dealer_statuses = DealerStatus.objects.all()
+        #
+        #         for status in dealer_statuses:
+        #             prod_price = ProductPrice.objects.filter(price_type=price_type, product=product,
+        #                                                      d_status=status).first()
+        #             amount = int(c.get('PriceAmount'))
+        #             prod_price.price = amount
+        #
+        #             prod_price_data.append(prod_price)
+        #
+        # ProductPrice.objects.bulk_update(prod_price_data, ['price'])
 
 
 def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
-    products = data.get('products')
     print('***Product CRUD***')
-    print(products)
+    print(data)
     dealer_statuses = DealerStatus.objects.all()
     cities = City.objects.all()
     p_types = PriceType.objects.all()
 
     price_create = []
+    cost_price_create = []
+    uid = data.get('product_uid')
+    product = AsiaProduct.objects.filter(uid=uid).first()
+    if product:
+        product.title = data.get('title')
+        product.is_active = bool(int(data.get('is_active')))
+        product.vendor_code = data.get('vendor_code')
+        product.save()
+        if product.category:
+            if product.category.uid != data.get('category_uid'):
+                category = Category.objects.filter(uid=data.get('category_uid'))
+                if category:
+                    product.category = category.first()
+                    product.save()
 
-    for prod in products:
-        uid = prod.get('product_uid')
-        product = AsiaProduct.objects.filter(uid=uid).first()
-        if product:
-            product.title = prod.get('title')
-            product.is_active = bool(int(prod.get('is_active')))
-            product.vendor_code = prod.get('vendor_code')
+    else:
+        product = AsiaProduct.objects.create(uid=uid, title=data.get('title'),
+                                             is_active=bool(int(data.get('is_active'))),
+                                             vendor_code=data.get('vendor_code'))
+        ProductCostPrice.objects.create(product=product)
+        category = Category.objects.filter(uid=data.get('category_uid')).first()
+        if category:
+            product.category = category
             product.save()
-            if product.category:
-                if product.category.uid != prod.get('category_uid'):
-                    category = Category.objects.filter(uid=prod.get('category_uid'))
-                    if category:
-                        product.category = category.first()
-                        product.save()
 
-        else:
-            product = AsiaProduct.objects.create(uid=uid, title=prod.get('title'),
-                                                 is_active=bool(int(prod.get('is_active'))),
-                                                 vendor_code=prod.get('vendor_code'))
-            category = Category.objects.filter(uid=prod.get('category_uid')).first()
-            if category:
-                product.category = category
-                product.save()
+        for d in dealer_statuses:
+            for c in cities:
+                price_create.append(ProductPrice(city=c, product=product, d_status=d))
 
-            for d in dealer_statuses:
-                for c in cities:
-                    price_create.append(ProductPrice(city=c, product=product, d_status=d))
+            for t in p_types:
+                price_create.append(ProductPrice(price_type=t, product=product, d_status=d))
 
-                for t in p_types:
-                    price_create.append(ProductPrice(price_type=t, product=product, d_status=d))
-
-            p_count_data = [ProductCount(stock=s, product=product) for s in Stock.objects.all()]
-            ProductCount.objects.bulk_create(p_count_data)
+        p_count_data = [ProductCount(stock=s, product=product) for s in Stock.objects.all()]
+        ProductCount.objects.bulk_create(p_count_data)
 
     ProductPrice.objects.bulk_create(price_create)
 
@@ -232,14 +241,19 @@ def sync_dealer():
 
             price_type = PriceType.objects.filter(title__icontains=city).first()
             city = d.pop('city')
+            if city:
+                village = city.villages.first()
+            else:
+                village = None
             dealer_status = d.pop('dealer_status')
             user = MyUser.objects.create_user(**d)
             dealer_data.append(
                 DealerProfile(
                     user=user,
-                    village=city.first(),
+                    village=village,
                     dealer_status=dealer_status,
-                    price_type=price_type
+                    price_type=price_type,
+                    price_city=city
                 )
             )
             wallet_data.append(user)
@@ -280,9 +294,9 @@ def sync_order_histories_1c_to_crm():
                             'author': author.dealer_profile,
                             'price': o.get('total_price'),
                             'type_status': o.get('type_status') if o.get('type_status') else 'Карта',
-                            'created_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
-                            'released_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
-                            'paid_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
+                            'created_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+                            'released_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+                            'paid_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
                             'uid': o.get('uid'),
                             'status': 'success',
                             'stock': stock,
@@ -330,7 +344,7 @@ def sync_order_histories_1c_to_crm():
         print('*** ', x)
         order = MyOrder.objects.filter(uid=o.get('uid')).first()
         if order:
-            order.created_at = datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S")
+            order.created_at = datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
             order.save()
 
 
@@ -360,7 +374,7 @@ def sync_pay_doc_histories():
 
     update_data = []
     for p in payments:
-        date_object = datetime.datetime.strptime(p['created_at'], "%d.%m.%Y %H:%M:%S")
+        date_object = datetime.datetime.strptime(p['created_at'], "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         money_doc = MoneyDoc.objects.filter(uid=p['uid']).first()
         if money_doc:
             money_doc.created_at = date_object
@@ -381,7 +395,7 @@ def sync_1c_money_doc_crud(data):
         money_doc.status = data.get('status')
         money_doc.is_active = bool(int(data.get('is_active')))
         money_doc.amount = data.get('amount')
-        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S')
+        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
         money_doc.save()
     else:
         data = {
@@ -391,7 +405,7 @@ def sync_1c_money_doc_crud(data):
             'status': data.get('status'),
             'is_active': bool(int(data.get('is_active'))),
             'amount': data.get('amount'),
-            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S')
+            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
         }
         CashBox.objects.create(**data)
     return True, 'Success!'
@@ -400,10 +414,11 @@ def sync_1c_money_doc_crud(data):
 def sync_dealer_1C_to_back(request):
     data = {
         "name": request.data.get("Name"),
+        "username": request.data.get("UID"),
         "uid": request.data.get("UID"),
         "phone": request.data.get("Telephone"),
         "email": request.data.get("Email"),
-        'status': 'dealer_1c',
+        'status': 'dealer',
         'password': generate_pwd(),
         'is_active': bool(int(request.data.get('is_active')))
     }
@@ -428,6 +443,7 @@ def sync_dealer_1C_to_back(request):
         user.uid = data['uid']
         user.phone = data['phone']
         user.email = data['email']
+        user.is_active = data['is_active']
         user.save()
 
         profile = user.dealer_profile
@@ -437,6 +453,7 @@ def sync_dealer_1C_to_back(request):
         profile.save()
 
     else:
+        profile_data['is_active'] = False
         user = MyUser.objects.create_user(**data)
         profile = DealerProfile.objects.create(user=user, **profile_data)
 
@@ -458,7 +475,8 @@ def order_1c_to_crm(data):
     order_data = dict()
     products = data.get('products')
     user = MyUser.objects.get(uid=data.get('user_uid'))
-    city_stock = Stock.objects.filter(uid=data.get('stock_uid')).first()
+    city_stock = Stock.objects.filter(uid=data.get('cityUID')).first()
+
     if user and city_stock:
         order_data['author'] = user.dealer_profile
         order_data['cost_price'] = total_cost_price(products)
@@ -467,14 +485,17 @@ def order_1c_to_crm(data):
         order_data['price'] = data.get('total_price')
         order_data['type_status'] = 'wallet'
         order_data['stock'] = city_stock
-        order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
-        order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
-        order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
+        order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
+        order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
+        order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         order_data['is_active'] = bool(int(data['is_active']))
 
         order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
         if order:
             # update
+            order_data.pop('paid_at')
+            order_data.pop('created_at')
+
             if order.is_active:
                 plus_quantity(order)
 
@@ -502,6 +523,7 @@ def order_1c_to_crm(data):
             Notification.objects.create(**kwargs)
 
             # change_dealer_status.delay(user.id)
+        update_dealer_kpi(order)
 
 
 def sync_test_nurs():

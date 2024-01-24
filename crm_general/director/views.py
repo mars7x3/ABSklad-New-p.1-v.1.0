@@ -22,7 +22,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorTaskListSerializer, DirectorMotivationListSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
     DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, \
-    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer
+    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer, DirectorCategorySerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
 from crm_general.permissions import IsStaff
@@ -829,7 +829,7 @@ class DStockProductListView(mixins.ListModelMixin, GenericViewSet):
 
     def get_queryset(self):
         from django.db.models import F, Sum, IntegerField
-        stock_id = self.request.query_params.get('stock')
+        stock_id = int(self.request.query_params.get('stock'))
 
         return super().get_queryset().annotate(
             total_count=Sum(
@@ -1020,4 +1020,16 @@ class DealerStatusModelViewSet(viewsets.ModelViewSet):
     queryset = DealerStatus.objects.all()
     permission_classes = [IsAuthenticated, IsStaff]
     serializer_class = DirectorDealerStatusSerializer
+
+
+class DirectorCategoryModelViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    permission_classes = [IsAuthenticated, IsDirector]
+    serializer_class = DirectorCategorySerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
