@@ -1,7 +1,8 @@
 from datetime import datetime
 from logging import getLogger
+from typing import Iterable
 
-from django.db.models import F, Sum, Count, Case, When, Subquery, Value, DecimalField
+from django.db.models import F, Sum, Count, Case, When, Subquery, Value, DecimalField, QuerySet
 from django.utils import timezone
 
 from one_c.models import MoneyDoc
@@ -13,7 +14,7 @@ from .models import UserTransactionsStat, PurchaseStat, StockGroupStat
 logger = getLogger('statistics')
 
 
-def create_empty_group_stat(date, stat_type, stock):
+def create_empty_group_stat(date, stat_type, stock) -> QuerySet:
     return StockGroupStat.objects.create(
         date=date,
         stat_type=stat_type,
@@ -21,7 +22,7 @@ def create_empty_group_stat(date, stat_type, stock):
     )
 
 
-def divide_into_weeks(start, end):
+def divide_into_weeks(start, end) -> Iterable[tuple[datetime, datetime]]:
     weeks_count = round(end.day / 7)
     delta = timezone.timedelta(days=7)
     end_date = start + delta
@@ -32,7 +33,7 @@ def divide_into_weeks(start, end):
         end_date += delta
 
 
-def sum_and_collect_by_map(queryset, fields_map):
+def sum_and_collect_by_map(queryset, fields_map) -> Iterable[dict]:
     data = queryset.annotate(**{field: Sum(source) for field, source in fields_map.items()})
 
     for item in data:
@@ -49,7 +50,7 @@ def sum_and_collect_by_map(queryset, fields_map):
         yield collected_data
 
 
-def date_filters(filter_type: str, date: datetime, date_field: str = "date"):
+def date_filters(filter_type: str, date: datetime, date_field: str = "date") -> None:
     query = {}
     match filter_type:
         case "month":
@@ -63,7 +64,7 @@ def date_filters(filter_type: str, date: datetime, date_field: str = "date"):
     return query
 
 
-def update_purchase_stat_group(group: StockGroupStat, queryset):
+def update_purchase_stat_group(group: StockGroupStat, queryset) -> None:
     orders_query = dict(
         stock=group.stock,
         is_active=True,
@@ -133,7 +134,7 @@ def update_tx_stat_group(group: StockGroupStat, queryset):
     group.save()
 
 
-def update_transaction_stat(tx: MoneyDoc):
+def update_transaction_stat(tx: MoneyDoc) -> None:
     if not tx.cash_box:
         logger.error("MoneyDoc ID: %s must have cash_box for founding stock!")
         return
@@ -170,7 +171,11 @@ def update_transaction_stat(tx: MoneyDoc):
     tx_stat.save()
 
 
-def update_purchase_stat(order_product: OrderProduct):
+def update_purchase_stat(order_product: OrderProduct) -> None:
+    if order_product.is_checked:
+        logger.debug("OrderProduct with ID %s was checked!" % order_product.id)
+        return
+
     if not order_product.ab_product:
         logger.error("OrderProduct.ab_product must have!")
         return
@@ -222,3 +227,47 @@ def update_purchase_stat(order_product: OrderProduct):
             purchase_stat.avg_check = 0
 
     purchase_stat.save()
+
+
+def update_stat_group_by_order(order: MyOrder) -> None:
+    new_purchase_stats = []
+    saved_purchase_stats = PurchaseStat.objects.filter(
+        date=order.released_at.date(),
+        user=order.author.user,
+        stock=order.stock
+    ).values_list("product_id", flat=True)
+
+    for product in order.order_products.all():
+        if product.ab_product.id in saved_purchase_stats:
+            new_purchase_stats.append(
+                PurchaseStat(
+                    date=order.released_at.date(),
+                    user=order.author.user,
+                    product=product.ab_product,
+                    stock=order.stock,
+                    spent_amount=product.total_price,
+                    count=product.count,
+                    avg_check=product.total_price
+                )
+            )
+            continue
+        update_purchase_stat(product)
+
+    if new_purchase_stats:
+        PurchaseStat.objects.bulk_create(new_purchase_stats)
+
+
+def collect_stats_for_all() -> None:
+    orders = MyOrder.objects.filter(
+        status__in=("send", "success"),
+        is_active=True,
+        stock__isnull=False,
+        order_products__isnull=False
+    ).distinct()
+
+    for order in orders:
+        update_stat_group_by_order(order)
+
+    txs = MoneyDoc.objects.filter(user_isnull=False, cash_box__isnull=False, is_active=True)
+    for tx in txs:
+        update_transaction_stat(tx)
