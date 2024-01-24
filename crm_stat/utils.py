@@ -84,7 +84,8 @@ def update_purchase_stat_group(group: StockGroupStat, queryset) -> None:
             sales_amount=Sum("spent_amount", default=Value(0.0)),
             sales_count=Subquery(
                 MyOrder.objects.filter(**orders_query)
-                .annotate(count=Count("id", distinct=True))[:1]
+                .annotate(count=Count("id", distinct=True))
+                .values('count')[:1]
             ),
             sales_users_count=Count("user_id", distinct=True),
         )
