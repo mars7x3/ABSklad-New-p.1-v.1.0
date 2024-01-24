@@ -84,7 +84,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if order_status == 'sent' or order_status == 'wait':
+        if order_status == 'sent':
             if order.status == 'paid':
                 order.status = order_status
                 order.save()
