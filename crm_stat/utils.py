@@ -102,19 +102,19 @@ def update_purchase_stat_group(group: StockGroupStat, queryset) -> None:
         )[0]
     )
     # sales
-    group.sales_products_count = update_data["sales_products_count"]
-    group.sales_amount = update_data["sales_amount"]
-    group.sales_count = update_data["sales_count"]
-    group.sales_users_count = update_data["sales_users_count"]
-    group.sales_avg_check = update_data["sales_avg_check"]
+    group.sales_products_count = update_data["sales_products_count"] or 0
+    group.sales_amount = update_data["sales_amount"] or 0
+    group.sales_count = update_data["sales_count"] or 0
+    group.sales_users_count = update_data["sales_users_count"] or 0
+    group.sales_avg_check = update_data["sales_avg_check"] or 0
     # dealers
-    group.dealers_amount = update_data["sales_amount"]
-    group.dealers_products_count = update_data["sales_products_count"]
-    group.dealers_avg_check = update_data["sales_avg_check"]
+    group.dealers_amount = update_data["sales_amount"] or 0
+    group.dealers_products_count = update_data["sales_products_count"] or 0
+    group.dealers_avg_check = update_data["sales_avg_check"] or 0
     # products
-    group.products_amount = update_data["sales_amount"]
-    group.products_user_count = update_data["sales_users_count"]
-    group.products_avg_check = update_data["sales_avg_check"]
+    group.products_amount = update_data["sales_amount"] or 0
+    group.products_user_count = update_data["sales_users_count"] or 0
+    group.products_avg_check = update_data["sales_avg_check"] or 0
     group.save()
 
 
