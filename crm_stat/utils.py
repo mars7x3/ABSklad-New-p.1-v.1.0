@@ -268,6 +268,10 @@ def collect_stats_for_all() -> None:
     for order in orders:
         update_stat_group_by_order(order)
 
+        order.order_products.update(is_checked=True)
+
     txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False, is_active=True).distinct()
     for tx in txs:
         update_transaction_stat(tx)
+
+    txs.update(is_checked=True)
