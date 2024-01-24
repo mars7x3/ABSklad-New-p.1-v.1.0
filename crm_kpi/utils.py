@@ -366,7 +366,7 @@ def kpi_pds_3lvl(manager_id: int, date: datetime) -> list[dict]:
             per_done_pds=Case(
                 When(
                     total_pds__gt=0, fact_total_pds__gt=0,
-                    then=F("total_pds") / F("fact_total_pds") * Value(100),
+                    then=F("fact_total_pds") / F("total_pds") * Value(100),
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -396,7 +396,7 @@ def kpi_tmz_3lvl(manager_id: int, date: datetime) -> list[dict]:
             per_done_tmz_count=Case(
                 When(
                     total_tmz_count__gt=0, fact_total_tmz_count__gt=0,
-                    then=F("total_tmz_count") / F("fact_total_tmz_count") * 100
+                    then=F("fact_total_tmz_count") / F("total_tmz_count") * 100
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -404,7 +404,7 @@ def kpi_tmz_3lvl(manager_id: int, date: datetime) -> list[dict]:
             per_done_tmz_sum=Case(
                 When(
                     total_tmz_sum__gt=0, fact_total_tmz_sum__gt=0,
-                    then=F("total_tmz_sum") / F("fact_total_tmz_sum") * 100
+                    then=F("fact_total_tmz_sum") / F("total_tmz_sum") * 100
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -440,7 +440,7 @@ def kpi_sch_3lvl(manager_id: int, date: datetime) -> list[dict]:
             per_done_avg_price=Case(
                 When(
                     fact_avg_price__gt=0, avg_price__gt=0,
-                    then=F("avg_price") / F("fact_avg_price") * 100
+                    then=F("fact_avg_price") / F("avg_price") * 100
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -558,6 +558,9 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> bool:
 
 
 def update_dealer_kpi_by_order(order: MyOrder):
+    if order.is_checked:
+        return
+
     dealer_kpi = DealerKPI.objects.filter(
         month__month=order.released_at.month,
         month__year=order.released_at.year,
@@ -588,6 +591,9 @@ def update_dealer_kpi_by_order(order: MyOrder):
 
 
 def update_dealer_kpi_by_tx(tx: MoneyDoc):
+    if tx.is_checked:
+        return
+
     dealer_kpi = DealerKPI.objects.filter(
         month__month=tx.created_at.month,
         month__year=tx.created_at.year,
