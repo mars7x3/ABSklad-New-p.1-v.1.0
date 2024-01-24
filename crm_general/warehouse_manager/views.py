@@ -10,7 +10,7 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelV
 from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
-from crm_kpi.utils import update_dealer_kpi
+from crm_kpi.utils import update_dealer_kpi_by_order
 from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
@@ -90,7 +90,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
                 order.save()
 
                 sync_order_to_1C(order)
-                update_dealer_kpi(order)
+                update_dealer_kpi_by_order(order)
 
                 minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
                 return Response({'detail': f'Order status successfully changed to {order_status}'},
