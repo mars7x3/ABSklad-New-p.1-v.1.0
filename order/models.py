@@ -37,6 +37,7 @@ class MyOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
     is_active = models.BooleanField(default=True)
+    is_checked = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-created_at',)
