@@ -30,7 +30,7 @@ def task_update_tx_stat_group(tx_stat_id):
     month_group_stat = StockGroupStat.objects.filter(
         date__month=tx_stat.date.month,
         date__year=tx_stat.date.year,
-        type=StockGroupStat.StatType.month
+        stat_type=StockGroupStat.StatType.month
     ).first()
     if not month_group_stat:
         month_group_stat = create_empty_group_stat(
@@ -72,7 +72,7 @@ def task_update_purchase_stat_group(purchase_stat_id):
     month_group_stat = StockGroupStat.objects.filter(
         date__month=purchase_stat.date.month,
         date__year=purchase_stat.date.year,
-        type=StockGroupStat.StatType.month
+        stat_type=StockGroupStat.StatType.month
     ).first()
     if not month_group_stat:
         month_group_stat = create_empty_group_stat(
