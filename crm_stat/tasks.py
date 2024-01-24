@@ -12,7 +12,8 @@ def task_update_tx_stat_group(tx_stat_id):
 
     day_group_stat = StockGroupStat.objects.filter(
         date=tx_stat.date,
-        stat_type=StockGroupStat.StatType.day
+        stat_type=StockGroupStat.StatType.day,
+        stock=tx_stat.stock
     ).first()
 
     if not day_group_stat:
@@ -30,7 +31,8 @@ def task_update_tx_stat_group(tx_stat_id):
     month_group_stat = StockGroupStat.objects.filter(
         date__month=tx_stat.date.month,
         date__year=tx_stat.date.year,
-        stat_type=StockGroupStat.StatType.month
+        stat_type=StockGroupStat.StatType.month,
+        stock=tx_stat.stock
     ).first()
     if not month_group_stat:
         month_group_stat = create_empty_group_stat(
@@ -54,7 +56,8 @@ def task_update_purchase_stat_group(purchase_stat_id):
     purchase_stat = PurchaseStat.objects.get(id=purchase_stat_id)
     day_group_stat = StockGroupStat.objects.filter(
         date=purchase_stat.date,
-        stat_type=StockGroupStat.StatType.day
+        stat_type=StockGroupStat.StatType.day,
+        stock=purchase_stat.stock
     ).first()
 
     if not day_group_stat:
@@ -72,7 +75,8 @@ def task_update_purchase_stat_group(purchase_stat_id):
     month_group_stat = StockGroupStat.objects.filter(
         date__month=purchase_stat.date.month,
         date__year=purchase_stat.date.year,
-        stat_type=StockGroupStat.StatType.month
+        stat_type=StockGroupStat.StatType.month,
+        stock=purchase_stat.stock
     ).first()
     if not month_group_stat:
         month_group_stat = create_empty_group_stat(
