@@ -93,8 +93,12 @@ def create_dealer_kpi():
                                   dealer_profile__orders__created_at__gte=last_three_month).distinct()
 
     last_kpi = DealerKPI.objects.filter(month__month=last_month.month).first()
-    pds_percent = last_kpi.per_cent_pds / 100
-    tmz_percent = last_kpi.per_cent_tmz / 100
+    if last_kpi:
+        pds_percent = last_kpi.per_cent_pds / 100
+        tmz_percent = last_kpi.per_cent_tmz / 100
+    else:
+        pds_percent = 0.25
+        tmz_percent = 0.25
     created_dealer_kpi = DealerKPI.objects.filter(month=current_date).values_list('user__id', flat=True)
 
     for user in users:
@@ -137,8 +141,9 @@ def create_dealer_kpi():
                     kpi = DealerKPI.objects.get(id=new_kpi.id)
                     kpi.pds = total_pds
                     kpi.save()
+                    print(f'Created new KPI {kpi.id} for user {user.id}. date: {current_date}')
         else:
-            print(f'DealerKPI for user id {user.id} id being skipped as it was already created')
+            print(f'DealerKPI for user id {user.id} id being skipped as it was already created. {current_date}')
 
 
 @app.task
@@ -148,3 +153,4 @@ def confirm_dealer_kpis():
     for kpi in unconfirmed_dealer_kpis:
         kpi.is_confirmed = True
         kpi.save()
+        print(f'Confirmed KPI: {kpi.id}')

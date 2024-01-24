@@ -5,7 +5,7 @@ from django.utils import timezone
 from promotion.models import Banner
 
 
-@app.task()
+@app.task
 def create_notifications(notifications: list, image_url, dispatch_date):
     """
     Create every notification for user
@@ -18,7 +18,7 @@ def create_notifications(notifications: list, image_url, dispatch_date):
             notification.save()
 
 
-@app.task()
+@app.task
 def set_banner_false():
     current_date = timezone.now()
     banners = Banner.objects.filter(is_active=True, end_time__month=current_date.month,
@@ -29,7 +29,7 @@ def set_banner_false():
             banner.save()
 
 
-@app.task()
+@app.task
 def set_banner_true():
     current_date = timezone.now()
     banners = Banner.objects.filter(is_active=False, end_time__month=current_date.month,
