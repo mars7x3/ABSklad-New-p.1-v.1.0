@@ -202,7 +202,7 @@ def calculate_discount(price: int, discount: int):
     return final_price
 
 
-@app.task()
+@app.task
 def calculate_discount_product_price():
     crn_date = datetime.date.today()
     its_time_discounts = Discount.objects.filter(start_date=crn_date)
@@ -250,9 +250,10 @@ def calculate_discount_product_price():
                             final_price = calculate_discount(int(amount_without_abc), int(dealer.dealer_status.discount))
                             product_price.price = final_price
                             product_price.save()
+        print(f'Calculated Product Prices with discount {discount.id}')
 
 
-@app.task()
+@app.task
 def update_product_prices_after_ended_discount():
     crn_date = datetime.date.today()
     ended_discounts = Discount.objects.filter(end_date__lte=crn_date)
@@ -288,3 +289,4 @@ def update_product_prices_after_ended_discount():
                         product_price.old_price = 0
                         product_price.price = final_price
                         product_price.save()
+        print(f'Calculated Product Prices for ended discount {discount.id}')
