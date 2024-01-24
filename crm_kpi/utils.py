@@ -75,7 +75,11 @@ def kpi_acb_1lvl(date: datetime) -> dict[str, int]:
     total = (
         manager_kpi_query
         .aggregate(
-            total=Sum("akb", output_field=IntegerField(), default=Value(0))
+            total=Sum(
+                "akb",
+                output_field=IntegerField(),
+                default=Value(0)
+            )
         )["total"]
     )
     fact = (
@@ -128,7 +132,7 @@ def kpi_total_info(date: datetime):
             per_done_pds=Case(
                 When(
                     total_pds__gt=0, fact_total_pds__gt=0,
-                    then=F("total_pds") / F("fact_total_pds") * 100
+                    then=F("fact_total_pds") / F("total_pds") * 100
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -136,7 +140,7 @@ def kpi_total_info(date: datetime):
             per_done_tmz_count=Case(
                 When(
                     total_tmz_count__gt=0, fact_total_tmz_count__gt=0,
-                    then=F("total_tmz_count") / F("fact_total_tmz_count") * 100
+                    then=F("fact_total_tmz_count") / F("total_tmz_count") * 100
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -144,7 +148,7 @@ def kpi_total_info(date: datetime):
             per_done_tmz_sum=Case(
                 When(
                     total_tmz_sum__gt=0, fact_total_tmz_sum__gt=0,
-                    then=F("total_tmz_sum") / F("fact_total_tmz_sum") * 100
+                    then=F("fact_total_tmz_sum") / F("total_tmz_sum") * 100
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -152,7 +156,7 @@ def kpi_total_info(date: datetime):
             per_done_avg_price=Case(
                 When(
                     avg_price__gt=0, fact_avg_price__gt=0,
-                    then=F("avg_price") / F("fact_avg_price") * 100
+                    then=F("fact_avg_price") / F("avg_price") * 100
                 ),
                 default=Value(0),
                 output_field=IntegerField()
@@ -214,7 +218,7 @@ def kpi_pds_2lvl(date: datetime):
                 'id': manager.id,
                 'fact_total_pds': round(total_kpis[0]),
                 'total_pds': round(total_kpis[1]),
-                'per_done_pds': round(total_kpis[1] / total_kpis[0] * 100),
+                'per_done_pds': round(total_kpis[0] / total_kpis[1] * 100),
             })
     return managers_data
 
@@ -242,8 +246,8 @@ def kpi_tmz_2lvl(date: datetime):
                 'fact_total_tmz_sum': round(total_kpis[1]),
                 'total_tmz_count': round(total_kpis[2]),
                 'total_tmz_sum': round(total_kpis[3]),
-                'per_done_tmz_count': round(total_kpis[2] / total_kpis[0] * 100),
-                'per_done_tmz_sum': round(total_kpis[3] / total_kpis[1] * 100),
+                'per_done_tmz_count': round(total_kpis[0] / total_kpis[2] * 100),
+                'per_done_tmz_sum': round(total_kpis[1] / total_kpis[3] * 100),
             })
     return managers_data
 
@@ -256,9 +260,16 @@ def kpi_sch_2lvl(date: datetime):
         kpis = DealerKPI.objects.filter(
             month__month=date.month, user__dealer_profile__managers=manager
         ).annotate(
-            fact_avg_price=Sum(F('kpi_products__fact_sum') / F('kpi_products__fact_count'), output_field=FloatField(),
-                               default=0),
-            avg_price=Sum(F('kpi_products__sum') / F('kpi_products__count'), output_field=FloatField(), default=0),
+            fact_avg_price=Sum(
+                F('kpi_products__fact_sum') / F('kpi_products__fact_count'),
+                output_field=FloatField(),
+                default=0
+            ),
+            avg_price=Sum(
+                F('kpi_products__sum') / F('kpi_products__count'),
+                output_field=FloatField(),
+                default=0
+            )
         ).values_list('fact_avg_price', 'avg_price')
 
         total_kpis = tuple(sum(x) for x in zip(*kpis))
@@ -268,7 +279,7 @@ def kpi_sch_2lvl(date: datetime):
                 'id': manager.id,
                 'fact_avg_price': round(total_kpis[0]),
                 'avg_price': round(total_kpis[1]),
-                'per_done_avg_price': round(total_kpis[1] / total_kpis[0] * 100),
+                'per_done_avg_price': round(total_kpis[0] / total_kpis[1] * 100),
             })
     return managers_data
 
