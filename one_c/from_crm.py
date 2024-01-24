@@ -31,9 +31,11 @@ def sync_category_crm_to_1c(category):
 
     username = 'Директор'
     password = '757520ля***'
+    print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    print(response.text)
     response_data = json.loads(response.content)
-    uid = response_data.get('category_uid')
+    uid = response_data.get('result_uid')
 
     category.uid = uid
     category.save()
