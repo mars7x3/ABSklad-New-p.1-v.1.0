@@ -4,6 +4,12 @@ from rest_framework import serializers
 from .models import *
 
 
+class StockListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        fields = ('id', 'title', 'slug')
+
+
 class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
