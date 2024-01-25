@@ -94,7 +94,7 @@ def create_dealer_kpi():
                                   dealer_profile__orders__created_at__gte=last_three_month,
                                   dealer_profile__orders__order_products__isnull=False).distinct()
 
-    last_kpi = DealerKPI.objects.filter(month__month=last_month.month).first()
+    last_kpi = DealerKPI.objects.filter(month__month=last_month.month, month__year=current_date.year).first()
     if last_kpi:
         pds_percent = last_kpi.per_cent_pds / 100
         tmz_percent = last_kpi.per_cent_tmz / 100
@@ -106,7 +106,8 @@ def create_dealer_kpi():
         tmz_percent = 0.25
         last_kpi_percent_pds = 25
         last_kpi_percent_tmz = 25
-    created_dealer_kpi = DealerKPI.objects.filter(month__month=current_month).values_list('user__id', flat=True)
+    created_dealer_kpi = DealerKPI.objects.filter(month__month=current_month,
+                                                  month__year=current_date.year).values_list('user__id', flat=True)
 
     for user in users:
         if user.id not in created_dealer_kpi:

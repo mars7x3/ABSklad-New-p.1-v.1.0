@@ -269,7 +269,7 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
     )
     serializer_class = ShortProductSerializer
     filter_backends = (filters.SearchFilter, FilterByFields)
-    search_fields = ("product__name",)
+    search_fields = ("title",)
     filter_by_fields = {
         "is_active": {"by": "is_active", "type": "boolean", "pipline": convert_bool_string_to_bool},
         "category_slug": {"by": "category__slug", "type": "string"},
