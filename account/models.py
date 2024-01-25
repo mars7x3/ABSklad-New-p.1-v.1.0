@@ -177,8 +177,6 @@ class Notification(models.Model):
     )
 
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='notifications')
-    notification = models.ForeignKey('CRMNotification', on_delete=models.SET_NULL, related_name='crm_notification',
-                                     blank=True, null=True)
     status = models.CharField(choices=STATUS, max_length=10, blank=True, null=True)
     image = models.FileField(upload_to='notification', blank=True, null=True)
     is_read = models.BooleanField(default=False)

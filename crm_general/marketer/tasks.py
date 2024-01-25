@@ -32,8 +32,8 @@ def set_banner_false():
 @app.task
 def set_banner_true():
     current_date = timezone.now()
-    banners = Banner.objects.filter(is_active=False, end_time__month=current_date.month,
-                                    end_time__day=current_date.day, end_time__year=current_date.year)
+    banners = Banner.objects.filter(is_active=False, start_time__month=current_date.month,
+                                    start_time__day=current_date.day, start_time__year=current_date.year)
     for banner in banners:
         if banner.start_time <= current_date:
             banner.is_active = True
