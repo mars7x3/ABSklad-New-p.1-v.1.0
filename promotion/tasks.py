@@ -85,7 +85,7 @@ def activate_discount():
 @app.task
 def deactivate_discount():
     crn_date = datetime.date.today()
-    discounts = Discount.objects.filter(end_date=crn_date)
+    discounts = Discount.objects.filter(end_date__lt=crn_date)
 
     discounts_to_deactivate = []
     for discount in discounts:

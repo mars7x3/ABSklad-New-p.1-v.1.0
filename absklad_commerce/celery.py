@@ -43,8 +43,7 @@ app.conf.beat_schedule = {
     },
     'discount_deactivate': {
         'task': 'promotion.tasks.deactivate_discount',
-        # 'schedule': crontab(minute=1, hour=0),
-        'schedule': 60.0,
+        'schedule': crontab(minute=2, hour=0),
     },
 
     'create_notifications': {
