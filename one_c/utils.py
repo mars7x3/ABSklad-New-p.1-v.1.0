@@ -411,7 +411,7 @@ def sync_1c_money_doc_crud(data):
 
     else:
         data = {
-            'uid': data.get('uid'),
+            'uid': data.get('doc_uid'),
             'user': user,
             'cash_box': cash_box,
             'status': data.get('doc_type'),
