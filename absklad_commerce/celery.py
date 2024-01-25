@@ -26,30 +26,28 @@ app.conf.beat_schedule = {
     # kpi tasks
     'create_kpi': {
         'task': 'crm_kpi.tasks.create_kpi',
-        # 'schedule': crontab(day_of_month='1'),
-        'schedule': 360.0,
+        'schedule': crontab(day_of_month='1'),
     },
     'confirm_dealer_kpis': {
         'task': 'crm_kpi.tasks.confirm_dealer_kpis',
-        # 'schedule': crontab(day_of_month='5'),
-        'schedule': 360.0,
+        'schedule': crontab(day_of_month='5'),
     },
 
     # discount tasks
     'discount_activate': {
         'task': 'promotion.tasks.activate_discount',
         # 'schedule': crontab(minute=1, hour=0),
-        'schedule': 60.0,
+        'schedule': 600.0,
     },
     'discount_deactivate': {
         'task': 'promotion.tasks.deactivate_discount',
-        'schedule': crontab(minute=2, hour=0),
+        'schedule': crontab(minute=1, hour=0),
     },
 
     'create_notifications': {
         'task': 'crm_general.marketer.tasks.create_notifications',
         # 'schedule': crontab(hour=8, minute=0),
-        'schedule': 60.0,
+        'schedule': 1800.0,
     },
 
     # sync 1c task
