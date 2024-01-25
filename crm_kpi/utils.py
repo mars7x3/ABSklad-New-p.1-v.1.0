@@ -419,21 +419,38 @@ def kpi_sch_3lvl(manager_id: int, date: datetime) -> list[dict]:
         .filter(month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager_id)
         .values("user_id")
         .annotate(
+            fact_sum=Sum("kpi_products__fact_sum", default=0),
+            fact_count=Sum("kpi_products__fact_count", default=0),
+            sum=Sum("kpi_products__sum", default=-0),
+            count=Sum("kpi_products__count", default=0)
+        )
+        .annotate(
             name=F("user__name"),
-            fact_avg_price=Sum(
-                F('kpi_products__fact_sum') / F('kpi_products__fact_count'),
-                output_field=FloatField(),
-                default=Value(0.0)
+            fact_avg_price=Case(
+                When(
+                    fact_sum__gt=0, fact_count__gt=0,
+                    then=F("fact_sum") / F("fact_count")
+                ),
+                default=Value(0.0),
+                output_field=FloatField()
             ),
-            avg_price=Sum(
-                F('kpi_products__sum') / F('kpi_products__count'),
-                output_field=FloatField(),
-                default=Value(0.0)
+            avg_price=Case(
+                When(
+                    sum__gt=0, count__gt=0,
+                    then=F("sum") / F("count")
+                ),
+                default=Value(0.0),
+                output_field=FloatField()
             )
         )
     )
     collected = []
     for item in query:
+        item.pop("fact_sum", None)
+        item.pop("fact_count", None)
+        item.pop("sum", None)
+        item.pop("count", None)
+
         item["id"] = item.pop("user_id")
         item["avg_price"] = round(item["avg_price"])
         item["fact_avg_price"] = round(item["fact_avg_price"])
