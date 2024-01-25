@@ -11,6 +11,7 @@ from transliterate import translit
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
 from crm_kpi.utils import update_dealer_kpi_by_tx
+from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock, City, PriceType, CashBox
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
@@ -150,7 +151,9 @@ def sync_1c_money_doc(money_doc):
 
     money_doc.uid = uid
     money_doc.save()
-    update_dealer_kpi_by_tx(money_doc)
+    main_stat_pds_sync(money_doc)
+    money_doc.is_checked = not money_doc.is_checked
+    money_doc.save()
 
 
 def sync_money_doc_to_1C(order):
@@ -185,7 +188,9 @@ def sync_money_doc_to_1C(order):
             order.paid_at = timezone.now()
             order.save()
             m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
-            update_dealer_kpi_by_tx(m_d)
+            main_stat_pds_sync(m_d)
+            m_d.is_checked = not m_d.is_checked
+            m_d.save()
     except Exception as e:
         raise TypeError
 
