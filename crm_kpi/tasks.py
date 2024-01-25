@@ -112,6 +112,7 @@ def create_dealer_kpi():
                 new_kpi = DealerKPI.objects.create(
                     user=user,
                     month=current_date,
+                    is_confirmed=False,
                     per_cent_pds=last_kpi_percent_pds,
                     per_cent_tmz=last_kpi_percent_tmz
                 )
