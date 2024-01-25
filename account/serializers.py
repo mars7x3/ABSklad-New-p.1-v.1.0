@@ -130,10 +130,10 @@ class DealerProfileUpdateSerializer(serializers.ModelSerializer):
         pwd = validated_data.get('pwd')
         if username:
             if not username_is_valid(username):
-                raise serializers.ValidationError({"text": "Некорректный username"})
+                raise serializers.ValidationError({"username": "Некорректный username"})
         if pwd:
             if not pwd_is_valid(pwd):
-                raise serializers.ValidationError({"text": "Некорректный pwd"})
+                raise serializers.ValidationError({"pwd": "Некорректный pwd"})
 
         for key, value in validated_data.items():
             setattr(instance, key, value)
