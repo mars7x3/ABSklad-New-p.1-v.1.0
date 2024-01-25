@@ -115,12 +115,13 @@ class DealerFundsView(views.APIView):
                     name=F("user__name")
                 ),
                 incoming_bank_amount=Sum("bank_income"),
-                incoming_cash_amount=Sum("cash_income"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                incoming_cash_amount=Sum("cash_income")
             )
         ):
             item.pop("user_id", None)
+
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -146,9 +147,7 @@ class DealerSalesView(views.APIView):
                     name=F("user__name")
                 ),
                 sales_amount=Sum("spent_amount"),
-                sales_count=Sum("purchases_count"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                sales_count=Sum("purchases_count")
             )
             .annotate(
                 sales_avg_check=Case(
@@ -167,6 +166,8 @@ class DealerSalesView(views.APIView):
 
         for item in items:
             item.pop("user_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -192,9 +193,7 @@ class DealerProductView(views.APIView):
                     name=F("user__name")
                 ),
                 products_amount=Sum("spent_amount"),
-                sales_count=Sum("purchases_count"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                sales_count=Sum("purchases_count")
             )
             .annotate(
                 sales_avg_check=Case(
@@ -209,6 +208,8 @@ class DealerProductView(views.APIView):
         ):
             item.pop("user_id", None)
             item.pop("sales_count", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -232,9 +233,7 @@ class DealerView(views.APIView):
                     id=F("stock_id"),
                     title=F("stock__title")
                 ),
-                dealers_amount=Sum("spent_amount"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                dealers_amount=Sum("spent_amount")
             )
             .annotate(
                 dealers_avg_check=Round(
@@ -273,7 +272,8 @@ class DealerView(views.APIView):
             item.pop("incoming_cash_amount", None)
 
             item.pop("stock_id", None)
-            item["date"] = str(date.date())
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -303,9 +303,7 @@ class ProductSalesView(views.APIView):
                     title=F("product__title")
                 ),
                 sales_amount=Sum("spent_amount"),
-                sales_count=Sum("purchases_count"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                sales_count=Sum("purchases_count")
             )
             .annotate(
                 sales_avg_check=Case(
@@ -325,6 +323,8 @@ class ProductSalesView(views.APIView):
 
         for item in items:
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -352,9 +352,7 @@ class ProductDealersView(views.APIView):
                 ),
                 dealers_incoming_funds=F("incoming_bank_amount") + F("incoming_cash_amount"),
                 dealers_products_count=Count("product_id", distinct=True),
-                dealers_amount=Sum("spent_amount"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                dealers_amount=Sum("spent_amount")
             )
             .annotate(
                 dealers_avg_check=Case(
@@ -370,6 +368,8 @@ class ProductDealersView(views.APIView):
             item.pop("incoming_bank_amount", None)
             item.pop("incoming_cash_amount", None)
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -395,9 +395,7 @@ class ProductView(views.APIView):
                     id=F("product_id"),
                     title=F("product__title")
                 ),
-                products_amount=Sum("spent_amount"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                products_amount=Sum("spent_amount")
             )
             .annotate(
                 products_avg_check=Case(
@@ -419,6 +417,8 @@ class ProductView(views.APIView):
             item.pop("incoming_bank_amount", None)
             item.pop("incoming_cash_amount", None)
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -445,18 +445,22 @@ class TransactionUserView(views.APIView):
             case "bank":
                 query["status"] = "Без нал"
 
-        data = (
+        items = (
             MoneyDoc.objects.filter(is_active=True, user__isnull=False, **query)
             .values("user_id")
             .annotate(
                 name=F("user__name"),
                 amount=Sum("amount"),
-                count=Count("id", distinct=True),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                count=Count("id", distinct=True)
             )
         )
-        return response.Response(data)
+        collected_items = []
+        for item in items:
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
+            collected_items.append(item)
+
+        return response.Response(collected_items)
 
 
 class TransactionView(views.APIView):
@@ -514,20 +518,20 @@ class OrderView(views.APIView):
                     name=F("user__name")
                 ),
                 price=Sum("spent_amount"),
-                count=Sum("count"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                count=Sum("count")
             )
         )
         collected_items = []
         for item in items:
             item.pop("user_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             collected_items.append(item)
         return response.Response(collected_items)
 
 
 class OrderDetailsView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated, IsStaff)
+    # permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
         date_filter = DateFilter.for_request(request, date)
@@ -554,13 +558,13 @@ class OrderDetailsView(views.APIView):
                     title=F("product__title")
                 ),
                 total_count=Sum("count"),
-                total_amount=Sum("spent_amount"),
-                date=Value(str(date_filter.start.date())),
-                end=Value(str(date_filter.end_date_for_week))
+                total_amount=Sum("spent_amount")
             )
         )
         collected_items = []
         for item in items:
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             collected_items.append(item)
         return response.Response(collected_items)
