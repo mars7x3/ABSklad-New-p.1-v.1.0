@@ -105,7 +105,6 @@ class DateFilter:
             return self.end.date()
 
 
-
 def update_purchase_stat_group(group: StockGroupStat, queryset) -> None:
     orders_query = dict(
         stock=group.stock,
