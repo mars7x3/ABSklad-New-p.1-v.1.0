@@ -134,8 +134,8 @@ def kpi_total_info(date: datetime):
             ),
             avg_price=Case(
                 When(
-                    fact_total_tmz_sum__gt=0, fact_total_tmz_count__gt=0,
-                    then=F('fact_total_tmz_sum') / F('fact_total_tmz_count')
+                    total_tmz_sum__gt=0, total_tmz_count__gt=0,
+                    then=F('total_tmz_sum') / F('total_tmz_count')
                 ),
                 output_field=FloatField(),
                 default=Value(0.0)
