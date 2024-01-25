@@ -983,7 +983,7 @@ class StockProductListSerializer(serializers.ModelSerializer):
         stock_id = self.context['request'].query_params.get('stock')
         rep = super().to_representation(instance)
         rep['category_title'] = instance.category.title if instance.category else '---'
-        rep['collection'] = instance.collection.title if instance.category else '---'
+        rep['collection'] = instance.collection.title if instance.collection else '---'
         stock = Stock.objects.get(id=stock_id)
         price = instance.prices.filter(city=stock.city).first()
         rep['prod_amount_crm'] = instance.total_count * price.price
