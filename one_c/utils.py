@@ -387,8 +387,10 @@ def sync_1c_money_doc_crud(data):
     user = MyUser.objects.filter(uid=data.get('user')).first()
     cash_box = CashBox.objects.filter(uid=data.get('cash_box')).first()
     if not user:
+        print('Контрагент не существует')
         return False, 'Контрагент не существует'
     if not cash_box:
+        print('Касса не существует')
         return False, 'Касса не существует'
     if money_doc:
         money_doc.status = data.get('status')
@@ -414,9 +416,13 @@ def sync_1c_money_doc_crud(data):
             'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
         }
         money_doc = MoneyDoc.objects.create(**data)
+        print('Check stat')
         main_stat_pds_sync(money_doc)
+        print('End Check stat')
         money_doc.is_checked = not money_doc.is_checked
         money_doc.save()
+        print(money_doc.is_checked)
+
     return True, 'Success!'
 
 
