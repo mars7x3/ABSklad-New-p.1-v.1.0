@@ -40,7 +40,7 @@ def kpi_svd_1lvl(date: datetime):
         order__status__in=('success', 'sent')
     )
     after_products = after_query.values_list("ab_product_id", "count")
-    after_product_ids = list(map(lambda x: x[0], after_products))
+    after_product_ids = set(after_query.values_list("ab_product_id", flat=True))
     after_amount = after_query.aggregate(count_sum=Sum("count"))["count_sum"]
 
     before_query = ManagerKPISVD.objects.filter(
@@ -48,7 +48,7 @@ def kpi_svd_1lvl(date: datetime):
         manager_kpi__month__year=date.year
     )
     before_products = before_query.values_list("product_id", "count")
-    before_product_ids = list(map(lambda x: x[0], before_products))
+    before_product_ids = set(before_query.values_list("product_id", flat=True))
     before_amount = before_query.aggregate(count_sum=Sum("count"))["count_sum"]
 
     old = {
@@ -130,6 +130,7 @@ def kpi_total_info(date: datetime):
                 default=Value(0.0)
             )
         )
+        # TODO: round wrong!
         .annotate(
             per_done_pds=Case(
                 When(
