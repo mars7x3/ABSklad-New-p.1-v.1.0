@@ -90,7 +90,8 @@ def create_dealer_kpi():
     last_three_month = timezone.now() - relativedelta(months=3)
     users = MyUser.objects.filter(status='dealer',
                                   dealer_profile__orders__isnull=False,
-                                  dealer_profile__orders__created_at__gte=last_three_month).distinct()
+                                  dealer_profile__orders__created_at__gte=last_three_month,
+                                  dealer_profile__orders__order_products__isnull=False).distinct()
 
     last_kpi = DealerKPI.objects.filter(month__month=last_month.month).first()
     if last_kpi:
