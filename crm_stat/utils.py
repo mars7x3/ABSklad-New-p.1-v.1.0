@@ -103,6 +103,7 @@ class DateFilter:
     def end_date_for_week(self):
         if self.filter_type == "week":
             return self.end.date()
+        return ""
 
 
 def update_purchase_stat_group(group: StockGroupStat, queryset) -> None:
