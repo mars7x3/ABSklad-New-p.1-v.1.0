@@ -114,6 +114,7 @@ def create_dealer_kpi():
             with transaction.atomic():
                 user_tmz_data = get_tmz_of_user_for_kpi(3, user.id)
                 total_pds = 0
+
                 if user_tmz_data:
                     new_kpi = DealerKPI.objects.create(
                         user=user,
@@ -147,6 +148,7 @@ def create_dealer_kpi():
                                     kpi=new_kpi,
                                     product=product,
                                     count=increased_total_count,
+                                    sum=total_price
                                 )
                             )
                     DealerKPIProduct.objects.bulk_create(dealer_kpi_products)

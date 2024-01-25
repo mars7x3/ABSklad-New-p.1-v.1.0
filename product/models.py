@@ -46,7 +46,7 @@ class AsiaProduct(models.Model):
     vendor_code = models.CharField(max_length=50, blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
     collection = models.ForeignKey(Collection, on_delete=models.SET_NULL, null=True, related_name='products')
-    made_in = models.CharField(max_length=50)
+    made_in = models.CharField(max_length=50, blank=True, null=True)
     guarantee = models.IntegerField(default=0)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
