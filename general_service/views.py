@@ -5,7 +5,8 @@ from rest_framework.views import APIView
 
 from crm_general.serializers import StockListSerializer
 from .models import Stock, City, Requisite, RequisiteCategory, PriceType
-from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer
+from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer, \
+    CountStockListSerializer
 
 
 class CategoryListView(viewsets.ReadOnlyModelViewSet):
@@ -17,7 +18,7 @@ class CategoryListView(viewsets.ReadOnlyModelViewSet):
 class StockListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Stock.objects.filter(is_active=True, is_show=True)
-    serializer_class = StockListSerializer
+    serializer_class = CountStockListSerializer
 
 
 class CityListView(viewsets.ReadOnlyModelViewSet):

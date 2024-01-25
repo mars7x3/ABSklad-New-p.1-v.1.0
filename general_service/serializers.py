@@ -4,10 +4,10 @@ from rest_framework import serializers
 from .models import *
 
 
-class StockListSerializer(serializers.ModelSerializer):
+class CountStockListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
-        fields = ('id', 'title', 'slug')
+        fields = ('id', 'title')
 
 
 class StockSerializer(serializers.ModelSerializer):
