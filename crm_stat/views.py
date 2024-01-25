@@ -95,7 +95,7 @@ class StockGroupAPIView(generics.ListAPIView):
 
 
 class DealerFundsView(views.APIView):
-    # permission_classes = (permissions.IsAuthenticated, IsStaff)
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
         date_filter = DateFilter.for_request(request, date)
@@ -531,7 +531,7 @@ class OrderView(views.APIView):
 
 
 class OrderDetailsView(views.APIView):
-    # permission_classes = (permissions.IsAuthenticated, IsStaff)
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
         date_filter = DateFilter.for_request(request, date)
