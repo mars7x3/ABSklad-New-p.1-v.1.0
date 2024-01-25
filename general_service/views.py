@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from crm_general.serializers import StockListSerializer
 from .models import Stock, City, Requisite, RequisiteCategory, PriceType
 from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer
 
@@ -11,6 +12,12 @@ class CategoryListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Stock.objects.filter(is_active=True, is_show=True)
     serializer_class = StockSerializer
+
+
+class StockListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Stock.objects.filter(is_active=True, is_show=True)
+    serializer_class = StockListSerializer
 
 
 class CityListView(viewsets.ReadOnlyModelViewSet):
