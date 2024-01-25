@@ -1,10 +1,14 @@
+import math
 from datetime import datetime
 from logging import getLogger
-from typing import Iterable
+from typing import Iterable, Self
 
 from django.db.models import F, Sum, Count, Case, When, Subquery, Value, DecimalField, QuerySet
 from django.utils import timezone
+from django.utils.functional import cached_property
+from rest_framework.request import Request
 
+from crm_general.utils import string_datetime_datetime
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
 
@@ -22,15 +26,23 @@ def create_empty_group_stat(date, stat_type, stock) -> QuerySet:
     )
 
 
-def divide_into_weeks(start, end) -> Iterable[tuple[datetime, datetime]]:
-    weeks_count = round(end.day / 7)
-    delta = timezone.timedelta(days=7)
-    end_date = start + delta
+def divide_into_weeks(start: datetime, end: datetime) -> Iterable[tuple[datetime, datetime]]:
+    assert end > start
+
+    weeks_count = math.ceil(end.day / 7)
+    temp_end = start + timezone.timedelta(days=7)
 
     for week_num in range(1, weeks_count + 1):
-        yield start, end_date
-        start += delta
-        end_date += delta
+        if temp_end > end:
+            temp_end = end
+
+        yield start, temp_end
+
+        start += timezone.timedelta(days=8)
+        temp_end += timezone.timedelta(days=8)
+
+        if temp_end == start:
+            break
 
 
 def sum_and_collect_by_map(queryset, fields_map) -> Iterable[dict]:
@@ -50,18 +62,48 @@ def sum_and_collect_by_map(queryset, fields_map) -> Iterable[dict]:
         yield collected_data
 
 
-def date_filters(filter_type: str, date: datetime, date_field: str = "date") -> dict:
-    query = {}
-    match filter_type:
-        case "month":
-            query[date_field + "__month"] = date.month
-            query[date_field + "__year"] = date.year
-        case "week":
-            query[date_field + "__gte"] = date
-            query[date_field + "__lte"] = date + timezone.timedelta(days=7)
-        case _:
-            query[date_field] = date
-    return query
+class DateFilter:
+    def __init__(self, filter_type: str, date: datetime, date_field: str = None, end: datetime = None):
+        self.filter_type = filter_type
+        self.start = date
+        self.date_field = date_field or "date"
+        self.end = end if end else self.start + timezone.timedelta(days=7)
+
+    @cached_property
+    def queries(self):
+        query = {}
+        match self.filter_type:
+            case "month":
+                query[self.date_field + "__month"] = self.start.month
+                query[self.date_field + "__year"] = self.start.year
+            case "week":
+                query[self.date_field + "__gte"] = self.start
+                query[self.date_field + "__lte"] = self.end
+            case _:
+                query[self.date_field] = self.start
+        return query
+
+    @classmethod
+    def for_request(cls, request: Request, date: str, date_field: str = None) -> Self:
+        filter_type = request.query_params.get("type", "day")
+        datetime_format = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
+        date = string_datetime_datetime(date.strip(), datetime_format=datetime_format)
+        end = request.query_params.get("end")
+        if end:
+            end = string_datetime_datetime(end.strip(), datetime_format=datetime_format)
+
+        return cls(
+            filter_type=filter_type,
+            date=date,
+            date_field=date_field,
+            end=end
+        )
+
+    @property
+    def end_date_for_week(self):
+        if self.filter_type == "week":
+            return self.end.date()
+
 
 
 def update_purchase_stat_group(group: StockGroupStat, queryset) -> None:
