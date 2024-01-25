@@ -401,9 +401,13 @@ def sync_1c_money_doc_crud(data):
         if bool(int(data.get('is_active'))) == money_doc.is_active:
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
+            print('Check stat')
             main_stat_order_sync(money_doc)
+            print('End Check stat')
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
+            print(money_doc.is_checked)
+
 
     else:
         data = {
