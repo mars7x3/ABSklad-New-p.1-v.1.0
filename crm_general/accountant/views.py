@@ -25,6 +25,7 @@ from crm_general.models import Inventory
 from crm_general.paginations import GeneralPurposePagination
 
 from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
+from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
 from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
@@ -270,6 +271,9 @@ class BalancePlusModerationView(APIView):
                     }
                     money_doc = MoneyDoc.objects.create(**data)
                     sync_1c_money_doc(money_doc)
+                    main_stat_pds_sync(money_doc)
+                    money_doc.is_checked = True
+                    money_doc.save()
 
                 return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
 

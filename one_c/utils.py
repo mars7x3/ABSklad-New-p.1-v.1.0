@@ -11,6 +11,7 @@ from transliterate import translit
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
 from crm_kpi.utils import update_dealer_kpi_by_order
+from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock, City, PriceType, CashBox
 from one_c.models import MoneyDoc
 from order.models import MyOrder, OrderProduct
@@ -165,16 +166,14 @@ def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
     uid = data.get('product_uid')
     product = AsiaProduct.objects.filter(uid=uid).first()
     if product:
+        category = Category.objects.filter(uid=data.get('category_uid'))
+        if category:
+            product.category = category.first()
+
         product.title = data.get('title')
         product.is_active = bool(int(data.get('is_active')))
         product.vendor_code = data.get('vendor_code')
         product.save()
-        if product.category:
-            if product.category.uid != data.get('category_uid'):
-                category = Category.objects.filter(uid=data.get('category_uid'))
-                if category:
-                    product.category = category.first()
-                    product.save()
 
     else:
         product = AsiaProduct.objects.create(uid=uid, title=data.get('title'),
@@ -397,6 +396,13 @@ def sync_1c_money_doc_crud(data):
         money_doc.amount = data.get('amount')
         money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
         money_doc.save()
+        if bool(int(data.get('is_active'))) == money_doc.is_active:
+            money_doc.is_checked = not money_doc.is_checked
+            money_doc.save()
+            main_stat_order_sync(money_doc)
+            money_doc.is_checked = not money_doc.is_checked
+            money_doc.save()
+
     else:
         data = {
             'uid': data.get('uid'),
@@ -407,7 +413,10 @@ def sync_1c_money_doc_crud(data):
             'amount': data.get('amount'),
             'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
         }
-        CashBox.objects.create(**data)
+        money_doc = MoneyDoc.objects.create(**data)
+        main_stat_pds_sync(money_doc)
+        money_doc.is_checked = not money_doc.is_checked
+        money_doc.save()
     return True, 'Success!'
 
 
@@ -510,6 +519,13 @@ def order_1c_to_crm(data):
                 OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products_data])
                 minus_quantity(order)
 
+            main_stat_order_sync(order)
+            update_data = []
+            for p in order.order_products.all():
+                p.is_checked = not p.is_checked
+                update_data.append(p)
+            OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+
         else:
             # create order
             order = MyOrder.objects.create(**order_data)
@@ -517,6 +533,13 @@ def order_1c_to_crm(data):
             products_data = generate_products_data(products)
             OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products_data])
             minus_quantity(order)
+
+            main_stat_order_sync(order)
+            update_data = []
+            for p in order.order_products.all():
+                p.is_checked = not p.is_checked
+                update_data.append(p)
+            OrderProduct.objects.bulk_update(update_data, ['is_checked'])
 
             kwargs = {'user': user, 'title': f'Заказ #{order.id}', 'description': order.comment,
                       'link_id': order.id, 'status': 'order', 'is_push': True}

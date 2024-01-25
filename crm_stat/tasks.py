@@ -1,9 +1,11 @@
 from datetime import datetime
 
 from absklad_commerce.celery import app
+from crm_kpi.utils import update_dealer_kpi_by_tx, update_dealer_kpi_by_order
 
 from .models import UserTransactionsStat, PurchaseStat, StockGroupStat
-from .utils import create_empty_group_stat, update_purchase_stat_group, update_tx_stat_group
+from .utils import create_empty_group_stat, update_purchase_stat_group, update_tx_stat_group, \
+    update_stat_group_by_order, update_transaction_stat
 
 
 @app.task()
@@ -93,3 +95,16 @@ def task_update_purchase_stat_group(purchase_stat_id):
             stock=purchase_stat.stock
         )
     )
+
+
+@app.task()
+def main_stat_order_sync(order):
+    update_stat_group_by_order(order)
+    update_dealer_kpi_by_order(order)
+
+
+@app.task()
+def main_stat_pds_sync(money_doc):
+    update_dealer_kpi_by_tx(money_doc)
+    update_transaction_stat(money_doc)
+

@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
 from crm_kpi.utils import update_dealer_kpi_by_order
+from crm_stat.tasks import main_stat_order_sync
 from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
@@ -90,7 +91,12 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
                 order.save()
 
                 sync_order_to_1C(order)
-                update_dealer_kpi_by_order(order)
+                main_stat_order_sync(order)
+                update_data = []
+                for p in order.order_products.all():
+                    p.is_checked = not p.is_checked
+                    update_data.append(p)
+                OrderProduct.objects.bulk_update(update_data, ['is_checked'])
 
                 minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
                 return Response({'detail': f'Order status successfully changed to {order_status}'},
