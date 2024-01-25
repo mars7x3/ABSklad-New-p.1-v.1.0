@@ -27,8 +27,9 @@ def get_tmz_of_user_for_kpi(check_months, user_id):
         total_count=Sum('order_products__count'),
         total_price=Sum('order_products__total_price'),
     )
-
-    return user_order_products
+    if user_order_products:
+        return user_order_products
+    return None
 
 
 def kpi_svd_1lvl(date: datetime):
