@@ -269,6 +269,11 @@ class BalancePlusModerationView(APIView):
                         "amount": balance.amount,
                         "cash_box": balance.dealer.village.city.stocks.first().cash_box
                     }
+                    if type_status == 'cash':
+                        data['status'] = 'Нал'
+                    elif type_status == 'visa':
+                        data['status'] = 'Без нал'
+
                     money_doc = MoneyDoc.objects.create(**data)
                     sync_1c_money_doc(money_doc)
                     main_stat_pds_sync(money_doc)
