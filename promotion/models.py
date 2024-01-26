@@ -15,7 +15,7 @@ class Story(models.Model):
     clicks = models.PositiveIntegerField(default=0)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    products = models.ManyToManyField(AsiaProduct, related_name='stories')
+    products = models.ManyToManyField(AsiaProduct, related_name='stories', blank=True)
     dealer_profiles = models.ManyToManyField(DealerProfile, related_name='stories')
 
     class Meta:
