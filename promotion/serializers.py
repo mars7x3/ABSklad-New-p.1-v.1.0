@@ -10,6 +10,12 @@ class StoryListSerializer(serializers.ModelSerializer):
         model = Story
         fields = ('id', 'file')
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        is_detail = bool(instance.products.all())
+        rep['is_detail'] = is_detail
+        return rep
+
 
 class StoryDetailSerializer(serializers.ModelSerializer):
     class Meta:
