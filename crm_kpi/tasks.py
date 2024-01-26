@@ -109,6 +109,8 @@ def create_dealer_kpi():
     created_dealer_kpi = DealerKPI.objects.filter(month__month=current_month,
                                                   month__year=current_date.year).values_list('user__id', flat=True)
 
+    update_dealer_kpi_pds = []
+
     for user in users:
         if user.id not in created_dealer_kpi:
             with transaction.atomic():
@@ -156,17 +158,23 @@ def create_dealer_kpi():
                     total_pds = round(int(total_pds) + increase_amount)
                     kpi = DealerKPI.objects.get(id=new_kpi.id)
                     kpi.pds = total_pds
-                    kpi.save()
+                    update_dealer_kpi_pds.append(kpi)
                     print(f'Created new KPI {kpi.id} for user {user.id}. date: {current_date}')
+
         else:
             print(f'DealerKPI for user id {user.id} id being skipped as it was already created. {current_date}')
+    DealerKPI.objects.bulk_update(update_dealer_kpi_pds, ['pds'])
 
 
 @app.task
 def confirm_dealer_kpis():
     current_date = timezone.now()
-    unconfirmed_dealer_kpis = DealerKPI.objects.filter(month__month=current_date.month, is_confirmed=False)
+    unconfirmed_dealer_kpis = DealerKPI.objects.filter(month__month=current_date.month,
+                                                       month__year=current_date.year,
+                                                       is_confirmed=False)
+    update_data = []
     for kpi in unconfirmed_dealer_kpis:
         kpi.is_confirmed = True
-        kpi.save()
-        print(f'Confirmed KPI: {kpi.id}')
+        update_data.append(kpi)
+    DealerKPI.objects.bulk_update(update_data, ['is_confirmed'])
+    print(f'Dealer KPI confirmed count {len(update_data)}')

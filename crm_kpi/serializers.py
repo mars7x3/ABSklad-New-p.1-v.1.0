@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from account.models import MyUser
 from crm_kpi.models import DealerKPI, DealerKPIProduct
-from product.models import AsiaProduct
+from product.models import AsiaProduct, ProductPrice
 
 
 class DealerKPISerializer(serializers.ModelSerializer):
@@ -32,11 +32,23 @@ class DealerKPISerializer(serializers.ModelSerializer):
 
         for product in products:
             product_instance = AsiaProduct.objects.get(id=product['id'])
+            if user.dealer_profile.price_type:
+                product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
+                                                            product_id=product['id'],
+                                                            price_type=user.dealer_profile.price_type).first()
+                price = product_price.price
+            else:
+                product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
+                                                            product_id=product['id'],
+                                                            city=user.dealer_profile.city).first()
+                price = product_price.price
+
             kpi_products_to_create.append(
                 DealerKPIProduct(
                     kpi=instance,
                     product=product_instance,
-                    count=product['count']
+                    count=product['count'],
+                    sum=product['count'] * price
                 )
             )
 
@@ -84,10 +96,24 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'detail': 'Can not update KPI which is already confirmed'})
 
         instance = super().update(instance, validated_data)
+        user = instance.user
         for p in products:
             dealer_product = DealerKPIProduct.objects.filter(product_id=p['product'], kpi=instance).first()
+
+            if user.dealer_profile.price_type:
+                product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
+                                                            product_id=p['product'],
+                                                            price_type=user.dealer_profile.price_type).first()
+                price = product_price.price
+            else:
+                product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
+                                                            product_id=p['product'],
+                                                            city=user.dealer_profile.city).first()
+                price = product_price.price
+
             if dealer_product:
                 dealer_product.count = p['count']
+                dealer_product.sum = p['count'] * price
                 dealer_product.save()
             else:
                 product = AsiaProduct.objects.filter(id=p['product']).first()
