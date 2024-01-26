@@ -264,24 +264,20 @@ def kpi_sch_2lvl(date: datetime):
             ),
             avg_price=Sum(
                 Case(
-                    When(kpi_products__fact_count__gt=0,
+                    When(kpi_products__count__gt=0,
                          then=F('kpi_products__sum') / F('kpi_products__count')),
                     default=Value(0),
                     output_field=FloatField()
                 )
             )
         ).values_list('fact_avg_price', 'avg_price')
-        print('1')
         fact_avg_price = sum([i[0] for i in kpis])
         if fact_avg_price:
-            print(fact_avg_price,len(kpis) )
             fact_avg_price = fact_avg_price / len(kpis)
-        print('2')
 
         avg_price = sum([i[1] for i in kpis])
         if avg_price:
             avg_price = sum([i[1] for i in kpis]) / len(kpis)
-        print('3')
 
         if fact_avg_price:
             per_done_avg_price = round(fact_avg_price / avg_price * 100)
