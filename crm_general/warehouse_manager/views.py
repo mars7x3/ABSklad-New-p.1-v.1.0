@@ -51,7 +51,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             queryset = queryset.filter(created_at__gte=start_date, created_at__lte=end_date)
 
         if search:
-            queryset = queryset.filter(Q(name__icontains=search), Q(gmail__icontains=search))
+            queryset = queryset.filter(author__user__name__icontains=search)
 
         paginator = GeneralPurposePagination()
         page = paginator.paginate_queryset(queryset, request)

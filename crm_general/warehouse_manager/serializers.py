@@ -71,8 +71,11 @@ class WareHouseCollectionListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        user = self.context['request'].user
+        stock_id = user.warehouse_profile.stock.id
         rep['categories_count'] = len(set(instance.products.values_list('category', flat=True)))
-        rep['products_count'] = sum(instance.products.values_list('counts__count_crm', flat=True))
+        products = instance.products.filter(counts__stock_id=stock_id)
+        rep['products_count'] = sum(products.values_list('counts__count_crm', flat=True))
         return rep
 
 
@@ -84,11 +87,13 @@ class WareHouseCategoryListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         request = self.context['request']
+        stock_id = request.user.warehouse_profile.stock.id
         if self.context.get('retrieve'):
             products = instance.products.all()
             rep['products'] = WareHouseProductListSerializer(products, context={'request': request}, many=True).data
         else:
-            rep['products_count'] = sum(instance.products.values_list('counts__count_crm', flat=True))
+            rep['products_count'] = sum(instance.products.filter(counts__stock_id=stock_id).
+                                        values_list('counts__count_crm', flat=True))
         return rep
 
 

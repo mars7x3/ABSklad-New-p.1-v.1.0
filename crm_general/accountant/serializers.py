@@ -261,11 +261,11 @@ class InventorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Inventory
         fields = ('id', 'status', 'is_active', 'created_at', 'updated_at', 'products', 'sender', 'receiver')
-        read_only_fields = ('sender', 'receiver', 'products')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['sender_name'] = instance.sender.name
+        rep['receiver_name'] = instance.receiver.name
         rep['stock_title'] = instance.sender.warehouse_profile.stock.title
         return rep
 
@@ -294,7 +294,6 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Inventory
         fields = ('id', 'status', 'is_active', 'created_at', 'updated_at', 'products', 'sender', 'receiver')
-        read_only_fields = ('sender', 'receiver', 'products')
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
@@ -306,6 +305,7 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['sender_name'] = instance.sender.name
+        rep['receiver_name'] = instance.receiver.name
         rep['stock_title'] = instance.sender.warehouse_profile.stock.title
         return rep
 

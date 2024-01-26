@@ -414,9 +414,6 @@ class InventoryListUpdateView(ListModelMixin,
     retrieve_serializer_class = InventoryDetailSerializer
     pagination_class = GeneralPurposePagination
 
-    def get_queryset(self):
-        return Inventory.objects.all()
-
     def get_serializer_class(self):
         if self.detail:
             return self.retrieve_serializer_class
