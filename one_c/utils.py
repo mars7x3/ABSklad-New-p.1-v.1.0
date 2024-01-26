@@ -211,7 +211,7 @@ def sync_dealer_update():
     for c in clients:
         count += 1
         print(count)
-        user = MyUser.objects.filter(uid=c.get('UID'))
+        user = MyUser.objects.filter(uid=c.get('UID')).first()
         if user:
             city = City.objects.filter(user_uid=c.get('CityUID')).first()
             if city:
