@@ -248,6 +248,17 @@ class BalanceHistoryListView(mixins.ListModelMixin, GenericViewSet):
 
         if t_status:
             kwargs['status'] = t_status
+
+        start = request.query_params.get('start')
+        end = request.query_params.get('end')
+
+        if start and end:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
+            end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+            end_date = end_date + timezone.timedelta(days=1)
+            kwargs['created_at__gte'] = start_date
+            kwargs['created_at__lte'] = end_date
+
         queryset = queryset.filter(**kwargs)
         paginator = AppNotificationPaginationClass()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
