@@ -300,7 +300,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
     dealers_queryset = DealerProfile.objects.all()
     serializer_class = WalletListSerializer
     pagination_class = AppPaginationClass
-    filter_backends = (filters.SearchFilter, FilterByFields)
+    filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
     search_fields = ("dealer__user__name",)
     filter_by_fields = {
         "start_date": {"by": "dealer__balance_histories__created_at__date__gte", "type": "date",
@@ -309,6 +309,7 @@ class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericVi
                      "pipline": string_date_to_date},
         "status": {"by": "dealer__dealer_status_id", "type": "number"}
     }
+    ordering_fields = ("amount_1c", "amount_crm")
 
     def get_queryset(self):
         return super().get_queryset().filter(dealer__managers=self.request.user.id).distinct()
