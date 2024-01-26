@@ -30,7 +30,7 @@ def divide_into_weeks(start: datetime, end: datetime) -> Iterable[tuple[datetime
     assert end > start
 
     weeks_count = math.ceil(end.day / 7)
-    temp_end = start + timezone.timedelta(days=7)
+    temp_end = start + timezone.timedelta(days=6)
 
     for week_num in range(1, weeks_count + 1):
         if temp_end > end:
@@ -38,8 +38,8 @@ def divide_into_weeks(start: datetime, end: datetime) -> Iterable[tuple[datetime
 
         yield start, temp_end
 
-        start += timezone.timedelta(days=8)
-        temp_end += timezone.timedelta(days=8)
+        start += timezone.timedelta(days=7)
+        temp_end += timezone.timedelta(days=7)
 
         if temp_end == start:
             break
