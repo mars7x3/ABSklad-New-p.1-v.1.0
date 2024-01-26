@@ -111,17 +111,32 @@ def kpi_acb_1lvl(date: datetime) -> dict[str, int]:
     }
 
 
+def kpi_pds_1lvl(date: datetime):
+    item = DealerKPI.objects.filter(
+        month__month=date.month, month__year=date.year,
+        user__dealer_profile__managers__in=Subquery(
+            MyUser.objects.filter(is_active=True, status='manager', manager_profile__is_main=True).values("id")
+        )
+    ).aggregate(
+        fact=Sum("fact_pds", default=0, output_field=IntegerField()),
+        total=Sum("pds", default=0)
+    )
+    return {
+        "fact_total_pds": item["fact"],
+        "total_pds": item["total"],
+        "per_done_pds": calc_percent_by_dict(item, fact_key="fact", total_key="total")
+    }
+
+
 def kpi_total_info(date: datetime):
     kpis = (
         DealerKPI.objects.filter(month__month=date.month, month__year=date.year)
         .values(date=TruncMonth("month"))
         .annotate(
-            fact_total_pds=Sum("fact_pds", default=0),
             fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
             fact_total_tmz_sum=Sum('kpi_products__fact_sum', default=0),
-            total_pds=Sum("pds", default=0),
             total_tmz_count=Sum('kpi_products__count', default=0),
-            total_tmz_sum=Sum('kpi_products__sum', default=0),
+            total_tmz_sum=Sum('kpi_products__sum', default=0)
         )
         .annotate(
             fact_avg_price=Case(
@@ -163,11 +178,21 @@ def kpi_total_info(date: datetime):
         }
 
     data = kpis[0]
-    data["per_done_pds"] = calc_percent_by_dict(data, fact_key="fact_total_pds", total_key="total_pds")
-    data["per_done_tmz_count"] = calc_percent_by_dict(data, fact_key="fact_total_tmz_count",
-                                                      total_key="total_tmz_count")
-    data["per_done_tmz_sum"] = calc_percent_by_dict(data, fact_key="fact_total_tmz_sum", total_key="total_tmz_sum")
-    data["per_done_avg_price"] = calc_percent_by_dict(data, fact_key="fact_avg_price", total_key="avg_price")
+    data["per_done_tmz_count"] = calc_percent_by_dict(
+        data,
+        fact_key="fact_total_tmz_count",
+        total_key="total_tmz_count"
+    )
+    data["per_done_tmz_sum"] = calc_percent_by_dict(
+        data,
+        fact_key="fact_total_tmz_sum",
+        total_key="total_tmz_sum"
+    )
+    data["per_done_avg_price"] = calc_percent_by_dict(
+        data,
+        fact_key="fact_avg_price",
+        total_key="avg_price"
+    )
     return data
 
 
@@ -254,10 +279,10 @@ def kpi_sch_2lvl(date: datetime):
         ).annotate(
             fact_avg_price=Sum(
                 Case(
-
-
-                    When(kpi_products__fact_count__gt=0, then=F('kpi_products__fact_sum') / F('kpi_products__fact_count')),
-
+                    When(
+                        kpi_products__fact_count__gt=0,
+                        then=F('kpi_products__fact_sum') / F('kpi_products__fact_count')
+                    ),
                     default=Value(0),
                     output_field=FloatField()
                 )
