@@ -259,29 +259,50 @@ def kpi_sch_2lvl(date: datetime):
     managers_data = []
     for manager in managers:
         kpis = DealerKPI.objects.filter(
-            month__month=date.month, user__dealer_profile__managers=manager
+            month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
         ).annotate(
             fact_avg_price=Sum(
-                F('kpi_products__fact_sum') / F('kpi_products__fact_count'),
-                output_field=FloatField(),
-                default=0
+                Case(
+                    When(kpi_products__fact_count__gt=0,
+                         then=F('kpi_products__fact_sum') / F('kpi_products__fact_count')),
+                    default=Value(0),
+                    output_field=FloatField()
+                )
             ),
             avg_price=Sum(
-                F('kpi_products__sum') / F('kpi_products__count'),
-                output_field=FloatField(),
-                default=0
+                Case(
+                    When(kpi_products__fact_count__gt=0,
+                         then=F('kpi_products__sum') / F('kpi_products__count')),
+                    default=Value(0),
+                    output_field=FloatField()
+                )
             )
         ).values_list('fact_avg_price', 'avg_price')
+        print('1')
+        fact_avg_price = sum([i[0] for i in kpis])
+        if fact_avg_price:
+            print(fact_avg_price,len(kpis) )
+            fact_avg_price = fact_avg_price / len(kpis)
+        print('2')
 
-        total_kpis = tuple(sum(x) for x in zip(*kpis))
-        if total_kpis:
-            managers_data.append({
-                'name': manager.name,
-                'id': manager.id,
-                'fact_avg_price': round(total_kpis[0]),
-                'avg_price': round(total_kpis[1]),
-                'per_done_avg_price': round(total_kpis[0] / total_kpis[1] * 100),
-            })
+        avg_price = sum([i[1] for i in kpis])
+        if avg_price:
+            avg_price = sum([i[1] for i in kpis]) / len(kpis)
+        print('3')
+
+        if fact_avg_price:
+            per_done_avg_price = round(fact_avg_price / avg_price * 100)
+        else:
+            per_done_avg_price = 0
+        print('4')
+
+        managers_data.append({
+            'name': manager.name,
+            'id': manager.id,
+            'fact_avg_price': round(fact_avg_price),
+            'avg_price': round(avg_price),
+            'per_done_avg_price': per_done_avg_price,
+        })
     return managers_data
 
 
