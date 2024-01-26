@@ -111,17 +111,32 @@ def kpi_acb_1lvl(date: datetime) -> dict[str, int]:
     }
 
 
+def kpi_pds_1lvl(date: datetime):
+    item = DealerKPI.objects.filter(
+        month__month=date.month, month__year=date.year,
+        user__dealer_profile__managers__in=Subquery(
+            MyUser.objects.filter(is_active=True, status='manager', manager_profile__is_main=True).values("id")
+        )
+    ).aggregate(
+        fact=Sum("fact_pds", default=0, output_field=IntegerField()),
+        total=Sum("pds", default=0)
+    )
+    return {
+        "fact_total_pds": item["fact"],
+        "total_pds": item["total"],
+        "per_done_pds": calc_percent_by_dict(item, fact_key="fact", total_key="total")
+    }
+
+
 def kpi_total_info(date: datetime):
     kpis = (
         DealerKPI.objects.filter(month__month=date.month, month__year=date.year)
         .values(date=TruncMonth("month"))
         .annotate(
-            fact_total_pds=Sum("fact_pds", default=0),
             fact_total_tmz_count=Sum('kpi_products__fact_count', default=0),
             fact_total_tmz_sum=Sum('kpi_products__fact_sum', default=0),
-            total_pds=Sum("pds", default=0),
             total_tmz_count=Sum('kpi_products__count', default=0),
-            total_tmz_sum=Sum('kpi_products__sum', default=0),
+            total_tmz_sum=Sum('kpi_products__sum', default=0)
         )
         .annotate(
             fact_avg_price=Case(
@@ -163,11 +178,21 @@ def kpi_total_info(date: datetime):
         }
 
     data = kpis[0]
-    data["per_done_pds"] = calc_percent_by_dict(data, fact_key="fact_total_pds", total_key="total_pds")
-    data["per_done_tmz_count"] = calc_percent_by_dict(data, fact_key="fact_total_tmz_count",
-                                                      total_key="total_tmz_count")
-    data["per_done_tmz_sum"] = calc_percent_by_dict(data, fact_key="fact_total_tmz_sum", total_key="total_tmz_sum")
-    data["per_done_avg_price"] = calc_percent_by_dict(data, fact_key="fact_avg_price", total_key="avg_price")
+    data["per_done_tmz_count"] = calc_percent_by_dict(
+        data,
+        fact_key="fact_total_tmz_count",
+        total_key="total_tmz_count"
+    )
+    data["per_done_tmz_sum"] = calc_percent_by_dict(
+        data,
+        fact_key="fact_total_tmz_sum",
+        total_key="total_tmz_sum"
+    )
+    data["per_done_avg_price"] = calc_percent_by_dict(
+        data,
+        fact_key="fact_avg_price",
+        total_key="avg_price"
+    )
     return data
 
 
@@ -248,47 +273,98 @@ def kpi_sch_2lvl(date: datetime):
 
     managers_data = []
     for manager in managers:
-        kpis = (
-            DealerKPI.objects.filter(
-                month__month=date.month, user__dealer_profile__managers=manager
-            )
-            .annotate(
-                fact_sum=Sum("kpi_products__fact_sum", default=Value(0.0)),
-                fact_count=Sum("kpi_products__fact_count", default=Value(0.0)),
-                sum=Sum("kpi_products__sum", default=Value(0.0)),
-                count=Sum("kpi_products__count", default=Value(0.0))
-            )
-            .annotate(
-                fact_avg_price=Case(
+
+        kpis = DealerKPI.objects.filter(
+            month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
+        ).annotate(
+            fact_avg_price=Sum(
+                Case(
                     When(
-                        fact_sum__gt=0, fact_count__gt=0,
-                        then=F("fact_sum") / F("fact_count")
+                        kpi_products__fact_count__gt=0,
+                        then=F('kpi_products__fact_sum') / F('kpi_products__fact_count')
                     ),
-                    default=Value(0.0),
-                    output_field=FloatField()
-                ),
-                avg_price=Case(
-                    When(
-                        sum__gt=0, count__gt=0,
-                        then=F("sum") / F("count")
-                    ),
-                    default=Value(0.0),
+                    default=Value(0),
                     output_field=FloatField()
                 )
-            ).values_list('fact_avg_price', 'avg_price')
-        )
+            ),
+            avg_price=Sum(
+                Case(
+                    When(kpi_products__count__gt=0,
+                         then=F('kpi_products__sum') / F('kpi_products__count')),
+                    default=Value(0),
+                    output_field=FloatField()
+                )
+            )
+        ).values_list('fact_avg_price', 'avg_price')
+        fact_avg_price = sum([i[0] for i in kpis])
+        if fact_avg_price:
+            fact_avg_price = fact_avg_price / len(kpis)
 
-        total_kpis = tuple(sum(x) for x in zip(*kpis))
-        if total_kpis:
-            fact_avg, avg = total_kpis[0], total_kpis[1]
+        avg_price = sum([i[1] for i in kpis])
+        if avg_price:
+            avg_price = sum([i[1] for i in kpis]) / len(kpis)
 
-            managers_data.append({
-                'name': manager.name,
-                'id': manager.id,
-                'fact_avg_price': round(fact_avg),
-                'avg_price': round(avg),
-                'per_done_avg_price': calc_percent(fact_avg, avg)
-            })
+        if fact_avg_price:
+            per_done_avg_price = round(fact_avg_price / avg_price * 100)
+        else:
+            per_done_avg_price = 0
+        print('4')
+
+
+
+#         kpis = (
+#             DealerKPI.objects.filter(
+#                 month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
+#             )
+#             .annotate(
+#                 fact_sum=Sum("kpi_products__fact_sum", default=Value(0.0)),
+#                 fact_count=Sum("kpi_products__fact_count", default=Value(0.0)),
+#                 sum=Sum("kpi_products__sum", default=Value(0.0)),
+#                 count=Sum("kpi_products__count", default=Value(0.0))
+#             )
+#             .annotate(
+#                 fact_avg_price=Case(
+#                     When(
+#                         fact_sum__gt=0, fact_count__gt=0,
+#                         then=F("fact_sum") / F("fact_count")
+#                     ),
+#                     default=Value(0.0),
+#                     output_field=FloatField()
+#                 ),
+#                 avg_price=Case(
+#                     When(
+#                         sum__gt=0, count__gt=0,
+#                         then=F("sum") / F("count")
+#                     ),
+#                     default=Value(0.0),
+#                     output_field=FloatField()
+#                 )
+#             ).values_list('fact_avg_price', 'avg_price')
+#         )
+
+
+        fact_avg_price = sum([i[0] for i in kpis])
+        if fact_avg_price:
+            fact_avg_price = fact_avg_price / len(kpis)
+
+        avg_price = sum([i[1] for i in kpis])
+        if avg_price:
+            avg_price = sum([i[1] for i in kpis]) / len(kpis)
+
+        if fact_avg_price:
+            per_done_avg_price = round(fact_avg_price / avg_price * 100)
+        else:
+            per_done_avg_price = 0
+
+
+        managers_data.append({
+            'name': manager.name,
+            'id': manager.id,
+            'fact_avg_price': round(fact_avg_price),
+            'avg_price': round(avg_price),
+            'per_done_avg_price': per_done_avg_price,
+        })
+
     return managers_data
 
 
@@ -535,7 +611,7 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> None:
 
     order = order_product.order
     dealer_kpi = DealerKPIProduct.objects.filter(
-        product_id=order.product.id,
+        product_id=order_product.ab_product.id,
         kpi__user_id=getattr(order.author, "user_id"),
         kpi__month__month=order.released_at.month,
         kpi__month__year=order.released_at.year
@@ -545,11 +621,11 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> None:
         return
 
     if order.is_active:
-        dealer_kpi.fact_count += order.product.count
-        dealer_kpi.fact_sum += order.product.total_price
+        dealer_kpi.fact_count += order_product.count
+        dealer_kpi.fact_sum += order_product.total_price
     else:
-        dealer_kpi.fact_count -= order.product.count
-        dealer_kpi.fact_sum -= order.product.total_price
+        dealer_kpi.fact_count -= order_product.count
+        dealer_kpi.fact_sum -= order_product.total_price
     dealer_kpi.save()
     return True
 

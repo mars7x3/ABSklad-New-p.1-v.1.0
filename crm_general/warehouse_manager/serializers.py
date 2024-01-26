@@ -83,9 +83,10 @@ class WareHouseCategoryListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        request = self.context['request']
         if self.context.get('retrieve'):
             products = instance.products.all()
-            rep['products'] = WareHouseProductListSerializer(products, many=True).data
+            rep['products'] = WareHouseProductListSerializer(products, context={'request': request}, many=True).data
         else:
             rep['products_count'] = sum(instance.products.values_list('counts__count_crm', flat=True))
         return rep

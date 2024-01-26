@@ -198,6 +198,31 @@ def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
     ProductPrice.objects.bulk_create(price_create)
 
 
+def sync_dealer_update():
+    url = 'http://91.211.251.134/testcrm/hs/asoi/clients'
+    username = 'Директор'
+    password = '757520ля***'
+    response = requests.get(url, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response_data = json.loads(response.content)
+
+    clients = response_data.get('clients')
+    dealer_data = []
+    count = 0
+    for c in clients:
+        count += 1
+        print(count)
+        user = MyUser.objects.filter(uid=c.get('UID')).first()
+        if user:
+            city = City.objects.filter(user_uid=c.get('CityUID')).first()
+            if city:
+                profile = user.dealer_profile
+                village = city.villages.first()
+                profile.village = village
+                dealer_data.append(profile)
+
+    DealerProfile.objects.bulk_update(dealer_data, ['village'])
+
+
 def sync_dealer():
     url = 'http://91.211.251.134/testcrm/hs/asoi/clients'
     username = 'Директор'
