@@ -86,6 +86,7 @@ def create_manager_kpi():
 @app.task()
 def create_dealer_kpi():
     current_date = timezone.now().date()
+    current_month = current_date.month
     last_month = current_date - relativedelta(months=1)
     last_three_month = timezone.now() - relativedelta(months=3)
     users = MyUser.objects.filter(status='dealer',
@@ -93,7 +94,7 @@ def create_dealer_kpi():
                                   dealer_profile__orders__created_at__gte=last_three_month,
                                   dealer_profile__orders__order_products__isnull=False).distinct()
 
-    last_kpi = DealerKPI.objects.filter(month__month=last_month.month).first()
+    last_kpi = DealerKPI.objects.filter(month__month=last_month.month, month__year=current_date.year).first()
     if last_kpi:
         pds_percent = last_kpi.per_cent_pds / 100
         tmz_percent = last_kpi.per_cent_tmz / 100
@@ -105,22 +106,26 @@ def create_dealer_kpi():
         tmz_percent = 0.25
         last_kpi_percent_pds = 25
         last_kpi_percent_tmz = 25
-    created_dealer_kpi = DealerKPI.objects.filter(month=current_date).values_list('user__id', flat=True)
+    created_dealer_kpi = DealerKPI.objects.filter(month__month=current_month,
+                                                  month__year=current_date.year).values_list('user__id', flat=True)
 
     for user in users:
         if user.id not in created_dealer_kpi:
             with transaction.atomic():
-                new_kpi = DealerKPI.objects.create(
-                    user=user,
-                    month=current_date,
-                    is_confirmed=False,
-                    per_cent_pds=last_kpi_percent_pds,
-                    per_cent_tmz=last_kpi_percent_tmz
-                )
-
                 user_tmz_data = get_tmz_of_user_for_kpi(3, user.id)
                 total_pds = 0
-                if user_tmz_data is not None:
+
+                if user_tmz_data:
+                    new_kpi = DealerKPI.objects.create(
+                        user=user,
+                        month=current_date,
+                        is_confirmed=False,
+                        per_cent_pds=last_kpi_percent_pds,
+                        per_cent_tmz=last_kpi_percent_tmz
+                    )
+
+                    dealer_kpi_products = []
+
                     for tmz_data in user_tmz_data:
                         if tmz_data['total_count'] is not None:
 
@@ -138,11 +143,15 @@ def create_dealer_kpi():
 
                             product = AsiaProduct.objects.get(id=tmz_data['order_products__ab_product__id'])
 
-                            DealerKPIProduct.objects.create(
-                                kpi=new_kpi,
-                                product=product,
-                                count=increased_total_count,
+                            dealer_kpi_products.append(
+                                DealerKPIProduct(
+                                    kpi=new_kpi,
+                                    product=product,
+                                    count=increased_total_count,
+                                    sum=total_price
+                                )
                             )
+                    DealerKPIProduct.objects.bulk_create(dealer_kpi_products)
                     increase_amount = int(total_pds) * pds_percent
                     total_pds = round(int(total_pds) + increase_amount)
                     kpi = DealerKPI.objects.get(id=new_kpi.id)

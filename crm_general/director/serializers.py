@@ -49,10 +49,10 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             pwd = validated_data.get('password')
             if username:
                 if not username_is_valid(username):
-                    raise serializers.ValidationError({"text": "Некорректный username"})
+                    raise serializers.ValidationError({"username": "Некорректный username"})
             if pwd:
                 if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"text": "Некорректный password"})
+                    raise serializers.ValidationError({"password": "Некорректный password"})
 
             request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
@@ -75,10 +75,10 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             pwd = validated_data.get('password')
             if username:
                 if not username_is_valid(username):
-                    raise serializers.ValidationError({"text": "Некорректный username"})
+                    raise serializers.ValidationError({"username": "Некорректный username"})
             if pwd:
                 if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"text": "Некорректный password"})
+                    raise serializers.ValidationError({"password": "Некорректный password"})
 
             request = self.context['request']
             for key, value in validated_data.items():
@@ -475,10 +475,10 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
             pwd = validated_data.get('password')
             if username:
                 if not username_is_valid(username):
-                    raise serializers.ValidationError({"text": "Некорректный username"})
+                    raise serializers.ValidationError({"username": "Некорректный username"})
             if pwd:
                 if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"text": "Некорректный password"})
+                    raise serializers.ValidationError({"password": "Некорректный password"})
 
             profile = self.context.get('request').data.get('profile')
             user = MyUser.objects.create_user(**validated_data)
@@ -494,10 +494,10 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
             pwd = validated_data.get('password')
             if username:
                 if not username_is_valid(username):
-                    raise serializers.ValidationError({"text": "Некорректный username"})
+                    raise serializers.ValidationError({"username": "Некорректный username"})
             if pwd:
                 if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"text": "Некорректный password"})
+                    raise serializers.ValidationError({"password": "Некорректный password"})
 
             profile = self.context.get('request').data.get('profile')
             for key, value in validated_data.items():
@@ -983,7 +983,7 @@ class StockProductListSerializer(serializers.ModelSerializer):
         stock_id = self.context['request'].query_params.get('stock')
         rep = super().to_representation(instance)
         rep['category_title'] = instance.category.title if instance.category else '---'
-        rep['collection'] = instance.collection.title if instance.category else '---'
+        rep['collection'] = instance.collection.title if instance.collection else '---'
         stock = Stock.objects.get(id=stock_id)
         price = instance.prices.filter(city=stock.city).first()
         rep['prod_amount_crm'] = instance.total_count * price.price
