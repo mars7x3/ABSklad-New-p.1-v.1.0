@@ -248,9 +248,10 @@ def kpi_sch_2lvl(date: datetime):
 
     managers_data = []
     for manager in managers:
+
         kpis = (
             DealerKPI.objects.filter(
-                month__month=date.month, user__dealer_profile__managers=manager
+                month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
             )
             .annotate(
                 fact_sum=Sum("kpi_products__fact_sum", default=Value(0.0)),
@@ -278,17 +279,16 @@ def kpi_sch_2lvl(date: datetime):
             ).values_list('fact_avg_price', 'avg_price')
         )
 
-        total_kpis = tuple(sum(x) for x in zip(*kpis))
-        if total_kpis:
-            fact_avg, avg = total_kpis[0], total_kpis[1]
+        fact_avg_price = sum([i[0] for i in kpis])
+        avg_price = sum([i[1] for i in kpis])
+        managers_data.append({
+            'name': manager.name,
+            'id': manager.id,
+            'fact_avg_price': fact_avg_price,
+            'avg_price': avg_price,
+            'per_done_avg_price': round(fact_avg_price / avg_price * 100),
+        })
 
-            managers_data.append({
-                'name': manager.name,
-                'id': manager.id,
-                'fact_avg_price': round(fact_avg),
-                'avg_price': round(avg),
-                'per_done_avg_price': calc_percent(fact_avg, avg)
-            })
     return managers_data
 
 
