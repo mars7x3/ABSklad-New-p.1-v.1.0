@@ -47,11 +47,11 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
         kwargs = {}
-        city = request.query_params.get('city')
+        stock = request.query_params.get('stock')
         o_status = request.query_params.get('status')
 
-        if city:
-            kwargs['stock__city__slug'] = city
+        if stock:
+            kwargs['stock_id'] = stock
 
         if o_status:
             kwargs['status'] = o_status
