@@ -262,9 +262,11 @@ def kpi_sch_2lvl(date: datetime):
             month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
         ).annotate(
             fact_avg_price=Sum(
-                F('kpi_products__fact_sum') / F('kpi_products__fact_count'),
-                output_field=FloatField(),
-                default=0
+                Case(
+                    When(kpi_products__fact_count__gt=0, then=F('kpi_products__fact_sum') / F('kpi_products__fact_count')),
+                    default=Value(0),
+                    output_field=FloatField()
+                )
             ),
             avg_price=Sum(
                 F('kpi_products__sum') / F('kpi_products__count'),
@@ -272,15 +274,25 @@ def kpi_sch_2lvl(date: datetime):
                 default=0
             )
         ).values_list('fact_avg_price', 'avg_price')
-
         fact_avg_price = sum([i[0] for i in kpis])
+        if fact_avg_price:
+            fact_avg_price = fact_avg_price / len(kpis)
+
         avg_price = sum([i[1] for i in kpis])
+        if avg_price:
+            avg_price = sum([i[1] for i in kpis]) / len(kpis)
+
+        if fact_avg_price:
+            per_done_avg_price = round(fact_avg_price / avg_price * 100)
+        else:
+            per_done_avg_price = 0
+
         managers_data.append({
             'name': manager.name,
             'id': manager.id,
-            'fact_avg_price': fact_avg_price,
-            'avg_price': avg_price,
-            'per_done_avg_price': round(fact_avg_price / avg_price * 100),
+            'fact_avg_price': round(fact_avg_price),
+            'avg_price': round(avg_price),
+            'per_done_avg_price': per_done_avg_price,
         })
     return managers_data
 
