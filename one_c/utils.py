@@ -408,9 +408,9 @@ def sync_pay_doc_histories():
 
 
 def sync_1c_money_doc_crud(data):
-    money_doc = MoneyDoc.objects.filter(uid=data.get('uid')).first()
-    user = MyUser.objects.filter(uid=data.get('user')).first()
-    cash_box = CashBox.objects.filter(uid=data.get('cash_box')).first()
+    money_doc = MoneyDoc.objects.filter(uid=data.get('doc_uid')).first()
+    user = MyUser.objects.filter(uid=data.get('user_uid')).first()
+    cash_box = CashBox.objects.filter(uid=data.get('kassa')).first()
     if not user:
         return False, 'Контрагент не существует'
     if not cash_box:
@@ -430,10 +430,10 @@ def sync_1c_money_doc_crud(data):
 
     else:
         data = {
-            'uid': data.get('uid'),
+            'uid': data.get('doc_uid'),
             'user': user,
             'cash_box': cash_box,
-            'status': data.get('status'),
+            'status': data.get('doc_type'),
             'is_active': bool(int(data.get('is_active'))),
             'amount': data.get('amount'),
             'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
