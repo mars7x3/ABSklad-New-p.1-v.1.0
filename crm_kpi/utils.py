@@ -554,7 +554,7 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> None:
 
     order = order_product.order
     dealer_kpi = DealerKPIProduct.objects.filter(
-        product_id=order.product.id,
+        product_id=order_product.ab_product.id,
         kpi__user_id=getattr(order.author, "user_id"),
         kpi__month__month=order.released_at.month,
         kpi__month__year=order.released_at.year
@@ -564,11 +564,11 @@ def update_dealer_kpi_product(order_product: OrderProduct) -> None:
         return
 
     if order.is_active:
-        dealer_kpi.fact_count += order.product.count
-        dealer_kpi.fact_sum += order.product.total_price
+        dealer_kpi.fact_count += order_product.count
+        dealer_kpi.fact_sum += order_product.total_price
     else:
-        dealer_kpi.fact_count -= order.product.count
-        dealer_kpi.fact_sum -= order.product.total_price
+        dealer_kpi.fact_count -= order_product.count
+        dealer_kpi.fact_sum -= order_product.total_price
     dealer_kpi.save()
     return True
 
