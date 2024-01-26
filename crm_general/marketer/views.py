@@ -33,10 +33,18 @@ class MarketerProductRUViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMi
         queryset = self.queryset
         active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
+        category_slug = self.request.query_params.get('category_slug')
+        collection_slug = self.request.query_params.get('collection_slug')
         if active_status == 'active':
             queryset = queryset.filter(is_active=True)
         elif active_status == 'inactive':
             queryset = queryset.filter(is_active=False)
+
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
+
+        if collection_slug:
+            queryset = queryset.filter(collection__slug=collection_slug)
 
         if search:
             queryset = queryset.filter(title__icontains=search)

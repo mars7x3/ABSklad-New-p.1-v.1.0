@@ -9,7 +9,7 @@ from one_c.models import MoneyDoc
 
 from .models import StockGroupStat, PurchaseStat, UserTransactionsStat
 from .serializers import StockGroupSerializer, TransactionSerializer
-from .utils import divide_into_weeks, sum_and_collect_by_map, date_filters
+from .utils import divide_into_weeks, sum_and_collect_by_map, DateFilter
 
 
 class StockGroupByWeekAPIView(views.APIView):
@@ -58,19 +58,18 @@ class StockGroupByWeekAPIView(views.APIView):
                 )
             )
 
-            for data in sum_and_collect_by_map(query, self.summing_fields):
-                data.pop("stock_id", None)
+            items = sum_and_collect_by_map(query, self.summing_fields)
+            for item in items:
+                item.pop("stock_id", None)
+                item["date"] = start.date()
+                item["end"] = end.date()
+                collected_dates.append(item)
 
-                if all(value is None for value in data.values()):
-                    continue
-
-                data["date"] = start.date()
-                collected_dates.append(data)
         return response.Response(collected_dates)
 
 
 class StockGroupAPIView(generics.ListAPIView):
-    # permission_classes = (permissions.IsAuthenticated, IsStaff)
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
     queryset = StockGroupStat.objects.all()
     serializer_class = StockGroupSerializer
     filter_backends = (FilterByFields, filters.OrderingFilter)
@@ -99,10 +98,9 @@ class DealerFundsView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
+
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
             query["stock_id"] = stock_id
@@ -117,11 +115,13 @@ class DealerFundsView(views.APIView):
                     name=F("user__name")
                 ),
                 incoming_bank_amount=Sum("bank_income"),
-                incoming_cash_amount=Sum("cash_income"),
-                date=Value(str(date.date()))
+                incoming_cash_amount=Sum("cash_income")
             )
         ):
             item.pop("user_id", None)
+
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -130,10 +130,8 @@ class DealerSalesView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
@@ -149,8 +147,7 @@ class DealerSalesView(views.APIView):
                     name=F("user__name")
                 ),
                 sales_amount=Sum("spent_amount"),
-                sales_count=Sum("purchases_count"),
-                date=Value(str(date.date()))
+                sales_count=Sum("purchases_count")
             )
             .annotate(
                 sales_avg_check=Case(
@@ -169,6 +166,8 @@ class DealerSalesView(views.APIView):
 
         for item in items:
             item.pop("user_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -177,10 +176,8 @@ class DealerProductView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
@@ -196,8 +193,7 @@ class DealerProductView(views.APIView):
                     name=F("user__name")
                 ),
                 products_amount=Sum("spent_amount"),
-                sales_count=Sum("purchases_count"),
-                date=Value(str(date.date()))
+                sales_count=Sum("purchases_count")
             )
             .annotate(
                 sales_avg_check=Case(
@@ -212,6 +208,8 @@ class DealerProductView(views.APIView):
         ):
             item.pop("user_id", None)
             item.pop("sales_count", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -220,10 +218,8 @@ class DealerView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, user_id, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
@@ -237,7 +233,7 @@ class DealerView(views.APIView):
                     id=F("stock_id"),
                     title=F("stock__title")
                 ),
-                dealers_amount=Sum("spent_amount"),
+                dealers_amount=Sum("spent_amount")
             )
             .annotate(
                 dealers_avg_check=Round(
@@ -276,7 +272,8 @@ class DealerView(views.APIView):
             item.pop("incoming_cash_amount", None)
 
             item.pop("stock_id", None)
-            item["date"] = str(date.date())
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -285,10 +282,8 @@ class ProductSalesView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
@@ -308,8 +303,7 @@ class ProductSalesView(views.APIView):
                     title=F("product__title")
                 ),
                 sales_amount=Sum("spent_amount"),
-                sales_count=Sum("purchases_count"),
-                date=Value(str(date.date()))
+                sales_count=Sum("purchases_count")
             )
             .annotate(
                 sales_avg_check=Case(
@@ -329,6 +323,8 @@ class ProductSalesView(views.APIView):
 
         for item in items:
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -337,10 +333,8 @@ class ProductDealersView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
@@ -358,8 +352,7 @@ class ProductDealersView(views.APIView):
                 ),
                 dealers_incoming_funds=F("incoming_bank_amount") + F("incoming_cash_amount"),
                 dealers_products_count=Count("product_id", distinct=True),
-                dealers_amount=Sum("spent_amount"),
-                date=Value(str(date.date()))
+                dealers_amount=Sum("spent_amount")
             )
             .annotate(
                 dealers_avg_check=Case(
@@ -375,6 +368,8 @@ class ProductDealersView(views.APIView):
             item.pop("incoming_bank_amount", None)
             item.pop("incoming_cash_amount", None)
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -383,10 +378,8 @@ class ProductView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, product_id, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
@@ -402,8 +395,7 @@ class ProductView(views.APIView):
                     id=F("product_id"),
                     title=F("product__title")
                 ),
-                products_amount=Sum("spent_amount"),
-                date=Value(str(date.date()))
+                products_amount=Sum("spent_amount")
             )
             .annotate(
                 products_avg_check=Case(
@@ -425,6 +417,8 @@ class ProductView(views.APIView):
             item.pop("incoming_bank_amount", None)
             item.pop("incoming_cash_amount", None)
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             data.append(item)
         return response.Response(data)
 
@@ -433,10 +427,8 @@ class TransactionUserView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date, "created_at__date")
+        date_filter = DateFilter.for_request(request, date, date_field="created_at__date")
+        query = date_filter.queries
 
         user_id = request.query_params.get("user_id", "")
         if user_id.isdigit():
@@ -453,7 +445,7 @@ class TransactionUserView(views.APIView):
             case "bank":
                 query["status"] = "Без нал"
 
-        data = (
+        items = (
             MoneyDoc.objects.filter(is_active=True, user__isnull=False, **query)
             .values("user_id")
             .annotate(
@@ -462,17 +454,22 @@ class TransactionUserView(views.APIView):
                 count=Count("id", distinct=True)
             )
         )
-        return response.Response(data)
+        collected_items = []
+        for item in items:
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
+            collected_items.append(item)
+
+        return response.Response(collected_items)
 
 
 class TransactionView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date, "created_at__date")
+        date_filter = DateFilter.for_request(request, date, date_field="created_at__date")
+        query = date_filter.queries
+
         user_id = request.query_params.get("user_id", "")
         if user_id.isdigit():
             query["user_id"] = user_id
@@ -497,10 +494,8 @@ class OrderView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         product_id = request.query_params.get("product_id", "")
         if product_id.isdigit():
@@ -529,18 +524,18 @@ class OrderView(views.APIView):
         collected_items = []
         for item in items:
             item.pop("user_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             collected_items.append(item)
         return response.Response(collected_items)
 
 
 class OrderDetailsView(views.APIView):
-    # permission_classes = (permissions.IsAuthenticated, IsStaff)
+    permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        filter_type = request.query_params.get("type", "day")
-        format_date = "%Y-%m-%d" if filter_type != "month" else "%Y-%m"
-        date = string_datetime_datetime(date.strip(), datetime_format=format_date)
-        query = date_filters(filter_type, date)
+        date_filter = DateFilter.for_request(request, date)
+        query = date_filter.queries
 
         product_id = request.query_params.get("product_id", "")
         if product_id.isdigit():
@@ -569,5 +564,7 @@ class OrderDetailsView(views.APIView):
         collected_items = []
         for item in items:
             item.pop("product_id", None)
+            item["date"] = date_filter.start.date()
+            item["end"] = date_filter.end_date_for_week
             collected_items.append(item)
         return response.Response(collected_items)
