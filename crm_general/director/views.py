@@ -778,7 +778,7 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
 
         is_active = request.query_params.get('is_active')
         if is_active:
-            kwargs['is_active'] = True
+            kwargs['is_active'] = bool(int(is_active))
 
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
