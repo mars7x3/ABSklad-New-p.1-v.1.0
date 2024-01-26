@@ -166,7 +166,7 @@ class ProductLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
         fields = ('title', 'vendor_code', 'category', 'collection', 'made_in', 'guarantee', 'description',
-                  'video_link', 'weight', 'package_count', 'diagram')
+                  'video_link', 'weight', 'package_count', 'diagram', 'diagram_link')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

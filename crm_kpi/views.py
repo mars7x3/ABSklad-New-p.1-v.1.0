@@ -177,6 +177,9 @@ class KPITotalView(APIView):
 
     def get(self, request):
         month = request.query_params.get('month')
+        if not month:
+            raise ValidationError({"detail": "month is required param!"})
+
         try:
             date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
         except ValueError as e:
@@ -194,6 +197,9 @@ class KPITotalMain2lvlView(APIView):
     def get(self, request):
         month = request.query_params.get('month')
         stat_type = request.query_params.get('stat_type')
+        if not month or not stat_type:
+            raise ValidationError({"detail": "month and stat_type required params!"})
+
         try:
             date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
         except ValueError as e:

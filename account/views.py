@@ -233,7 +233,7 @@ class BalanceHistoryListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     queryset = BalanceHistory.objects.filter(is_active=True)
     serializer_class = BalanceHistorySerializer
-    pagination_class = PageNumberPagination
+    pagination_class = AppNotificationPaginationClass
 
     def get_queryset(self):
         queryset = self.request.user.dealer_profile.balance_histories.all()
@@ -249,11 +249,21 @@ class BalanceHistoryListView(mixins.ListModelMixin, GenericViewSet):
         if t_status:
             kwargs['status'] = t_status
 
+        start = request.query_params.get('start')
+        end = request.query_params.get('end')
+
+        if start and end:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
+            end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+            end_date = end_date + timezone.timedelta(days=1)
+            kwargs['created_at__gte'] = start_date
+            kwargs['created_at__lte'] = end_date
+
         queryset = queryset.filter(**kwargs)
-        paginator = PageNumberPagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+        paginator = AppNotificationPaginationClass()
+        paginated_queryset = paginator.paginate_queryset(queryset, request)
+        serializer = BalanceHistorySerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 
