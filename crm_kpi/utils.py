@@ -249,44 +249,74 @@ def kpi_sch_2lvl(date: datetime):
     managers_data = []
     for manager in managers:
 
-        kpis = (
-            DealerKPI.objects.filter(
-                month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
-            )
-            .annotate(
-                fact_sum=Sum("kpi_products__fact_sum", default=Value(0.0)),
-                fact_count=Sum("kpi_products__fact_count", default=Value(0.0)),
-                sum=Sum("kpi_products__sum", default=Value(0.0)),
-                count=Sum("kpi_products__count", default=Value(0.0))
-            )
-            .annotate(
-                fact_avg_price=Case(
-                    When(
-                        fact_sum__gt=0, fact_count__gt=0,
-                        then=F("fact_sum") / F("fact_count")
-                    ),
-                    default=Value(0.0),
-                    output_field=FloatField()
-                ),
-                avg_price=Case(
-                    When(
-                        sum__gt=0, count__gt=0,
-                        then=F("sum") / F("count")
-                    ),
-                    default=Value(0.0),
+        kpis = DealerKPI.objects.filter(
+            month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
+        ).annotate(
+            fact_avg_price=Sum(
+                Case(
+                    When(kpi_products__fact_count__gt=0, then=F('kpi_products__fact_sum') / F('kpi_products__fact_count')),
+                    default=Value(0),
                     output_field=FloatField()
                 )
-            ).values_list('fact_avg_price', 'avg_price')
-        )
+            ),
+            avg_price=Sum(
+                F('kpi_products__sum') / F('kpi_products__count'),
+                output_field=FloatField(),
+                default=0
+            )
+        ).values_list('fact_avg_price', 'avg_price')
+
+
+#         kpis = (
+#             DealerKPI.objects.filter(
+#                 month__month=date.month, month__year=date.year, user__dealer_profile__managers=manager
+#             )
+#             .annotate(
+#                 fact_sum=Sum("kpi_products__fact_sum", default=Value(0.0)),
+#                 fact_count=Sum("kpi_products__fact_count", default=Value(0.0)),
+#                 sum=Sum("kpi_products__sum", default=Value(0.0)),
+#                 count=Sum("kpi_products__count", default=Value(0.0))
+#             )
+#             .annotate(
+#                 fact_avg_price=Case(
+#                     When(
+#                         fact_sum__gt=0, fact_count__gt=0,
+#                         then=F("fact_sum") / F("fact_count")
+#                     ),
+#                     default=Value(0.0),
+#                     output_field=FloatField()
+#                 ),
+#                 avg_price=Case(
+#                     When(
+#                         sum__gt=0, count__gt=0,
+#                         then=F("sum") / F("count")
+#                     ),
+#                     default=Value(0.0),
+#                     output_field=FloatField()
+#                 )
+#             ).values_list('fact_avg_price', 'avg_price')
+#         )
+
 
         fact_avg_price = sum([i[0] for i in kpis])
+        if fact_avg_price:
+            fact_avg_price = fact_avg_price / len(kpis)
+
         avg_price = sum([i[1] for i in kpis])
+        if avg_price:
+            avg_price = sum([i[1] for i in kpis]) / len(kpis)
+
+        if fact_avg_price:
+            per_done_avg_price = round(fact_avg_price / avg_price * 100)
+        else:
+            per_done_avg_price = 0
+
         managers_data.append({
             'name': manager.name,
             'id': manager.id,
-            'fact_avg_price': fact_avg_price,
-            'avg_price': avg_price,
-            'per_done_avg_price': round(fact_avg_price / avg_price * 100),
+            'fact_avg_price': round(fact_avg_price),
+            'avg_price': round(avg_price),
+            'per_done_avg_price': per_done_avg_price,
         })
 
     return managers_data
