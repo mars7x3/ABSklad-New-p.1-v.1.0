@@ -315,7 +315,7 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
     serializer_class = AccountantProductSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         pr_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         collection_slug = self.request.query_params.get('collection_slug')
@@ -342,7 +342,7 @@ class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericVi
     serializer_class = AccountantCollectionSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         c_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
 
@@ -371,9 +371,10 @@ class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet)
     def get_queryset(self):
         collection_slug = self.request.query_params.get('collection_slug')
         if collection_slug:
-            return self.queryset.filter(products__collection__slug=collection_slug).distinct()
+            instances = self.get_queryset()
+            return instances.filter(products__collection__slug=collection_slug).distinct()
         else:
-            return self.queryset
+            return self.get_queryset()
           
           
 class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
@@ -383,7 +384,7 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
     retrieve_serializer_class = AccountantStockDetailSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         stock_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         if stock_status == 'true':
@@ -420,7 +421,7 @@ class InventoryListUpdateView(ListModelMixin,
         return self.serializer_class
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         request_query = self.request.query_params
         stock_id = request_query.get('stock_id')
         search = request_query.get('search')
