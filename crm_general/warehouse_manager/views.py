@@ -154,7 +154,7 @@ class WareHouseCollectionViewSet(ListModelMixin,
     serializer_class = WareHouseCollectionListSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         c_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
 
