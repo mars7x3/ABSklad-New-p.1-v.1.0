@@ -318,10 +318,16 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
         queryset = self.queryset
         pr_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
+        collection_slug = self.request.query_params.get('collection_slug')
+        category_slug = self.request.query_params.get('category_slug')
         if pr_status == 'active':
             queryset = queryset.filter(is_active=True)
         elif pr_status == 'inactive':
             queryset = queryset.filter(is_active=False)
+        if collection_slug:
+            queryset = queryset.filter(collection__slug=collection_slug)
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
 
         if search:
             queryset = queryset.filter(title__icontains=search)
