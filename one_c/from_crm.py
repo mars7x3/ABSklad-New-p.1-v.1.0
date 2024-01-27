@@ -123,23 +123,22 @@ def sync_return_order_to_1C(returns_order):
 
 def sync_1c_money_doc(money_doc):
     url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
-    if money_doc.status == 'Без нал':
-        cash_box_uid = ''
+    if 'Нал' == money_doc.status:
+        type_status = 'Наличка'
+        cash_box_uid = money_doc.cash_box.uid
     else:
-        city = money_doc.user.dealer_profile.village.city
-        cash_box = city.stocks.first().cash_box
-        cash_box_uid = cash_box.uid
-    # TODO: если в регионе будет больше 1 склада, то надо будет логику кассы поменять.
-
+        type_status = 'Без нал'
+        cash_box_uid = ''
     payload = json.dumps({
         "user_uid": money_doc.user.uid,
         "amount": int(money_doc.amount),
         "created_at": f'{timezone.localtime(money_doc.created_at) + datetime.timedelta(hours=6)}',
-        "order_type": money_doc.status,
+        "order_type": type_status,
         "cashbox_uid": cash_box_uid,
-        "is_active": int(money_doc.is_active),
-        "uid": money_doc.uid
+        "is_active": 1,
+        "uid": "00000000-0000-0000-0000-000000000000"
     })
+
     print('***Sync_order_pay_to_1C: ', payload)
 
     username = 'Директор'
