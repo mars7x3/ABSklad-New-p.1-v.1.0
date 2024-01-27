@@ -422,7 +422,7 @@ def sync_1c_money_doc_crud(data):
         money_doc.status = data.get('doc_type')
         money_doc.is_active = bool(int(data.get('is_active')))
         money_doc.amount = data.get('amount')
-        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
+        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
         money_doc.save()
         if bool(int(data.get('is_active'))) == money_doc.is_active:
             money_doc.is_checked = not money_doc.is_checked
@@ -442,7 +442,7 @@ def sync_1c_money_doc_crud(data):
             'status': data.get('doc_type'),
             'is_active': bool(int(data.get('is_active'))),
             'amount': data.get('amount'),
-            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%d %H:%M:%S') - datetime.timedelta(hours=6)
+            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
         }
         money_doc = MoneyDoc.objects.create(**data)
         print('Check stat')
