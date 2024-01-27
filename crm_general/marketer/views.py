@@ -100,7 +100,7 @@ class MarketerCategoryModelViewSet(ListModelMixin,
 
     def get_queryset(self):
         collection_slug = self.request.query_params.get('collection_slug')
-        queryset = self.get_queryset()
+        queryset = Category.objects.all()
         if collection_slug:
             return queryset.filter(products__collection__slug=collection_slug).distinct()
         else:

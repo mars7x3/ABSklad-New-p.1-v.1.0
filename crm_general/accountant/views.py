@@ -370,11 +370,11 @@ class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet)
 
     def get_queryset(self):
         collection_slug = self.request.query_params.get('collection_slug')
+        instances = Category.objects.all()
         if collection_slug:
-            instances = self.get_queryset()
             return instances.filter(products__collection__slug=collection_slug).distinct()
         else:
-            return self.get_queryset()
+            return instances
           
           
 class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
