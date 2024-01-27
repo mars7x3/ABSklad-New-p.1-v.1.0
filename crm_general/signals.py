@@ -72,7 +72,7 @@ def on_delete_order_product(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=AsiaProduct)
-def check_product_before_activation(sender, instance, **kwargs):
+def check_product_before_activation(sender, instance, created, **kwargs):
     count = 0
 
     d_status_city_counts = DealerStatus.objects.all().count() * City.objects.filter(is_active=True).count()
