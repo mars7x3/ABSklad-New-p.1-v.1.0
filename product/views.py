@@ -60,7 +60,7 @@ class CollectionListView(viewsets.ReadOnlyModelViewSet):
 
 class HitProductListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = AsiaProduct.objects.filter(is_active=True, is_hit=True)
+    queryset = AsiaProduct.objects.filter(is_active=True, is_hit=True).order_by('-updated_at')
     serializer_class = ProductListSerializer
     pagination_class = AppProductPaginationClass
 
