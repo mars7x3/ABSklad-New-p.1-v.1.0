@@ -242,6 +242,6 @@ class CRMNotificationView(ListModelMixin,
 
 
 class MarketerProductHitsListView(ListModelMixin, GenericViewSet):
-    queryset = AsiaProduct.objects.filter(is_hit=True)
+    queryset = AsiaProduct.objects.filter(is_hit=True).order_by('-updated_at')
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = HitProductSerializer
