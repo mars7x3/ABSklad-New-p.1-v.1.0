@@ -78,14 +78,12 @@ def check_product_before_activation(sender, instance, created, **kwargs):
     d_status_city_counts = DealerStatus.objects.all().count() * City.objects.filter(is_active=True).count()
     d_status_type_counts = DealerStatus.objects.all().count() * PriceType.objects.filter(is_active=True).count()
     final_price_count = d_status_city_counts + d_status_type_counts
-
     product_price_count = instance.prices.all().count()
-
     if final_price_count == product_price_count:
         count += 1
 
     cost_prices = instance.cost_prices.filter(price=0)
-    if cost_prices is None:
+    if len(cost_prices) == 0:
         count += 1
 
     if len(instance.description) > 100:
