@@ -13,6 +13,7 @@ from product.models import Category, AsiaProduct, Review, Collection, FilterMaxM
 from product.permissions import IsAuthor
 from product.serializers import CategoryListSerializer, ProductListSerializer, ReviewSerializer, \
     ProductDetailSerializer, CollectionListSerializer, ProductLinkSerializer
+from product.tasks import delete_avg_rating
 
 
 class AppProductPaginationClass(PageNumberPagination):
@@ -36,6 +37,13 @@ class ReviewCDView(mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericVie
     permission_classes = [IsAuthenticated, IsAuthor]
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        delete_avg_rating(instance.id)
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
 class CategoryListView(viewsets.ReadOnlyModelViewSet):
