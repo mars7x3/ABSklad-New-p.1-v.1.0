@@ -310,7 +310,7 @@ warehouse_manager_urlpatterns = [
     path('warehouse-manager/', include(warehouse_manager_router.urls)),
     path('warehouse-manager/report/', WareHouseSaleReportView.as_view()),
     path('warehouse-manager/report/<int:pk>/', WareHouseSaleReportDetailView.as_view()),
-    path('warehouse-manager/notifications/', WareHouseNotificationView.as_view()),
+    path('warehouse/notifications/', WareHouseNotificationView.as_view()),
 
 ]
 
