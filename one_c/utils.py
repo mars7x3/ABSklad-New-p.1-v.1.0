@@ -411,10 +411,11 @@ def sync_1c_money_doc_crud(data):
     money_doc = MoneyDoc.objects.filter(uid=data.get('doc_uid')).first()
     user = MyUser.objects.filter(uid=data.get('user_uid')).first()
     cash_box = CashBox.objects.filter(uid=data.get('kassa')).first()
+
     if not user:
         print('Контрагент не существует')
         return False, 'Контрагент не существует'
-    if not cash_box:
+    if not cash_box and data.get('doc_type') != 'Без нал':
         print('Касса не существует')
         return False, 'Касса не существует'
     if money_doc:
@@ -432,7 +433,6 @@ def sync_1c_money_doc_crud(data):
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
             print(money_doc.is_checked)
-
 
     else:
         data = {
