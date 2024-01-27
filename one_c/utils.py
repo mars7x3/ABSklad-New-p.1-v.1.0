@@ -428,7 +428,7 @@ def sync_1c_money_doc_crud(data):
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
             print('Check stat')
-            main_stat_order_sync(money_doc)
+            main_stat_pds_sync(money_doc)
             print('End Check stat')
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
