@@ -22,7 +22,7 @@ class MyOrderListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
-
+        rep['stock_title'] = instance.stock.title
         return rep
 
 
@@ -35,6 +35,7 @@ class MyOrderDealerSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['name'] = instance.user.name
         rep['city_title'] = instance.village.city.title if instance.village else None
+        rep['phone'] = instance.user.phone
         return rep
 
 
@@ -267,6 +268,7 @@ class InventorySerializer(serializers.ModelSerializer):
         rep['sender_name'] = instance.sender.name
         rep['receiver_name'] = instance.receiver.name
         rep['stock_title'] = instance.sender.warehouse_profile.stock.title
+        rep['city_title'] = instance.sender.warehouse_profile.stock.city.title
         return rep
 
 
@@ -297,9 +299,16 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
+        products = self.context['request'].data.get('products')
         instance = super().update(instance, validated_data)
         instance.receiver = user
         instance.save()
+        inventory_product_to_update = []
+        for product in products:
+            inventory_product = InventoryProduct.objects.get(id=product['id'])
+            inventory_product.rejected = product['rejected']
+            inventory_product_to_update.append(inventory_product)
+        InventoryProduct.objects.bulk_update(inventory_product_to_update, ['rejected'])
         return instance
 
     def to_representation(self, instance):
@@ -307,6 +316,8 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
         rep['sender_name'] = instance.sender.name
         rep['receiver_name'] = instance.receiver.name
         rep['stock_title'] = instance.sender.warehouse_profile.stock.title
+        rep['city_title'] = instance.sender.warehouse_profile.stock.city.title
+        rep['total_count'] = sum(instance.products.filter().values_list('count', flat=True))
         return rep
 
 
