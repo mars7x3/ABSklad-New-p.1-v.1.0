@@ -26,6 +26,7 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
 from crm_general.permissions import IsStaff
+from crm_kpi.models import DealerKPI
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
@@ -1037,3 +1038,15 @@ class DirectorCategoryModelViewSet(viewsets.ModelViewSet):
         sync_category_crm_to_1c(instance)
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
+
+class DirectorNotificationView(APIView):
+    def get(self, request):
+        kpi_count = DealerKPI.objects.filter(is_confirmed=False).count()
+        tasks_count = CRMTask.objects.filter(status='created', status__in=['waiting', 'repeat']).count()
+
+        data = {
+            'kpi_count': kpi_count,
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

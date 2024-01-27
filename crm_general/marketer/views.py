@@ -17,6 +17,7 @@ from .serializers import MarketerProductSerializer, MarketerProductListSerialize
     MarketerCategorySerializer, BannerSerializer, BannerListSerializer, DealerStatusSerializer, StoryListSerializer, \
     StoryDetailSerializer, ShortProductSerializer, CRMNotificationSerializer, MotivationSerializer, \
     DiscountSerializer, HitProductSerializer
+from ..models import CRMTask
 from ..paginations import ProductPagination, GeneralPurposePagination
 from product.models import AsiaProduct, Collection, Category, ProductSize
 from .permissions import IsMarketer
@@ -245,3 +246,17 @@ class MarketerProductHitsListView(ListModelMixin, GenericViewSet):
     queryset = AsiaProduct.objects.filter(is_hit=True).order_by('-updated_at')
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = HitProductSerializer
+
+
+class MarketerNotificationView(APIView):
+    permission_classes = [IsAuthenticated, IsMarketer]
+
+    def get(self, request):
+        user = self.request.user
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

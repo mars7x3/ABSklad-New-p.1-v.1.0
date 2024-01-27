@@ -340,3 +340,21 @@ class ReturnOrderProductView(ListModelMixin,
     queryset = ReturnOrder.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     serializer_class = ReturnOrderSerializer
+
+
+class WareHouseNotificationView(APIView):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+
+    def get(self, request):
+        user = self.request.user
+        order_count = MyOrder.objects.filter(stock=user.warehouse_profile.stock, status='created').count()
+        inventory_count = Inventory.objects.filter(status='new').count()
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'order_count': order_count,
+            'inventory_count': inventory_count,
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
