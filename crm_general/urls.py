@@ -3,7 +3,7 @@ from rest_framework.routers import SimpleRouter
 
 from .accountant.views import AccountantOrderListView, AccountantProductListView, AccountantCollectionListView, \
     AccountantCategoryView, AccountantStockViewSet
-from .hr.views import HRStaffListView, StaffMagazineCreateView
+from .hr.views import HRStaffListView, StaffMagazineCreateView, HrNotificationView
 from .main_director.views import MainDirStaffCRUDView, MainDirectorStockListView
 
 from .manager.views import (
@@ -26,6 +26,7 @@ from .manager.views import (
     ProductRetrieveAPIView as ManagerProductRetrieveAPIView,
     BalanceViewSet as ManagerBalanceViewSet,
     BalancePlusManagerView as ManagerBalancePlusManagerView, ProdListForOrderView, ManagerDeleteOrderView,
+    ManagerNotificationView,
 )
 
 from .rop.views import (
@@ -51,7 +52,7 @@ from .rop.views import (
     ProductPriceListAPIView as RopProductPriceListAPIView,
     ProductRetrieveAPIView as RopProductRetrieveAPIView,
     BalanceViewSet as BalanceViewSet,
-    ManagerShortListView as ManagerShortListView
+    ManagerShortListView as ManagerShortListView, RopNotificationView
 )
 
 from .director.views import *
@@ -62,12 +63,12 @@ from .views import *
 from .marketer.views import (
     MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeView,
     MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView,
-    MarketerProductHitsListView,
+    MarketerProductHitsListView, MarketerNotificationView,
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
     WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView, ReturnOrderProductView,
-    InventoryProductDeleteView
+    InventoryProductDeleteView, WareHouseNotificationView
 )
 
 main_director_router = SimpleRouter()
@@ -86,7 +87,7 @@ hr_router.register("hr/staff/list", HRStaffListView)
 hr_router.register("hr/magazine/create", StaffMagazineCreateView)
 
 hr_urlpatterns = [
-
+    path('hr/notifications/', HrNotificationView.as_view()),
     path('', include(hr_router.urls)),
 ]
 
@@ -137,6 +138,7 @@ director_urlpatterns = [
     path('director/warehouses/add-to-stock/', DirJoinWarehouseToStockListView.as_view()),
     path('director/rop/deactivate/', ROPChangeView.as_view()),
     path('director/warehouse/deactivate/', WareHouseChangeView.as_view()),
+    path('director/notifications/', DirectorNotificationView.as_view()),
 
     path('max-test/', MaxatTestView.as_view()),
 
@@ -211,7 +213,8 @@ manager_urlpatterns = [
     path("manager/balance/plus/", ManagerBalancePlusManagerView.as_view(),
          name="crm_general-manager-balance-plus-create"),
     path("manager/product/list/for-order/", ProdListForOrderView.as_view()),
-    path("manager/order/delete", ManagerDeleteOrderView.as_view()),
+    path("manager/order/delete/", ManagerDeleteOrderView.as_view()),
+    path("manager/notifications/", ManagerNotificationView.as_view()),
 
     path("manager/", include(manager_router.urls)),
 ]
@@ -264,6 +267,8 @@ rop_urlpatterns = [
     path("rop/collections/", RopCollectionListAPIView.as_view(), name="crm_general-rop-collections-list"),
     path("rop/categories/", RopCategoryListAPIView.as_view(), name="crm_general-rop-categories-list"),
     path("rop/products/", RopProductPriceListAPIView.as_view(), name="crm_general-rop-products-list"),
+    path('rop/notifications/', RopNotificationView.as_view()),
+
     re_path("^rop/products/(?P<product_id>.+)/detail/$", RopProductRetrieveAPIView.as_view(),
             name="crm_general-rop-product-detail"),
 
@@ -284,6 +289,7 @@ marketer_router.register('product-hits', MarketerProductHitsListView)
 
 marketer_urlpatterns = [
     path('marketer/dealer-status/list/', MarketerDealerStatusListView.as_view({'get': 'list'})),
+    path('marketer/notifications/', MarketerNotificationView.as_view()),
     path('marketer/', include(marketer_router.urls)),
 ]
 
@@ -304,6 +310,7 @@ warehouse_manager_urlpatterns = [
     path('warehouse-manager/', include(warehouse_manager_router.urls)),
     path('warehouse-manager/report/', WareHouseSaleReportView.as_view()),
     path('warehouse-manager/report/<int:pk>/', WareHouseSaleReportDetailView.as_view()),
+    path('warehouse-manager/notifications/', WareHouseNotificationView.as_view()),
 
 ]
 

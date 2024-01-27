@@ -1,6 +1,8 @@
 from django.db.models import FloatField, Sum, Q
 from rest_framework import decorators, filters, mixins, generics, viewsets, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from account.models import ManagerProfile, DealerProfile, BalanceHistory, Wallet, DealerStatus, MyUser
 from crm_general.filters import FilterByFields
@@ -15,6 +17,7 @@ from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, 
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
     DealerStatusSerializer, ManagerListSerializer
 from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin, BaseManagerMixin
+from ..models import CRMTask
 
 
 # -------------------------------------------- MANAGERS
@@ -353,3 +356,16 @@ class ManagerShortListView(generics.ListAPIView):
     queryset = ManagerProfile.objects.select_related("user", "city").all()
     serializer_class = ManagerListSerializer
 
+
+class RopNotificationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = self.request.user
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

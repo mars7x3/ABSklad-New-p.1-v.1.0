@@ -60,3 +60,16 @@ class StaffMagazineCreateView(mixins.CreateModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsHR]
     queryset = StaffMagazine.objects.all()
     serializer_class = HRStaffMagazineSerializer
+
+
+class HrNotificationView(APIView):
+    def get(self, request):
+        new_accounts = MyUser.objects.filter(
+            status__in=['director', 'main_director', 'rop', 'manager', 'marketer', 'accountant', 'warehouse', 'hr'],
+            magazines__isnull=True).count()
+
+        data = {
+            'new_accounts': new_accounts,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
