@@ -21,7 +21,7 @@ from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDet
     AccountantStockShortSerializer, InventoryDetailSerializer, ReturnOrderDetailSerializer, ReturnOrderSerializer, \
     ReturnOrderProductSerializer
 from crm_general.filters import FilterByFields
-from crm_general.models import Inventory
+from crm_general.models import Inventory, CRMTask
 from crm_general.paginations import GeneralPurposePagination
 
 from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
@@ -473,3 +473,22 @@ class ReturnOrderProductUpdateView(UpdateModelMixin, GenericViewSet):
     queryset = ReturnOrderProduct.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = ReturnOrderProductSerializer
+
+
+class AccountantNotificationView(APIView):
+    def get(self, request):
+        inventories_count = Inventory.objects.filter(status='new').count()
+        orders_count = MyOrder.objects.filter(status='created').count()
+        return_orders_count = ReturnOrderProduct.objects.filter(status='created').count()
+        balances_plus_count = BalancePlus.objects.filter(is_moderation=True).count()
+        tasks_count = CRMTask.objects.filter(status='created').count()
+
+        data = {
+            'inventories_count': inventories_count,
+            'orders_count': orders_count,
+            'return_orders_count': return_orders_count,
+            'balances_plus_count': balances_plus_count,
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
