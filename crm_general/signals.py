@@ -83,11 +83,13 @@ def check_product_before_activation(sender, instance, created, **kwargs):
         count += 1
 
     cost_prices = instance.cost_prices.filter(price=0)
-    if len(cost_prices) == 0:
-        count += 1
+    if cost_prices:
+        if len(cost_prices) == 0:
+            count += 1
 
-    if len(instance.description) > 100:
-        count += 1
+    if instance.description:
+        if len(instance.description) > 100:
+            count += 1
 
     images = instance.images.first()
     if images:
