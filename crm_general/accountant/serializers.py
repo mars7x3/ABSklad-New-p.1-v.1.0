@@ -313,8 +313,8 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['sender_name'] = instance.sender.name
-        rep['receiver_name'] = instance.receiver.name
+        rep['sender_name'] = instance.sender.name if instance.sender else None
+        rep['receiver_name'] = instance.receiver.name if instance.receiver else None
         rep['stock_title'] = instance.sender.warehouse_profile.stock.title
         rep['city_title'] = instance.sender.warehouse_profile.stock.city.title
         rep['total_count'] = sum(instance.products.filter().values_list('count', flat=True))
