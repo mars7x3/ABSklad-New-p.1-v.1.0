@@ -82,8 +82,8 @@ def check_product_before_activation(sender, instance, created, **kwargs):
     if final_price_count == product_price_count:
         count += 1
 
-    cost_prices = instance.cost_prices.filter(price=0)
-    if len(cost_prices) == 0:
+    cost_prices = instance.cost_prices.filter(price=0).first()
+    if cost_prices is None:
         count += 1
 
     if instance.description:
@@ -97,11 +97,12 @@ def check_product_before_activation(sender, instance, created, **kwargs):
     sizes = instance.sizes.first()
     if sizes:
         count += 1
+
     if instance.is_active:
         if count < 5:
             instance.is_active = False
-            instance.save()
+            AsiaProduct.objects.filter(pk=instance.pk).update(is_active=False)
 
     if count == 5:
         instance.is_active = True
-        instance.save()
+        AsiaProduct.objects.filter(pk=instance.pk).update(is_active=True)
