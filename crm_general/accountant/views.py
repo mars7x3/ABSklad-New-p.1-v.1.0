@@ -434,8 +434,10 @@ class InventoryListUpdateView(ListModelMixin,
         if search:
             queryset = queryset.filter(user__name__icontains=search)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = InventorySerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @action(methods=['GET'], detail=False, url_path='stock-list')
     def get_stock_list(self, request):
