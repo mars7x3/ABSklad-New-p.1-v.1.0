@@ -87,6 +87,7 @@ def sync_dealer_back_to_1C(dealer):
             'Email': dealer.email,
             'City': profile.village.city.title if profile.village else '',
             'CityUID': profile.village.city.user_uid if profile.village else '00000000-0000-0000-0000-000000000000',
+            "delete": not int(dealer.is_active),
         }]})
 
     print('***DEALER SYNC***')
@@ -115,10 +116,11 @@ def sync_return_order_to_1C(returns_order):
             for p in products
         ]
     })
-
+    print(payload)
     username = 'Директор'
     password = '757520ля***'
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    print('return - ', response.text)
 
 
 def sync_1c_money_doc(money_doc):
