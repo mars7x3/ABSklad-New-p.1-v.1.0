@@ -25,7 +25,7 @@ def sync_category_crm_to_1c(category):
         "NomenclatureUID": '',
         "category_title": category.title,
         "category_uid": category.uid,
-        "is_active": int(category.is_active),
+        "delete": int(not category.is_active),
         "vendor_code": '',
         "is_product": 0
     })
@@ -49,7 +49,7 @@ def sync_product_crm_to_1c(product):
         "NomenclatureUID": product.uid,
         "CategoryName": product.category.title,
         "CategoryUID": product.category.uid,
-        "is_active": int(product.is_active),
+        "delete": int(not product.is_active),
         "vendor_code": product.vendor_code,
         "is_product": 1
     })
@@ -78,7 +78,7 @@ def sync_dealer_back_to_1C(dealer):
         print(response.text)
     payload = json.dumps({
         "clients": [{
-            "is_active": int(dealer.is_active),
+            "delete": int(not dealer.is_active),
             'Name': dealer.name,
             'UID': dealer.uid,
             'Telephone': dealer.phone,
@@ -87,7 +87,6 @@ def sync_dealer_back_to_1C(dealer):
             'Email': dealer.email,
             'City': profile.village.city.title if profile.village else '',
             'CityUID': profile.village.city.user_uid if profile.village else '00000000-0000-0000-0000-000000000000',
-            "delete": not int(dealer.is_active),
         }]})
 
     print('***DEALER SYNC***')
@@ -104,9 +103,9 @@ def sync_dealer_back_to_1C(dealer):
 
 def sync_return_order_to_1C(returns_order):
     url = "http://91.211.251.134/testcrm/hs/asoi/ReturnGoods"
-    products = returns_order.return_products.all()
+    products = returns_order.products.all()
     payload = json.dumps({
-        "uid": returns_order.order.uid,
+        "uid": returns_order.order.author.user.uid,
         "created_at": f'{timezone.localtime(returns_order.created_at) + datetime.timedelta(hours=6)}',
         "products_return": [
             {
@@ -137,7 +136,7 @@ def sync_1c_money_doc(money_doc):
         "created_at": f'{timezone.localtime(money_doc.created_at) + datetime.timedelta(hours=6)}',
         "order_type": type_status,
         "cashbox_uid": cash_box_uid,
-        "is_active": 1,
+        "delete": 0,
         "uid": "00000000-0000-0000-0000-000000000000"
     })
 
@@ -173,7 +172,7 @@ def sync_money_doc_to_1C(order):
                 "created_at": f'{timezone.localtime(order.created_at) + datetime.timedelta(hours=6)}',
                 "order_type": type_status,
                 "cashbox_uid": cash_box_uid,
-                "is_active": 1,
+                "delete": 0,
                 "uid": "00000000-0000-0000-0000-000000000000"
             })
             print('***ORDER PAY***')
@@ -208,7 +207,7 @@ def sync_order_to_1C(order):
                 "created_at": f'{released_at}',
                 "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
                 "cityUID": order.stock.uid,
-                "is_active": int(order.is_active),
+                "delete": int(not order.is_active),
                 "uid": order.uid,
                 "products": [
                     {"title": p.title,
@@ -241,7 +240,7 @@ def sync_stock_1c_2_crm(stock):
     payload = json.dumps({
         "CategoryUID": stock.uid,
         "title": stock.title,
-        "is_active": int(stock.is_active)
+        "delete": int(not stock.is_active)
     })
 
     username = 'Директор'
