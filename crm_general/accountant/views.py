@@ -483,7 +483,7 @@ class AccountantNotificationView(APIView):
         inventories_count = Inventory.objects.filter(status='new').count()
         orders_count = MyOrder.objects.filter(status='created').count()
         return_orders_count = ReturnOrderProduct.objects.filter(status='created').count()
-        balances_plus_count = BalancePlus.objects.filter(is_moderation=True).count()
+        balances_plus_count = BalancePlus.objects.filter(is_moderation=False).count()
         tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
 
         data = {

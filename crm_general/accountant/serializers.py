@@ -7,6 +7,7 @@ from rest_framework import serializers
 from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus, BalancePlusFile
 from crm_general.accountant.utils import deduct_returned_product_from_order_and_stock
 from crm_general.models import Inventory, InventoryProduct
+from crm_general.serializers import CRMStockSerializer
 
 from general_service.models import Stock
 
@@ -49,7 +50,7 @@ class MyOrderDetailSerializer(serializers.ModelSerializer):
         rep['order_receipts'] = OrderReceiptSerializer(instance.order_receipts, many=True, context=self.context).data
         rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
         rep['order_products'] = OrderProductSerializer(instance.order_products, many=True, context=self.context).data
-
+        rep['stock'] = CRMStockSerializer(instance.stock, context=self.context).data
         return rep
 
 
@@ -156,7 +157,7 @@ class AccountantProductSerializer(serializers.ModelSerializer):
         rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
         price = instance.prices.filter().first()
         rep['price'] = price.price if price else '---'
-        rep['total_price'] = sum(instance.prices.all().values_list('price', flat=True))
+        rep['total_price'] = price.price * stocks_count_crm if price else 0
         return rep
 
 
@@ -217,7 +218,7 @@ class AccountantStockListSerializer(serializers.ModelSerializer):
         stock = sum(instance.counts.all().values_list('count_norm', flat=True))
         rep['stocks_count_crm'] = stocks_count_crm
         rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
-        rep['total_price'] = sum(instance.city.prices.all().values_list('price', flat=True))
+        rep['total_price'] = round(sum(instance.city.prices.all().values_list('price', flat=True)))
         rep['city_title'] = instance.city.title
         rep['stock'] = stocks_count_crm - stock
         return rep
@@ -238,8 +239,7 @@ class AccountantStockProductSerializer(serializers.ModelSerializer):
         rep['stocks_count_1c'] = sum(instance.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
         price = instance.prices.filter(city__stocks__id=stock_id).first()
         rep['price'] = price.price if price else '---'
-        rep['total_price'] = sum(instance.prices.filter(city__stocks__id=stock_id).
-                                 values_list('price', flat=True))
+        rep['total_price'] = price.price * stocks_count_crm if price else 0
         return rep
 
 
@@ -287,6 +287,9 @@ class InventoryProductSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['product'] = instance.product.id
         rep['product_id'] = instance.product.title
+        product = instance.product
+        stock = instance.inventory.sender.warehouse_profile.stock
+        rep['count_crm'] = sum(product.counts.filter(stock=stock).values_list('count_crm', flat=True))
         return rep
 
 
