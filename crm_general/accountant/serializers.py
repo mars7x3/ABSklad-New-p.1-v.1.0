@@ -24,6 +24,7 @@ class MyOrderListSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
         rep['stock_title'] = instance.stock.title
+        rep['creator_name'] = instance.creator.name if instance.creator else None
         return rep
 
 
@@ -51,6 +52,7 @@ class MyOrderDetailSerializer(serializers.ModelSerializer):
         rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
         rep['order_products'] = OrderProductSerializer(instance.order_products, many=True, context=self.context).data
         rep['stock'] = CRMStockSerializer(instance.stock, context=self.context).data
+        rep['creator_name'] = instance.creator.name if instance.creator else None
         return rep
 
 

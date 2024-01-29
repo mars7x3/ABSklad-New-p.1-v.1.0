@@ -32,11 +32,13 @@ class ShortOrderSerializer(serializers.ModelSerializer):
     stock_name = serializers.SerializerMethodField(read_only=True)
     stock_address = serializers.SerializerMethodField(read_only=True)
     name = serializers.SerializerMethodField(read_only=True)
+    creator_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyOrder
         fields = ("id", 'name', "dealer_city", "stock_city", "price", "type_status",
-                  "created_at", "paid_at", "released_at", "is_active", "status", "stock_name", "stock_address")
+                  "created_at", "paid_at", "released_at", "is_active", "status", "stock_name", "stock_address",
+                  "creator_name")
 
     def get_name(self, instance):
         if instance.author:
@@ -58,6 +60,10 @@ class ShortOrderSerializer(serializers.ModelSerializer):
         if instance.stock:
             return instance.stock.address
 
+    def get_creator_name(self, instance):
+        if instance.creator:
+            return instance.creator.name
+
 
 class OrderReceiptSerializer(serializers.ModelSerializer):
     class Meta:
@@ -76,6 +82,7 @@ class OrderSerializer(serializers.ModelSerializer):
     receipts = OrderReceiptSerializer(many=True, read_only=True, source="order_receipts")
     products = OrderProductSerializer(many=True, read_only=True, source="order_products")
     name = serializers.SerializerMethodField(read_only=True)
+    creator_name = serializers.SerializerMethodField(read_only=True)
 
     stock_id = serializers.PrimaryKeyRelatedField(
         queryset=Stock.objects.all(),
@@ -99,7 +106,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = MyOrder
         fields = ("id", "stock", "price", "status", "type_status", "comment",
                   "created_at", "released_at", "paid_at", "receipts", "products",
-                  "stock_id", "user_id", "product_counts", 'name')
+                  "stock_id", "user_id", "product_counts", 'name', 'creator_name')
         read_only_fields = ("id", "stock", "status", "created_at",
                             "released_at", "paid_at", 'name')
 
@@ -107,8 +114,16 @@ class OrderSerializer(serializers.ModelSerializer):
         if instance.author:
             return instance.author.user.name
 
+    def get_creator_name(self, instance):
+        if instance.creator:
+            return instance.creator.name
+
     def validate(self, attrs):
+        creator = self.context['request'].user
         user = attrs.pop("user_id", None)
+        if creator:
+            attrs['creator'] = creator
+
         if user:
             dealer = user.dealer_profile
             attrs["author"] = dealer
