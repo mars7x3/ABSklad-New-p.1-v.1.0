@@ -205,12 +205,12 @@ class FilterProductByDiscountAPIView(APIView):
 
 class CRMTaskListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsStaff]
-    queryset = CRMTask.objects.all()
+    queryset = CRMTask.objects.filter(is_active=True)
     serializer_class = CRMTaskCRUDSerializer
     pagination_class = CRMPaginationClass
 
     def get_queryset(self):
-        queryset = self.request.user.my_tasks.all()
+        queryset = self.request.user.my_tasks.filter(is_active=True)
         return queryset
 
     @action(detail=False, methods=['get'])

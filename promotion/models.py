@@ -13,6 +13,7 @@ class Story(models.Model):
     text = models.TextField()
     file = models.FileField(upload_to='stories_files', blank=True, null=True)
     clicks = models.PositiveIntegerField(default=0)
+    created_at = models.DateField(auto_now_add=True)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     products = models.ManyToManyField(AsiaProduct, related_name='stories', blank=True)

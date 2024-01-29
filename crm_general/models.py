@@ -132,4 +132,5 @@ class InventoryProduct(models.Model):
     inventory = models.ForeignKey(Inventory, on_delete=models.CASCADE, related_name='products')
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='inventory_products')
     count = models.PositiveIntegerField(default=0)
+    rejected = models.BooleanField(default=False)
 
