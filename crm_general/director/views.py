@@ -1037,3 +1037,4 @@ class DirectorCategoryModelViewSet(viewsets.ModelViewSet):
         sync_category_crm_to_1c(instance)
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
+

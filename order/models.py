@@ -70,6 +70,7 @@ class OrderProduct(models.Model):
 class ReturnOrder(models.Model):
     order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='return_orders')
     created_at = models.DateTimeField(auto_now_add=True)
+    uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
 
     class Meta:
         ordering = ('-created_at',)

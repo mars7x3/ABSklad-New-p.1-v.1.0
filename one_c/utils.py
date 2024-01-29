@@ -10,6 +10,7 @@ from transliterate import translit
 
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
+from crm_general.models import Inventory
 from crm_kpi.utils import update_dealer_kpi_by_order
 from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock, City, PriceType, CashBox
@@ -705,4 +706,20 @@ def sync_1c_prod_price_crud(data):
         return True, 'Success!'
     else:
         return False, 'Продукт не найден!'
+
+
+def sync_1c_inventory_crud(data):
+    inventory = Inventory.objects.filter(uid=data['uid']).first()
+    if inventory:
+        update_data = []
+        for p in data['products']:
+            stock = Stock.objects.filter(uid=p['stock_uid']).first()
+            count = product.counts.filter(stock=stock)
+            if stock:
+                count.count_1c = p['count']
+                update_data.append(count)
+
+        ProductCount.objects.bulk_update(update_data, ['count_1c'])
+        return True, 'Success!'
+    return False, 'Inventory не найден!'
 
