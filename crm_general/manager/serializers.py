@@ -11,6 +11,7 @@ from account.models import (
     MyUser, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory,
     BalancePlus, BalancePlusFile
 )
+from account.serializers import BalancePlusFileSerializer
 from crm_general.models import CRMTask
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer, VillageSerializer
 from crm_general.utils import get_motivation_done
@@ -336,6 +337,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
 
 class DealerBalanceHistorySerializer(serializers.ModelSerializer):
     balance_crm = serializers.SerializerMethodField(read_only=True)
+    files = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = BalanceHistory
@@ -347,6 +349,13 @@ class DealerBalanceHistorySerializer(serializers.ModelSerializer):
                 return instance.balance + instance.amount
             case "wallet":
                 return instance.balance - instance.amount
+
+    def get_files(self, obj):
+        balance_plus_instances = BalancePlus.objects.filter(dealer=obj.dealer)
+        files = BalancePlusFile.objects.filter(balance__in=balance_plus_instances)
+
+        serializer = BalancePlusFileSerializer(files, many=True)
+        return serializer.data
 
 
 class DealerBasketProductSerializer(serializers.ModelSerializer):
