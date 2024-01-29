@@ -172,13 +172,13 @@ def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
             product.category = category.first()
 
         product.title = data.get('title')
-        product.is_active = bool(int(data.get('is_active')))
+        product.is_active = not bool(data.get('delete'))
         product.vendor_code = data.get('vendor_code')
         product.save()
 
     else:
         product = AsiaProduct.objects.create(uid=uid, title=data.get('title'),
-                                             is_active=bool(int(data.get('is_active'))),
+                                             is_active=not bool(data.get('delete')),
                                              vendor_code=data.get('vendor_code'))
         ProductCostPrice.objects.create(product=product)
         category = Category.objects.filter(uid=data.get('category_uid')).first()
@@ -421,11 +421,11 @@ def sync_1c_money_doc_crud(data):
         return False, 'Касса не существует'
     if money_doc:
         money_doc.status = data.get('doc_type')
-        money_doc.is_active = not data.get('delete')
+        money_doc.is_active = not bool(data.get('delete'))
         money_doc.amount = data.get('amount')
         money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
         money_doc.save()
-        if not data.get('delete') == money_doc.is_active:
+        if not bool(data.get('delete')) == money_doc.is_active:
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
             print('Check stat')
@@ -441,7 +441,7 @@ def sync_1c_money_doc_crud(data):
             'user': user,
             'cash_box': cash_box,
             'status': data.get('doc_type'),
-            'is_active': not data.get('delete'),
+            'is_active': not bool(data.get('delete')),
             'amount': data.get('amount'),
             'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
         }
@@ -465,7 +465,7 @@ def sync_dealer_1C_to_back(request):
         "email": request.data.get("Email"),
         'status': 'dealer',
         'password': generate_pwd(),
-        'is_active': bool(int(request.data.get('is_active')))
+        'is_active': not bool(request.data.get('delete'))
     }
     profile_data = {
         "liability": request.data.get('Liability'),
@@ -509,11 +509,11 @@ def sync_category_1c_to_crm(data):
     category = Category.objects.filter(uid=data.get('category_uid')).first()
     if category:
         category.title = data.get('category_title')
-        category.is_active = bool(int(data.get('is_active')))
+        category.is_active = not bool(data.get('is_active'))
         category.save()
     else:
         Category.objects.create(title=data.get('category_title'), uid=data.get('category_uid'),
-                                slug=data.get('category_uid'), is_active=bool(int(data.get('is_active'))))
+                                slug=data.get('category_uid'), is_active=not bool(data.get('is_active')))
 
 
 def order_1c_to_crm(data):
@@ -533,7 +533,7 @@ def order_1c_to_crm(data):
         order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
-        order_data['is_active'] = not data['delete']
+        order_data['is_active'] = not bool(data['delete'])
 
         order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
         if order:
@@ -608,18 +608,18 @@ def sync_1c_price_city_crud(data):
     price_type = PriceType.objects.filter(uid=data['uid']).first()
 
     if city:
-        city.is_active = bool(int(data['is_active']))
+        city.is_active = not bool(data['delete'])
         city.title = data['title']
         city.save()
     elif price_type:
-        price_type.is_active = bool(int(data['is_active']))
+        price_type.is_active = not bool(data['delete'])
         price_type.title = data['title']
         price_type.save()
     else:
         data = {
             'uid': data['uid'],
             'title': data['title'],
-            'is_active': bool(int(data['is_active']))
+            'is_active': not bool(data['delete'])
         }
         PriceType.objects.create(**data)
     return True, 'Success!'
@@ -630,7 +630,7 @@ def sync_1c_user_city_crud(data):
     title = translit(data['title'], 'ru', reversed=True)
     slug = title.replace(' ', '_').lower()
     if city:
-        city.is_active = bool(int(data['is_active']))
+        city.is_active = not bool(data['is_active'])
         city.title = data['title']
         city.slug = slug
         city.save()
@@ -638,7 +638,7 @@ def sync_1c_user_city_crud(data):
         data = {
             'uid': data['uid'],
             'title': data['title'],
-            'is_active': bool(int(data['is_active'])),
+            'is_active': not bool(data['is_active']),
             'slug': slug
         }
         City.objects.create(**data)
@@ -648,14 +648,14 @@ def sync_1c_user_city_crud(data):
 def sync_1c_stock_crud(data):
     stock = Stock.objects.filter(uid=data['uid']).first()
     if stock:
-        stock.is_active = bool(int(data['is_active']))
+        stock.is_active = not bool(data['delete'])
         stock.title = data['title']
         stock.save()
     else:
         data = {
             'uid': data['uid'],
             'title': data['title'],
-            'is_active': bool(int(data['is_active'])),
+            'is_active': not bool(data['delete']),
         }
         Stock.objects.create(**data)
     return True, 'Success!'
