@@ -392,12 +392,10 @@ class ManagerNotificationView(APIView):
 
     def get(self, request):
         user = self.request.user
-        order_count = MyOrder.objects.filter(author__managers=user.id, status='created').count()
         tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
 
         data = {
-            'order_count': order_count,
-            'tasks_count': tasks_count,
+            'tasks_count': tasks_count
         }
 
         return Response(data, status=status.HTTP_200_OK)
