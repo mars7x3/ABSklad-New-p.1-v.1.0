@@ -87,6 +87,7 @@ def sync_dealer_back_to_1C(dealer):
             'Email': dealer.email,
             'City': profile.village.city.title if profile.village else '',
             'CityUID': profile.village.city.user_uid if profile.village else '00000000-0000-0000-0000-000000000000',
+            "delete": not int(dealer.is_active),
         }]})
 
     print('***DEALER SYNC***')

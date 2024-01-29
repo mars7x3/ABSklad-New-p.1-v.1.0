@@ -420,11 +420,11 @@ def sync_1c_money_doc_crud(data):
         return False, 'Касса не существует'
     if money_doc:
         money_doc.status = data.get('doc_type')
-        money_doc.is_active = bool(int(data.get('is_active')))
+        money_doc.is_active = not data.get('delete')
         money_doc.amount = data.get('amount')
         money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
         money_doc.save()
-        if bool(int(data.get('is_active'))) == money_doc.is_active:
+        if not data.get('delete') == money_doc.is_active:
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
             print('Check stat')
@@ -440,7 +440,7 @@ def sync_1c_money_doc_crud(data):
             'user': user,
             'cash_box': cash_box,
             'status': data.get('doc_type'),
-            'is_active': bool(int(data.get('is_active'))),
+            'is_active': not data.get('delete'),
             'amount': data.get('amount'),
             'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
         }
@@ -532,7 +532,7 @@ def order_1c_to_crm(data):
         order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
         order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
-        order_data['is_active'] = bool(int(data['is_active']))
+        order_data['is_active'] = not data['delete']
 
         order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
         if order:
@@ -576,12 +576,11 @@ def order_1c_to_crm(data):
                 update_data.append(p)
             OrderProduct.objects.bulk_update(update_data, ['is_checked'])
 
-            kwargs = {'user': user, 'title': f'Заказ #{order.id}', 'description': order.comment,
+            kwargs = {'user': user, 'title': f'Заказ #{order.id}', 'description': "Заказ успешно создан.",
                       'link_id': order.id, 'status': 'order', 'is_push': True}
             Notification.objects.create(**kwargs)
 
             # change_dealer_status.delay(user.id)
-
 
 
 def sync_test_nurs():
