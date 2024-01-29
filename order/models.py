@@ -21,6 +21,7 @@ class MyOrder(models.Model):
         ('kaspi', 'Каспи')
     )
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
+    creator = models.ForeignKey(MyUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     name = models.CharField(max_length=100, blank=True, null=True)  # TODO: delete this
     gmail = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this
     phone = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this

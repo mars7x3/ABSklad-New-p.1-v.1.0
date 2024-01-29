@@ -36,6 +36,7 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
 class OrderListSerializer(serializers.ModelSerializer):
     type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
     name = serializers.SerializerMethodField(read_only=True)
+    creator_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyOrder
@@ -43,6 +44,10 @@ class OrderListSerializer(serializers.ModelSerializer):
 
     def get_name(self, instance):
         return instance.author.user.name
+
+    def get_creator_name(self, instance):
+        if instance.creator:
+            return instance.creator.name
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
@@ -61,6 +66,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['name'] = instance.author.user.name
+        rep['creator_name'] = instance.creator.name if instance.creator else None
         return rep
 
 
