@@ -186,6 +186,12 @@ class InventoryProductSerializer(serializers.ModelSerializer):
     def get_category_title(obj):
         return obj.product.category.title
 
+    @staticmethod
+    def get_count_1c(obj):
+        product = obj.product
+        stock = obj.inventory.sender.warehouse_profile.stock
+        return sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField(read_only=True)
@@ -283,12 +289,14 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
         files = self.context['request'].FILES.getlist('files')
         return_order = ReturnOrder.objects.filter(order_id=order_id).first()
         if return_order:
-            create_order_return_product(return_order, comment, int(count), files, product_id)
-            return return_order
+            return_product = create_order_return_product(return_order, comment, int(count), files, product_id)
+            if return_product:
+                return return_order
         else:
             instance = super().create(validated_data)
-            create_order_return_product(instance, comment, int(count), files, product_id)
-            return instance
+            return_product = create_order_return_product(instance, comment, int(count), files, product_id)
+            if return_product:
+                return instance
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Case, When
+from django.db.models import Case, When, Sum, F, Q
 from django.utils import timezone
 from rest_framework.filters import SearchFilter
 from rest_framework import viewsets, status, mixins, generics, filters
@@ -29,7 +29,7 @@ from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
 from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
-from one_c.models import MoneyDoc
+from one_c.models import MoneyDoc, MovementProduct1C
 from order.models import MyOrder, ReturnOrder, ReturnOrderProduct
 from crm_general.tasks import minus_quantity
 from product.models import AsiaProduct, Collection, Category
@@ -132,7 +132,7 @@ class AccountantOrderTotalInfoView(APIView):
 
 class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = DealerProfile.objects.all()
+    queryset = DealerProfile.objects.filter(Q(wallet__amount_crm__gt=0) | Q(wallet__amount_1c__gt=0))
     serializer_class = DealerProfileListSerializer
     pagination_class = CRMPaginationClass
 
@@ -227,7 +227,7 @@ class AccountantTotalEcoBalanceView(APIView):
 
 class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = BalancePlus.objects.filter(is_moderation=False)
+    queryset = BalancePlus.objects.all()
     serializer_class = BalancePlusListSerializer
 
     @action(detail=False, methods=['get'])
@@ -238,6 +238,10 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
         is_success = request.query_params.get('is_success')
         if is_success:
             kwargs['is_success'] = bool(int(is_success))
+
+        is_moderation = request.query_params.get('is_moderation')
+        if is_moderation:
+            kwargs['is_moderation'] = bool(int(is_moderation))
 
         queryset = queryset.filter(**kwargs)
         serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
@@ -495,3 +499,34 @@ class AccountantNotificationView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class ProductHistoryView(APIView):
+    def get(self, request, *args, **kwargs):
+        query_params = self.request.query_params
+        product_id = query_params.get('product_id')
+        start_date = query_params.get('start_date')
+        end_date = query_params.get('end_date')
+
+        sent = MyOrder.objects.filter(order_products__ab_product_id=product_id,
+                                      created_at__range=[start_date, end_date],
+                                      status__in=['paid', 'sent', 'wait', 'success']).values(
+            'created_at',
+            'author'
+        ).annotate(
+            count=Sum('order_products__count'),
+            author_name=F('author__user__name')
+        )
+        movements = MovementProduct1C.objects.filter(mv_products__product_id=product_id,
+                                                     created_at__range=[start_date, end_date]).values(
+            'mv_products__product',
+            'warehouse_recipient_uid',
+            'warehouse_sender_uid'
+        ).annotate(
+            count=Sum('mv_products__count'),
+        )
+        data = {
+            "sent": sent,
+            "movement": movements
+        }
+        return Response(data)
