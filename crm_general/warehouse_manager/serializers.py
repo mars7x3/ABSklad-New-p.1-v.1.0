@@ -173,6 +173,7 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
 class InventoryProductSerializer(serializers.ModelSerializer):
     product_title = serializers.SerializerMethodField(read_only=True)
     category_title = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = InventoryProduct
@@ -191,6 +192,13 @@ class InventoryProductSerializer(serializers.ModelSerializer):
         product = obj.product
         stock = obj.inventory.sender.warehouse_profile.stock
         return sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+
+    @staticmethod
+    def get_price(instance):
+        stock = instance.inventory.sender.warehouse_profile.stock
+        city= stock.city
+        product = instance.product
+        return instance.product.prices.filter(city=city, product=product).first().price
 
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
