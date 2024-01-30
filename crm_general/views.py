@@ -293,5 +293,5 @@ class ProductInStockAPIView(APIView):
             if crm_count != 0 or ones_count != 0 or total_price != 0:
                 products_in_stock.append(product)
 
-        serializer = AccountantStockProductSerializer(products, context={'stock_id': stock_id}, many=True)
+        serializer = AccountantStockProductSerializer(products_in_stock, context={'stock_id': stock_id}, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
