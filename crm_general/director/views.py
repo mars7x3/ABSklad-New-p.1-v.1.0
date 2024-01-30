@@ -655,7 +655,7 @@ class DirectorPriceListView(mixins.ListModelMixin, GenericViewSet):
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
-        kwargs = {}
+        kwargs = {'is_discount': False}
 
         title = request.query_params.get('title')
         if title:
