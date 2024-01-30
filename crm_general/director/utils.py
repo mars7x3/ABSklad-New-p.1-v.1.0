@@ -231,3 +231,4 @@ def create_prod_counts(stock):
             )
         )
     ProductCount.objects.bulk_create(create_data)
+

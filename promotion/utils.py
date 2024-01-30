@@ -120,7 +120,7 @@ def get_kpi_products(user):
                 'id': p.product.id,
                 'count': p.count,
                 'fact_count': p.fact_count,
-                'percent': round(p.fact_count / p.count * 100) if p.count > 0 else 0
+                'percent': round(p.fact_count / p.count * 100) if p.fact_count > 0 else 0
             }
         )
     return prods_data
