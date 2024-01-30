@@ -110,9 +110,18 @@ class MyUserSerializer(serializers.ModelSerializer):
 
 
 class DirBalanceHistorySerializer(serializers.ModelSerializer):
+    files = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = BalanceHistory
         fields = '__all__'
+
+    def get_files(self, obj):
+        balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
+        files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
+        if files:
+            serializer = BalancePlusFileSerializer(files, many=True)
+            return serializer.data
 
 
 class BalancePlusListSerializer(serializers.ModelSerializer):
