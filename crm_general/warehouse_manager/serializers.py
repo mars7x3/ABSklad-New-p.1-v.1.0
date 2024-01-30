@@ -39,8 +39,9 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
         count = ReturnOrderProduct.objects.filter(product_id=instance.ab_product.id,
                                                   return_order__order_id=instance.order.id).aggregate(
             total_count=Sum('count'))['total_count']
-
-        return count
+        if count:
+            return count
+        return 0
 
 
 class OrderListSerializer(serializers.ModelSerializer):
