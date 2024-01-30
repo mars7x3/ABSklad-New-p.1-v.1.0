@@ -354,8 +354,9 @@ class DealerBalanceHistorySerializer(serializers.ModelSerializer):
         balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
         files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
         if files:
-            serializer = BalancePlusFileSerializer(files, many=True)
+            serializer = BalancePlusFileSerializer(files, many=True, context=self.context)
             return serializer.data
+        return []
 
 
 class DealerBasketProductSerializer(serializers.ModelSerializer):
