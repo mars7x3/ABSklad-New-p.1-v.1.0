@@ -420,12 +420,17 @@ def sync_1c_money_doc_crud(data):
         print('Касса не существует')
         return False, 'Касса не существует'
     if money_doc:
+        is_check = False
+        if not bool(data.get('delete')) == money_doc.is_active:
+            is_check = True
+
         money_doc.status = data.get('doc_type')
         money_doc.is_active = not bool(data.get('delete'))
         money_doc.amount = data.get('amount')
         money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
+
         money_doc.save()
-        if not bool(data.get('delete')) == money_doc.is_active:
+        if is_check:
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
             print('Check stat')
