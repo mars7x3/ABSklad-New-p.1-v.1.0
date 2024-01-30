@@ -564,7 +564,14 @@ def order_1c_to_crm(data):
                 minus_quantity(order)
 
             if is_check:
+                update_data = []
+                for p in order.order_products.all():
+                    p.is_checked = not p.is_checked
+                    update_data.append(p)
+                OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+
                 main_stat_order_sync(order)
+
                 update_data = []
                 for p in order.order_products.all():
                     p.is_checked = not p.is_checked
