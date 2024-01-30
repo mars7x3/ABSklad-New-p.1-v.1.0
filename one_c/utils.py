@@ -545,6 +545,9 @@ def order_1c_to_crm(data):
             # update
             order_data.pop('paid_at')
             order_data.pop('created_at')
+            is_check = False
+            if not order.is_active == bool(data['delete']):
+                is_check = True
 
             if order.is_active:
                 plus_quantity(order)
@@ -560,12 +563,13 @@ def order_1c_to_crm(data):
                 OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products_data])
                 minus_quantity(order)
 
-            main_stat_order_sync(order)
-            update_data = []
-            for p in order.order_products.all():
-                p.is_checked = not p.is_checked
-                update_data.append(p)
-            OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+            if is_check:
+                main_stat_order_sync(order)
+                update_data = []
+                for p in order.order_products.all():
+                    p.is_checked = not p.is_checked
+                    update_data.append(p)
+                OrderProduct.objects.bulk_update(update_data, ['is_checked'])
 
         else:
             # create order
