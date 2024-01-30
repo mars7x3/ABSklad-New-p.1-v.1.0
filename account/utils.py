@@ -66,12 +66,30 @@ def send_push_notification(users, title, text, link_id, status):
 
 def sync_balance_history(data, type_status):
     if type_status == 'order':
-        BalanceHistory.objects.create(
-            dealer=data.author,
-            amount=data.price,
-            balance=data.author.wallet.amount_crm,
+        balance = data.author.wallet.amount_crm
+        dealer = data.author
+    else:
+        balance = data.user.dealer_profile.wallet.amount_crm
+        dealer = data.user.dealer_profile
 
-        )
+    validated_data = {
+        'dealer': dealer,
+        'amount': data.price,
+        'status': type_status,
+        'action_id': data.id,
+        'is_active': data.is_active,
+        'created_at': data.created_at,
+        'balance': balance
+    }
+
+    history = BalanceHistory.objecs.filter(dealer=dealer, status=type_status, action_id=data.id)
+    if history:
+        for key, value in validated_data.items():
+            setattr(history, key, value)
+        history.save()
+    else:
+        BalanceHistory.objects.create(**validated_data)
+
 
 
 def username_is_valid(username):
