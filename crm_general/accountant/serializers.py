@@ -314,7 +314,7 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
-        products = instance.inventory_products.all()
+        products = instance.products.all()
         update_products = []
         for product in products:
             ones_count = sum(product.counts.filter(stock=instance.sender.warehouse_profile.stock).

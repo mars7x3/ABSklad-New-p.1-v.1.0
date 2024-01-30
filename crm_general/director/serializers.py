@@ -338,6 +338,8 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
             ProductCount.objects.bulk_update(stock_norm_counts_to_update, ['count_norm'])
 
         if city_prices:
+            if instance.is_discount:
+                raise serializers.ValidationError({'detail': 'Can not change price for discounted product'})
             city_prices_to_update = []
             dealer_statuses = DealerStatus.objects.all()
             for price in city_prices:
@@ -353,6 +355,8 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                     city_prices_to_update.append(product_d_status_price)
             ProductPrice.objects.bulk_update(city_prices_to_update, ['price'])
         if type_prices:
+            if instance.is_discount:
+                raise serializers.ValidationError({'detail': 'Can not change price for discounted product'})
             type_prices_to_update = []
             dealer_statuses = DealerStatus.objects.all()
             for price in type_prices:
