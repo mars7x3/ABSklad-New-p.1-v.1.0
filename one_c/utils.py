@@ -421,7 +421,7 @@ def sync_1c_money_doc_crud(data):
         return False, 'Касса не существует'
     if money_doc:
         is_check = False
-        if not bool(data.get('delete')) == money_doc.is_active:
+        if bool(data.get('delete')) == money_doc.is_active:
             is_check = True
 
         money_doc.status = data.get('doc_type')
