@@ -22,6 +22,7 @@ from .serializers import (
     WalletListSerializer, BalancePlusSerializer, ProductListForOrderSerializer,
     ShortProductSerializer
 )
+from ..models import CRMTask
 
 
 # ---------------------------------------------------- ORDERS
@@ -384,3 +385,17 @@ class ManagerDeleteOrderView(APIView):
 
             return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
         return Response({'text': 'Permission denied!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ManagerNotificationView(APIView):
+    permission_classes = [IsAuthenticated, IsManager]
+
+    def get(self, request):
+        user = self.request.user
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'tasks_count': tasks_count
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

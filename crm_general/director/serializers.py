@@ -45,14 +45,14 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         with transaction.atomic():
-            username = validated_data.get('username')
-            pwd = validated_data.get('password')
-            if username:
-                if not username_is_valid(username):
-                    raise serializers.ValidationError({"username": "Некорректный username"})
-            if pwd:
-                if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"password": "Некорректный password"})
+            # username = validated_data.get('username')
+            # pwd = validated_data.get('password')
+            # if username:
+            #     if not username_is_valid(username):
+            #         raise serializers.ValidationError({"username": "Некорректный username"})
+            # if pwd:
+            #     if not pwd_is_valid(pwd):
+            #         raise serializers.ValidationError({"password": "Некорректный password"})
 
             request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
@@ -71,20 +71,20 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         with transaction.atomic():
-            username = validated_data.get('username')
-            pwd = validated_data.get('password')
-            if username:
-                if not username_is_valid(username):
-                    raise serializers.ValidationError({"username": "Некорректный username"})
-            if pwd:
-                if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"password": "Некорректный password"})
+            # username = validated_data.get('username')
+            # pwd = validated_data.get('password')
+            # if username:
+            #     if not username_is_valid(username):
+            #         raise serializers.ValidationError({"username": "Некорректный username"})
+            # if pwd:
+            #     if not pwd_is_valid(pwd):
+            #         raise serializers.ValidationError({"password": "Некорректный password"})
 
             request = self.context['request']
             for key, value in validated_data.items():
                 setattr(instance, key, value)
-            instance.pwd = validated_data.get('password')
-            instance.set_password(validated_data.get('password'))
+            # instance.pwd = validated_data.get('password')
+            # instance.set_password(validated_data.get('password'))
             instance.save()
 
             if instance.status == 'rop':
@@ -471,14 +471,14 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         with transaction.atomic():
-            username = validated_data.get('username')
-            pwd = validated_data.get('password')
-            if username:
-                if not username_is_valid(username):
-                    raise serializers.ValidationError({"username": "Некорректный username"})
-            if pwd:
-                if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"password": "Некорректный password"})
+            # username = validated_data.get('username')
+            # pwd = validated_data.get('password')
+            # if username:
+            #     if not username_is_valid(username):
+            #         raise serializers.ValidationError({"username": "Некорректный username"})
+            # if pwd:
+            #     if not pwd_is_valid(pwd):
+            #         raise serializers.ValidationError({"password": "Некорректный password"})
 
             profile = self.context.get('request').data.get('profile')
             user = MyUser.objects.create_user(**validated_data)
@@ -490,20 +490,20 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         with transaction.atomic():
-            username = validated_data.get('username')
-            pwd = validated_data.get('password')
-            if username:
-                if not username_is_valid(username):
-                    raise serializers.ValidationError({"username": "Некорректный username"})
-            if pwd:
-                if not pwd_is_valid(pwd):
-                    raise serializers.ValidationError({"password": "Некорректный password"})
+            # username = validated_data.get('username')
+            # pwd = validated_data.get('password')
+            # if username:
+            #     if not username_is_valid(username):
+            #         raise serializers.ValidationError({"username": "Некорректный username"})
+            # if pwd:
+            #     if not pwd_is_valid(pwd):
+            #         raise serializers.ValidationError({"password": "Некорректный password"})
 
             profile = self.context.get('request').data.get('profile')
             for key, value in validated_data.items():
                 setattr(instance, key, value)
-            instance.pwd = validated_data.get('password')
-            instance.set_password(validated_data.get('password'))
+            # instance.pwd = validated_data.get('password')
+            # instance.set_password(validated_data.get('password'))
             instance.save()
 
             profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)

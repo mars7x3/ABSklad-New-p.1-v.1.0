@@ -114,9 +114,6 @@ def get_kpi_products(user):
     prods = kpi.kpi_products.all().select_related('product')
     prods_data = []
     for p in prods:
-        print(p.fact_count)
-        print(p.count)
-
         prods_data.append(
             {
                 'title': p.product.title,

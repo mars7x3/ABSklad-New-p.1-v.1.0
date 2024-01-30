@@ -21,7 +21,7 @@ from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDet
     AccountantStockShortSerializer, InventoryDetailSerializer, ReturnOrderDetailSerializer, ReturnOrderSerializer, \
     ReturnOrderProductSerializer
 from crm_general.filters import FilterByFields
-from crm_general.models import Inventory
+from crm_general.models import Inventory, CRMTask
 from crm_general.paginations import GeneralPurposePagination
 
 from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
@@ -315,7 +315,7 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
     serializer_class = AccountantProductSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         pr_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         collection_slug = self.request.query_params.get('collection_slug')
@@ -342,7 +342,7 @@ class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericVi
     serializer_class = AccountantCollectionSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         c_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
 
@@ -370,10 +370,11 @@ class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet)
 
     def get_queryset(self):
         collection_slug = self.request.query_params.get('collection_slug')
+        instances = Category.objects.all()
         if collection_slug:
-            return self.queryset.filter(products__collection__slug=collection_slug).distinct()
+            return instances.filter(products__collection__slug=collection_slug).distinct()
         else:
-            return self.queryset
+            return instances
           
           
 class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
@@ -383,7 +384,7 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
     retrieve_serializer_class = AccountantStockDetailSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         stock_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         if stock_status == 'true':
@@ -420,7 +421,7 @@ class InventoryListUpdateView(ListModelMixin,
         return self.serializer_class
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         request_query = self.request.query_params
         stock_id = request_query.get('stock_id')
         search = request_query.get('search')
@@ -433,8 +434,10 @@ class InventoryListUpdateView(ListModelMixin,
         if search:
             queryset = queryset.filter(user__name__icontains=search)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = InventorySerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @action(methods=['GET'], detail=False, url_path='stock-list')
     def get_stock_list(self, request):
@@ -472,3 +475,23 @@ class ReturnOrderProductUpdateView(UpdateModelMixin, GenericViewSet):
     queryset = ReturnOrderProduct.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = ReturnOrderProductSerializer
+
+
+class AccountantNotificationView(APIView):
+    def get(self, request):
+        user = self.request.user
+        inventories_count = Inventory.objects.filter(status='new').count()
+        orders_count = MyOrder.objects.filter(status='created').count()
+        return_orders_count = ReturnOrderProduct.objects.filter(status='created').count()
+        balances_plus_count = BalancePlus.objects.filter(is_moderation=False).count()
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'inventories_count': inventories_count,
+            'orders_count': orders_count,
+            'return_orders_count': return_orders_count,
+            'balances_plus_count': balances_plus_count,
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

@@ -107,16 +107,17 @@ class DealerKPIView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         request_query = self.request.query_params
         month = request_query.get('month')
+        queryset = self.get_queryset()
         if month:
             try:
                 date = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
             except ValueError as e:
                 raise ValidationError({"detail": str(e)})
 
-            queryset = self.queryset.filter(month__month=date.month, month__year=date.year)
+            queryset = queryset.filter(month__month=date.month, month__year=date.year)
         else:
             today = timezone.now()
-            queryset = self.queryset.filter(month__month=today.month, month__year=today.year)
+            queryset = queryset.filter(month__month=today.month, month__year=today.year)
 
         search = request_query.get('search')
         if search:

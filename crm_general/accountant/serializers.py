@@ -7,6 +7,7 @@ from rest_framework import serializers
 from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus, BalancePlusFile
 from crm_general.accountant.utils import deduct_returned_product_from_order_and_stock
 from crm_general.models import Inventory, InventoryProduct
+from crm_general.serializers import CRMStockSerializer
 
 from general_service.models import Stock
 
@@ -22,7 +23,8 @@ class MyOrderListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
-
+        rep['stock_title'] = instance.stock.title
+        rep['creator_name'] = instance.creator.name if instance.creator else None
         return rep
 
 
@@ -35,6 +37,7 @@ class MyOrderDealerSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['name'] = instance.user.name
         rep['city_title'] = instance.village.city.title if instance.village else None
+        rep['phone'] = instance.user.phone
         return rep
 
 
@@ -48,7 +51,8 @@ class MyOrderDetailSerializer(serializers.ModelSerializer):
         rep['order_receipts'] = OrderReceiptSerializer(instance.order_receipts, many=True, context=self.context).data
         rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
         rep['order_products'] = OrderProductSerializer(instance.order_products, many=True, context=self.context).data
-
+        rep['stock'] = CRMStockSerializer(instance.stock, context=self.context).data
+        rep['creator_name'] = instance.creator.name if instance.creator else None
         return rep
 
 
@@ -106,9 +110,18 @@ class MyUserSerializer(serializers.ModelSerializer):
 
 
 class DirBalanceHistorySerializer(serializers.ModelSerializer):
+    files = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = BalanceHistory
         fields = '__all__'
+
+    def get_files(self, obj):
+        balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
+        files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
+        if files:
+            serializer = BalancePlusFileSerializer(files, many=True)
+            return serializer.data
 
 
 class BalancePlusListSerializer(serializers.ModelSerializer):
@@ -155,7 +168,7 @@ class AccountantProductSerializer(serializers.ModelSerializer):
         rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
         price = instance.prices.filter().first()
         rep['price'] = price.price if price else '---'
-        rep['total_price'] = sum(instance.prices.all().values_list('price', flat=True))
+        rep['total_price'] = price.price * stocks_count_crm if price else 0
         return rep
 
 
@@ -216,7 +229,7 @@ class AccountantStockListSerializer(serializers.ModelSerializer):
         stock = sum(instance.counts.all().values_list('count_norm', flat=True))
         rep['stocks_count_crm'] = stocks_count_crm
         rep['stocks_count_1c'] = sum(instance.counts.all().values_list('count_1c', flat=True))
-        rep['total_price'] = sum(instance.city.prices.all().values_list('price', flat=True))
+        rep['total_price'] = round(sum(instance.city.prices.all().values_list('price', flat=True)))
         rep['city_title'] = instance.city.title
         rep['stock'] = stocks_count_crm - stock
         return rep
@@ -237,8 +250,7 @@ class AccountantStockProductSerializer(serializers.ModelSerializer):
         rep['stocks_count_1c'] = sum(instance.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
         price = instance.prices.filter(city__stocks__id=stock_id).first()
         rep['price'] = price.price if price else '---'
-        rep['total_price'] = sum(instance.prices.filter(city__stocks__id=stock_id).
-                                 values_list('price', flat=True))
+        rep['total_price'] = price.price * stocks_count_crm if price else 0
         return rep
 
 
@@ -264,9 +276,10 @@ class InventorySerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['sender_name'] = instance.sender.name
-        rep['receiver_name'] = instance.receiver.name
+        rep['sender_name'] = instance.sender.name if instance.sender else None
+        rep['receiver_name'] = instance.receiver.name if instance.receiver else None
         rep['stock_title'] = instance.sender.warehouse_profile.stock.title
+        rep['city_title'] = instance.sender.warehouse_profile.stock.city.title
         return rep
 
 
@@ -285,6 +298,9 @@ class InventoryProductSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['product'] = instance.product.id
         rep['product_id'] = instance.product.title
+        product = instance.product
+        stock = instance.inventory.sender.warehouse_profile.stock
+        rep['count_crm'] = sum(product.counts.filter(stock=stock).values_list('count_crm', flat=True))
         return rep
 
 
@@ -297,16 +313,25 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
+        products = self.context['request'].data.get('products')
         instance = super().update(instance, validated_data)
         instance.receiver = user
         instance.save()
+        inventory_product_to_update = []
+        for product in products:
+            inventory_product = InventoryProduct.objects.get(id=product['id'])
+            inventory_product.rejected = product['rejected']
+            inventory_product_to_update.append(inventory_product)
+        InventoryProduct.objects.bulk_update(inventory_product_to_update, ['rejected'])
         return instance
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['sender_name'] = instance.sender.name
-        rep['receiver_name'] = instance.receiver.name
+        rep['sender_name'] = instance.sender.name if instance.sender else None
+        rep['receiver_name'] = instance.receiver.name if instance.receiver else None
         rep['stock_title'] = instance.sender.warehouse_profile.stock.title
+        rep['city_title'] = instance.sender.warehouse_profile.stock.city.title
+        rep['total_count'] = sum(instance.products.filter().values_list('count', flat=True))
         return rep
 
 

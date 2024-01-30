@@ -17,6 +17,7 @@ from .serializers import MarketerProductSerializer, MarketerProductListSerialize
     MarketerCategorySerializer, BannerSerializer, BannerListSerializer, DealerStatusSerializer, StoryListSerializer, \
     StoryDetailSerializer, ShortProductSerializer, CRMNotificationSerializer, MotivationSerializer, \
     DiscountSerializer, HitProductSerializer
+from ..models import CRMTask
 from ..paginations import ProductPagination, GeneralPurposePagination
 from product.models import AsiaProduct, Collection, Category, ProductSize
 from .permissions import IsMarketer
@@ -30,7 +31,7 @@ class MarketerProductRUViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMi
     pagination_class = ProductPagination
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         category_slug = self.request.query_params.get('category_slug')
@@ -100,10 +101,11 @@ class MarketerCategoryModelViewSet(ListModelMixin,
 
     def get_queryset(self):
         collection_slug = self.request.query_params.get('collection_slug')
+        queryset = Category.objects.all()
         if collection_slug:
-            return self.queryset.filter(products__collection__slug=collection_slug).distinct()
+            return queryset.filter(products__collection__slug=collection_slug).distinct()
         else:
-            return self.queryset
+            return queryset
 
 
 class ProductSizeView(DestroyModelMixin,
@@ -125,7 +127,7 @@ class MarketerBannerModelViewSet(ListModelMixin,
     pagination_class = ProductPagination
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         start_date = self.request.query_params.get('start_time')
@@ -176,7 +178,7 @@ class MarketerStoryViewSet(ListModelMixin,
     retrieve_serializer_class = StoryDetailSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         if active_status == 'active':
@@ -212,7 +214,7 @@ class CRMNotificationView(ListModelMixin,
     pagination_class = GeneralPurposePagination
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         total_push = Notification.objects.filter(is_push=True).count()
         total_read = Notification.objects.filter(is_read=True).count()
         search = self.request.query_params.get('search')
@@ -241,6 +243,20 @@ class CRMNotificationView(ListModelMixin,
 
 
 class MarketerProductHitsListView(ListModelMixin, GenericViewSet):
-    queryset = AsiaProduct.objects.filter(is_hit=True)
+    queryset = AsiaProduct.objects.filter(is_hit=True).order_by('-updated_at')
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = HitProductSerializer
+
+
+class MarketerNotificationView(APIView):
+    permission_classes = [IsAuthenticated, IsMarketer]
+
+    def get(self, request):
+        user = self.request.user
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
