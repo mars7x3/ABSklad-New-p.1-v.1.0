@@ -70,7 +70,7 @@ class DealerStoreSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        data['dealer'] = request.user.dealer_profile,
+        data['dealer'] = request.user.dealer_profile
         return data
 
 
