@@ -18,7 +18,7 @@ from product.models import AsiaProduct, Collection, Category
 class MyOrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        fields = ('author', 'id', 'status', 'type_status', 'price')
+        fields = ('author', 'id', 'status', 'type_status', 'price', 'created_at', 'released_at', 'paid_at')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

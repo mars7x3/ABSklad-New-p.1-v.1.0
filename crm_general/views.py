@@ -18,6 +18,7 @@ from crm_general.serializers import StaffListSerializer, CollectionCRUDSerialize
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
     CityCRUDSerializer, PriceTypeListSerializer, DealerProfileSerializer, \
     ShortProductSerializer, CRMTaskCRUDSerializer, VillageSerializer
+from crm_general.warehouse_manager.serializers import WareHouseProductListSerializer
 from general_service.models import City, Stock, PriceType, Village
 from order.db_request import query_debugger
 from product.models import Collection, AsiaProduct, ProductImage, Category
@@ -276,4 +277,21 @@ class VillageListView(APIView):
     def get(self, request, *args, **kwargs):
         villages = Village.objects.all()
         serializer = VillageSerializer(villages, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductInStockAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        stock_id = self.request.query_params.get('stock_id')
+        products = AsiaProduct.objects.all()
+        products_in_stock = []
+        for product in products:
+            crm_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
+            ones_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+            price = product.prices.filter().first()
+            total_price = price.price * crm_count if price else 0
+            if crm_count != 0 or ones_count != 0 or total_price != 0:
+                products_in_stock.append(product)
+
+        serializer = WareHouseProductListSerializer(products_in_stock, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
