@@ -67,17 +67,11 @@ class DealerStoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerStore
         exclude = ('dealer',)
-        extra_kwargs = {"city": {'required': True}}
 
     def validate(self, data):
         request = self.context.get('request')
         data['dealer'] = request.user.dealer_profile,
         return data
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['city_title'] = instance.city.title if instance.city else None
-        return rep
 
 
 class AccountStockSerializer(serializers.ModelSerializer):
