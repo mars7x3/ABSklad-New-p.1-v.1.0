@@ -186,6 +186,12 @@ class InventoryProductSerializer(serializers.ModelSerializer):
     def get_category_title(obj):
         return obj.product.category.title
 
+    @staticmethod
+    def get_count_1c(obj):
+        product = obj.product
+        stock = obj.inventory.sender.warehouse_profile.stock
+        return sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField(read_only=True)
