@@ -297,11 +297,14 @@ class InventoryProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        stock = instance.inventory.sender.warehouse_profile.stock
+        city = stock.city
         rep['product'] = instance.product.id
         rep['product_id'] = instance.product.title
         product = instance.product
         stock = instance.inventory.sender.warehouse_profile.stock
         rep['count_1c'] = sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+        rep['price'] = instance.product.prices.filter(city=city, product=product).first().price
         return rep
 
 
