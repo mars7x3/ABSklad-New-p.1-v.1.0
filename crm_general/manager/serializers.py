@@ -351,10 +351,9 @@ class DealerBalanceHistorySerializer(serializers.ModelSerializer):
                 return instance.balance - instance.amount
 
     def get_files(self, obj):
-        history_status = obj.status
-        if history_status == 'wallet':
-            balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
-            files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
+        balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
+        files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
+        if files:
             serializer = BalancePlusFileSerializer(files, many=True)
             return serializer.data
 
