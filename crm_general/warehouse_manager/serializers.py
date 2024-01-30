@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -28,9 +29,18 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
 
 
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
+    return_product_count = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = OrderProduct
         fields = '__all__'
+
+    def get_return_product_count(self, instance):
+        count = ReturnOrderProduct.objects.filter(product_id=instance.ab_product.id,
+                                                  return_order__order_id=instance.order.id).aggregate(
+            total_count=Sum('count'))['total_count']
+
+        return count
 
 
 class OrderListSerializer(serializers.ModelSerializer):
@@ -165,7 +175,7 @@ class InventoryProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InventoryProduct
-        exclude = ('inventory', )
+        exclude = ('inventory',)
 
     @staticmethod
     def get_product_title(obj):
@@ -206,7 +216,7 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         if self.context.get('retrieve'):
-            rep['products'] = InventoryProductSerializer(instance.products.all(),  read_only=True, many=True).data
+            rep['products'] = InventoryProductSerializer(instance.products.all(), read_only=True, many=True).data
         return rep
 
     def update(self, instance, validated_data):
@@ -284,4 +294,3 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
         rep['name'] = instance.order.author.user.name
         rep['status'] = instance.order.status
         return rep
-
