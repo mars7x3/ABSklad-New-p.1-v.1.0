@@ -167,6 +167,7 @@ accountant_urlpatterns = [
     path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
     path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
     path('accountant/notifications/', AccountantNotificationView.as_view()),
+    path('accountant/product/history/list/', ProductHistoryView.as_view()),
 
     path('', include(accountant_router.urls)),
 ]
