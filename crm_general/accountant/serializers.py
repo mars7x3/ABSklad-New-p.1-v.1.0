@@ -117,11 +117,12 @@ class DirBalanceHistorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_files(self, obj):
-        balance_plus_instances = BalancePlus.objects.filter(dealer=obj.dealer)
-        files = BalancePlusFile.objects.filter(balance__in=balance_plus_instances)
-
-        serializer = BalancePlusFileSerializer(files, many=True)
-        return serializer.data
+        history_status = obj.status
+        if history_status == 'wallet':
+            balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
+            files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
+            serializer = BalancePlusFileSerializer(files, many=True)
+            return serializer.data
 
 
 class BalancePlusListSerializer(serializers.ModelSerializer):
