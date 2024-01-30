@@ -301,7 +301,7 @@ class InventoryProductSerializer(serializers.ModelSerializer):
         rep['product_id'] = instance.product.title
         product = instance.product
         stock = instance.inventory.sender.warehouse_profile.stock
-        rep['count_crm'] = sum(product.counts.filter(stock=stock).values_list('count_crm', flat=True))
+        rep['count_1c'] = sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
         return rep
 
 
@@ -314,16 +314,19 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
-        products = self.context['request'].data.get('products')
+        products = instance.inventory_products.all()
+        update_products = []
+        for product in products:
+            ones_count = sum(product.counts.filter(stock=instance.sender.warehouse_profile.stock).
+                             values_list('count_1c', flat=True))
+            if ones_count != product.count:
+                product.is_rejected = True
+                update_products.append(product)
+
         instance = super().update(instance, validated_data)
         instance.receiver = user
         instance.save()
-        inventory_product_to_update = []
-        for product in products:
-            inventory_product = InventoryProduct.objects.get(id=product['id'])
-            inventory_product.rejected = product['rejected']
-            inventory_product_to_update.append(inventory_product)
-        InventoryProduct.objects.bulk_update(inventory_product_to_update, ['rejected'])
+        InventoryProduct.objects.bulk_update(update_products, fields=['is_rejected'])
         return instance
 
     def to_representation(self, instance):

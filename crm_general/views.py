@@ -12,13 +12,13 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from account.models import MyUser, DealerStatus, DealerProfile
+from crm_general.accountant.serializers import AccountantStockProductSerializer
 from crm_general.models import CRMTask, CRMTaskFile
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
     CityCRUDSerializer, PriceTypeListSerializer, DealerProfileSerializer, \
     ShortProductSerializer, CRMTaskCRUDSerializer, VillageSerializer
-from crm_general.warehouse_manager.serializers import WareHouseProductListSerializer
 from general_service.models import City, Stock, PriceType, Village
 from order.db_request import query_debugger
 from product.models import Collection, AsiaProduct, ProductImage, Category
@@ -293,5 +293,5 @@ class ProductInStockAPIView(APIView):
             if crm_count != 0 or ones_count != 0 or total_price != 0:
                 products_in_stock.append(product)
 
-        serializer = WareHouseProductListSerializer(products_in_stock, many=True)
+        serializer = AccountantStockProductSerializer(products, context={'stock_id': stock_id}, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
