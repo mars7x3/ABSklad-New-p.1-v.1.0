@@ -74,35 +74,35 @@ def on_delete_order_product(sender, instance, **kwargs):
 @receiver(post_save, sender=AsiaProduct)
 def check_product_before_activation(sender, instance, created, **kwargs):
     count = 0
-
-    d_status_city_counts = DealerStatus.objects.all().count() * City.objects.filter(is_active=True).count()
-    d_status_type_counts = DealerStatus.objects.all().count() * PriceType.objects.filter(is_active=True).count()
-    final_price_count = d_status_city_counts + d_status_type_counts
-    product_price_count = instance.prices.all().count()
-    if final_price_count == product_price_count:
-        count += 1
-
-    cost_prices = instance.cost_prices.filter(price=0).first()
-    if cost_prices is None:
-        count += 1
-
-    if instance.description:
-        if len(instance.description) > 100:
+    if instance.is_active:
+        print('instance')
+        d_status_city_counts = DealerStatus.objects.all().count() * City.objects.filter(is_active=True).count()
+        d_status_type_counts = DealerStatus.objects.all().count() * PriceType.objects.filter(is_active=True).count()
+        final_price_count = d_status_city_counts + d_status_type_counts
+        product_price_count = instance.prices.all().count()
+        if final_price_count == product_price_count:
             count += 1
 
-    images = instance.images.first()
-    if images:
-        count += 1
+        cost_prices = instance.cost_prices.filter(price=0).first()
+        if cost_prices is None:
+            count += 1
 
-    sizes = instance.sizes.first()
-    if sizes:
-        count += 1
+        if instance.description:
+            if len(instance.description) > 100:
+                count += 1
 
-    if instance.is_active:
+        images = instance.images.first()
+        if images:
+            count += 1
+
+        sizes = instance.sizes.first()
+        if sizes:
+            count += 1
+
         if count < 5:
             instance.is_active = False
             AsiaProduct.objects.filter(pk=instance.pk).update(is_active=False)
 
-    if count == 5:
-        instance.is_active = True
-        AsiaProduct.objects.filter(pk=instance.pk).update(is_active=True)
+        if count == 5:
+            instance.is_active = True
+            AsiaProduct.objects.filter(pk=instance.pk).update(is_active=True)
