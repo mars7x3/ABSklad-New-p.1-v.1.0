@@ -16,8 +16,8 @@ from promotion.models import Banner, Story, Motivation, Discount
 from .serializers import MarketerProductSerializer, MarketerProductListSerializer, MarketerCollectionSerializer, \
     MarketerCategorySerializer, BannerSerializer, BannerListSerializer, DealerStatusSerializer, StoryListSerializer, \
     StoryDetailSerializer, ShortProductSerializer, CRMNotificationSerializer, MotivationSerializer, \
-    DiscountSerializer, HitProductSerializer
-from ..models import CRMTask
+    DiscountSerializer, HitProductSerializer, AutoNotificationSerializer
+from ..models import CRMTask, AutoNotification
 from ..paginations import ProductPagination, GeneralPurposePagination
 from product.models import AsiaProduct, Collection, Category, ProductSize
 from .permissions import IsMarketer
@@ -260,3 +260,26 @@ class MarketerNotificationView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class AutoNotificationViewSet(ListModelMixin,
+                              UpdateModelMixin,
+                              RetrieveModelMixin,
+                              CreateModelMixin,
+                              GenericViewSet):
+    queryset = AutoNotification.objects.all()
+    permission_classes = [IsAuthenticated, IsMarketer]
+    serializer_class = AutoNotificationSerializer
+
+    @action(methods=['GET'], detail=False, url_path='object-statuses')
+    def get_obj_statuses(self, request):
+        balance = self.request.query_params.get('balance')
+        order = self.request.query_params.get('order')
+        if order:
+            object_statuses = [value for value, display in AutoNotification.OBJ_STATUS]
+        elif balance:
+            object_statuses = ['created', 'rejected', 'success']
+        else:
+            object_statuses = []
+
+        return Response(object_statuses, status.HTTP_200_OK)

@@ -234,7 +234,7 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
                     inventory_product.count = product['count']
                     inventory_product.save()
                 else:
-                    ab_product = AsiaProduct.objects.filter(id=product['product'], is_active=True).first()
+                    ab_product = AsiaProduct.objects.filter(id=product['product']).first()
                     if ab_product is None:
                         raise serializers.ValidationError({'detail': 'Product not found'})
                     InventoryProduct.objects.create(inventory=instance, product=ab_product, count=product['count'])
