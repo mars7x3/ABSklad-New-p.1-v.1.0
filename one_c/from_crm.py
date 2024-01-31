@@ -253,3 +253,32 @@ def sync_stock_1c_2_crm(stock):
     uid = response_data.get('result_uid')
     stock.uid = uid
     stock.save()
+
+
+def sync_inventory_crm_2_1c(inventory):
+    print("*** INVENTORY sync ***")
+    url = 'http://91.211.251.134/testcrm/hs/asoi/CreateInventory'
+    username = 'Директор'
+    password = '757520ля***'
+
+    created_at = timezone.localtime(inventory.created_at) + datetime.timedelta(hours=6)
+    stock = inventory.sender.warehouse_profile.stock.uid
+    data = {
+        'uid': inventory.uid,
+        'user_uid': 'fcac9f0f-34d2-11ed-8a2f-2c59e53ae4c3',
+        'delete': not inventory.is_active,
+        'created_at': f'{created_at}',
+        'cityUID': stock,
+        'products': [
+            {'prod_uid': p.product.uid, 'count': p.count}
+            for p in inventory.products.all()
+        ]
+    }
+
+    print(data)
+    response = requests.request("POST", url, data=data, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    print(response.text)
+    response_data = json.loads(response.content)
+    uid = response_data.get('result_uid')
+    inventory.uid = uid
+    inventory.save()

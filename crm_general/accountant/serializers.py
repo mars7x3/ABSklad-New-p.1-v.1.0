@@ -10,6 +10,7 @@ from crm_general.models import Inventory, InventoryProduct
 from crm_general.serializers import CRMStockSerializer
 
 from general_service.models import Stock
+from one_c.from_crm import sync_inventory_crm_2_1c
 
 from order.models import MyOrder, OrderReceipt, OrderProduct, ReturnOrder, ReturnOrderProduct, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category
@@ -323,6 +324,8 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
             inventory_product.rejected = product['rejected']
             inventory_product_to_update.append(inventory_product)
         InventoryProduct.objects.bulk_update(inventory_product_to_update, ['rejected'])
+        if instance.status == 'moderated' and instance.is_active:
+            sync_inventory_crm_2_1c(instance)
         return instance
 
     def to_representation(self, instance):

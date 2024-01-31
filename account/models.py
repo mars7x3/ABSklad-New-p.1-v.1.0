@@ -100,6 +100,7 @@ class ManagerProfile(models.Model):
 class WarehouseProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='warehouse_profile')
     stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='warehouse_profiles')
+    is_main = models.BooleanField(default=False)
 
 
 class DealerProfile(models.Model):
