@@ -569,7 +569,7 @@ def order_1c_to_crm(data):
             if is_check:
                 update_data = []
                 for p in order.order_products.all():
-                    p.is_checked = not p.is_checked
+                    p.is_checked = False
                     update_data.append(p)
                 OrderProduct.objects.bulk_update(update_data, ['is_checked'])
                 print("START Check")
@@ -578,9 +578,10 @@ def order_1c_to_crm(data):
 
                 update_data = []
                 for p in order.order_products.all():
-                    p.is_checked = not p.is_checked
+                    p.is_checked = True
                     update_data.append(p)
                 OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+
                 for i in order.order_products.all():
                     print(i.is_checked)
 
@@ -598,7 +599,7 @@ def order_1c_to_crm(data):
 
             update_data = []
             for p in order.order_products.all():
-                p.is_checked = not p.is_checked
+                p.is_checked = True
                 update_data.append(p)
             OrderProduct.objects.bulk_update(update_data, ['is_checked'])
             for i in order.order_products.all():
