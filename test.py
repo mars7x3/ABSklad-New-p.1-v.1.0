@@ -82,3 +82,25 @@ import requests
 # u = MyUser.objects.filter(name__icontains='Асан', status__in=['rop', 'manager', 'marketer',
 #                                                               'accountant', 'warehouse', 'director'])
 
+import datetime
+from account.models import MyUser
+
+kpi = MyUser.objects.filter(username='dealer').first().kpis.filter(month__month=datetime.datetime.now().month).first()
+prods = kpi.kpi_products.all().select_related('product')
+for p in prods:
+    print(p.product.title)
+
+
+from account.models import MyUser, DealerProfile
+d = DealerProfile.objects.filter(user__uid='15889e5c-c00f-11ee-8a3c-2c59e53ae4c1')
+
+a = MyUser.objects.filter(uid='15889e5c-c00f-11ee-8a3c-2c59e53ae4c1').first()
+print(a.dealer_profile.price_type)
+
+
+from one_c.models import MoneyDoc
+
+m = MoneyDoc.objects.filter(amount=7878).first()
+
+from account.models import MyUser
+m = MyUser.objects.get(id=2455).dealer_profile.dealer_status.title
