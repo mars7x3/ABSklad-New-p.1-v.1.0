@@ -572,14 +572,17 @@ def order_1c_to_crm(data):
                     p.is_checked = not p.is_checked
                     update_data.append(p)
                 OrderProduct.objects.bulk_update(update_data, ['is_checked'])
-
+                print("START Check")
                 main_stat_order_sync(order)
+                print("END Check")
 
                 update_data = []
                 for p in order.order_products.all():
                     p.is_checked = not p.is_checked
                     update_data.append(p)
-                OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+                prods = OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+                for i in prods:
+                    print(i.is_checked)
 
         else:
             # create order
@@ -589,12 +592,17 @@ def order_1c_to_crm(data):
             OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products_data])
             minus_quantity(order)
 
+            print("START Check")
             main_stat_order_sync(order)
+            print("END Check")
+
             update_data = []
             for p in order.order_products.all():
                 p.is_checked = not p.is_checked
                 update_data.append(p)
-            OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+            prods = OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+            for i in prods:
+                print(i.is_checked)
 
             kwargs = {'user': user, 'title': f'Заказ #{order.id}', 'description': "Заказ успешно создан.",
                       'link_id': order.id, 'status': 'order', 'is_push': True}
