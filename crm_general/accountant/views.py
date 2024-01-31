@@ -515,22 +515,32 @@ class ProductHistoryView(APIView):
         start_date = query_params.get('start_date')
         end_date = query_params.get('end_date')
 
-        sent = MyOrder.objects.filter(order_products__ab_product_id=product_id,
+        sent = MyOrder.objects.filter(is_active=True,
+                                      order_products__ab_product_id=product_id,
                                       created_at__range=[start_date, end_date],
                                       status__in=['paid', 'sent', 'wait', 'success']).values(
             'created_at',
             'author'
         ).annotate(
+            order_id=F('id'),
             count=Sum('order_products__count'),
-            author_name=F('author__user__name')
+            author_name=F('author__user__name'),
+            stock_title=F('stock__title'),
+            released_at=F('released_at'),
+            total_price=F('order_products__price') * F('order_products__count')
         )
-        movements = MovementProduct1C.objects.filter(mv_products__product_id=product_id,
+
+        movements = MovementProduct1C.objects.filter(is_active=True,
+                                                     mv_products__product_id=product_id,
                                                      created_at__range=[start_date, end_date]).values(
+            'created_at',
             'mv_products__product',
             'warehouse_recipient',
             'warehouse_sender'
         ).annotate(
             count=Sum('mv_products__count'),
+            recipient_title=F('warehouse_recipient__title'),
+            sender_title=F('warehouse_sender__title'),
         )
 
         data = {

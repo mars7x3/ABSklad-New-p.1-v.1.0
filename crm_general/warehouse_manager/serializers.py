@@ -171,35 +171,49 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
 
 
 class InventoryProductSerializer(serializers.ModelSerializer):
-    product_title = serializers.SerializerMethodField(read_only=True)
-    category_title = serializers.SerializerMethodField(read_only=True)
-    price = serializers.SerializerMethodField(read_only=True)
-    count_1c = serializers.SerializerMethodField(read_only=True)
+    # product_title = serializers.SerializerMethodField(read_only=True)
+    # category_title = serializers.SerializerMethodField(read_only=True)
+    # price = serializers.SerializerMethodField(read_only=True)
+    # count_1c = serializers.SerializerMethodField(read_only=True)
+    # accounting_amount = serializers.SerializerMethodField(read_only=True)
+    #
+    # class Meta:
+    #     model = InventoryProduct
+    #     exclude = ('inventory',)
+    #
+    # @staticmethod
+    # def get_product_title(obj):
+    #     return obj.product.title
+    #
+    # @staticmethod
+    # def get_category_title(obj):
+    #     return obj.product.category.title
+    #
+    # @staticmethod
+    # def get_count_1c(obj):
+    #     product = obj.product
+    #     stock = obj.inventory.sender.warehouse_profile.stock
+    #     return sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+    #
+    # @staticmethod
+    # def get_price(instance):
+    #     stock = instance.inventory.sender.warehouse_profile.stock
+    #     city = stock.city
+    #     product = instance.product
+    #     return instance.product.prices.filter(city=city, product=product).first().price
 
-    class Meta:
-        model = InventoryProduct
-        exclude = ('inventory',)
-
-    @staticmethod
-    def get_product_title(obj):
-        return obj.product.title
-
-    @staticmethod
-    def get_category_title(obj):
-        return obj.product.category.title
-
-    @staticmethod
-    def get_count_1c(obj):
-        product = obj.product
-        stock = obj.inventory.sender.warehouse_profile.stock
-        return sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
-
-    @staticmethod
-    def get_price(instance):
-        stock = instance.inventory.sender.warehouse_profile.stock
-        city= stock.city
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
         product = instance.product
-        return instance.product.prices.filter(city=city, product=product).first().price
+        stock = instance.inventory.sender.warehouse_profile.stock
+        city = stock.city
+        count_1c = sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+        price = instance.product.prices.filter(city=city, product=product).first().price
+        rep['product_title'] = instance.product.title
+        rep['count_1c'] = count_1c
+        rep['price'] = price
+        rep['accounting_amount'] = count_1c * price
+        return rep
 
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
