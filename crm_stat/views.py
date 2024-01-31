@@ -498,7 +498,11 @@ class TransactionView(views.APIView):
             case "bank":
                 query["status"] = "Без нал"
 
-        queryset = MoneyDoc.objects.filter(is_active=True, user__isnull=False, **query).order_by("-created_at")
+        queryset = MoneyDoc.objects.filter(
+            is_active=True,
+            user__isnull=False,
+            **query
+        ).order_by("-created_at").distinct()
         serializer = TransactionSerializer(instance=queryset, many=True, context={"request": request, "view": self})
         return response.Response(serializer.data)
 
