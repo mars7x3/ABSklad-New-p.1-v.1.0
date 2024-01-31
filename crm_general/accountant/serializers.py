@@ -19,7 +19,7 @@ from product.models import AsiaProduct, Collection, Category
 class MyOrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        fields = ('author', 'id', 'status', 'type_status', 'price')
+        fields = ('author', 'id', 'status', 'type_status', 'price', 'created_at', 'released_at', 'paid_at')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -121,8 +121,9 @@ class DirBalanceHistorySerializer(serializers.ModelSerializer):
         balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
         files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
         if files:
-            serializer = BalancePlusFileSerializer(files, many=True)
+            serializer = BalancePlusFileSerializer(files, many=True, context=self.context)
             return serializer.data
+        return []
 
 
 class BalancePlusListSerializer(serializers.ModelSerializer):
@@ -297,11 +298,17 @@ class InventoryProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        stock = instance.inventory.sender.warehouse_profile.stock
+        city = stock.city
+        product = instance.product
         rep['product'] = instance.product.id
         rep['product_id'] = instance.product.title
-        product = instance.product
-        stock = instance.inventory.sender.warehouse_profile.stock
-        rep['count_crm'] = sum(product.counts.filter(stock=stock).values_list('count_crm', flat=True))
+        count_1c = sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+        price = instance.product.prices.filter(city=city, product=product).first().price
+        rep['count_1c'] = count_1c
+        rep['price'] = price
+        rep['amount'] = instance.count * price
+        rep['accounting_amount'] = count_1c * price
         return rep
 
 
@@ -314,10 +321,10 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user = self.context['request'].user
-        products = self.context['request'].data.get('products')
         instance = super().update(instance, validated_data)
         instance.receiver = user
         instance.save()
+
         inventory_product_to_update = []
         for product in products:
             inventory_product = InventoryProduct.objects.get(id=product['id'])

@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Case, When
+from django.db.models import Case, When, Sum, F, Q
 from django.utils import timezone
 from rest_framework.filters import SearchFilter
 from rest_framework import viewsets, status, mixins, generics, filters
@@ -29,7 +29,7 @@ from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
 from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
-from one_c.models import MoneyDoc
+from one_c.models import MoneyDoc, MovementProduct1C, MovementProducts
 from order.models import MyOrder, ReturnOrder, ReturnOrderProduct
 from crm_general.tasks import minus_quantity
 from product.models import AsiaProduct, Collection, Category
@@ -132,7 +132,7 @@ class AccountantOrderTotalInfoView(APIView):
 
 class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = DealerProfile.objects.all()
+    queryset = DealerProfile.objects.filter(Q(wallet__amount_crm__gt=0) | Q(wallet__amount_1c__gt=0))
     serializer_class = DealerProfileListSerializer
     pagination_class = CRMPaginationClass
 
@@ -227,8 +227,9 @@ class AccountantTotalEcoBalanceView(APIView):
 
 class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = BalancePlus.objects.filter(is_moderation=False)
+    queryset = BalancePlus.objects.all()
     serializer_class = BalancePlusListSerializer
+    pagination_class = GeneralPurposePagination
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
@@ -239,9 +240,19 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
         if is_success:
             kwargs['is_success'] = bool(int(is_success))
 
+        is_moderation = request.query_params.get('is_moderation')
+        if is_moderation:
+            kwargs['is_moderation'] = bool(int(is_moderation))
+
+        name = request.query_params.get('name')
+        if name:
+            kwargs['author__user__name__icontains'] = name
+
         queryset = queryset.filter(**kwargs)
-        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(serializer, status=status.HTTP_200_OK)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
       
 
 class BalancePlusModerationView(APIView):
@@ -279,8 +290,8 @@ class BalancePlusModerationView(APIView):
                     main_stat_pds_sync(money_doc)
                     money_doc.is_checked = True
                     money_doc.save()
-
-                return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+                serializer = BalancePlusListSerializer(balance, context=self.get_renderer_context())
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AccountantOrderModerationView(APIView):
@@ -495,3 +506,45 @@ class AccountantNotificationView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class ProductHistoryView(APIView):
+    def get(self, request, *args, **kwargs):
+        query_params = self.request.query_params
+        product_id = query_params.get('product_id')
+        start_date = query_params.get('start_date')
+        end_date = query_params.get('end_date')
+
+        sent = MyOrder.objects.filter(is_active=True,
+                                      order_products__ab_product_id=product_id,
+                                      created_at__range=[start_date, end_date],
+                                      status__in=['paid', 'sent', 'wait', 'success']).values(
+            'created_at',
+            'author'
+        ).annotate(
+            order_id=F('id'),
+            count=Sum('order_products__count'),
+            author_name=F('author__user__name'),
+            stock_title=F('stock__title'),
+            released_at=F('released_at'),
+            total_price=F('order_products__price') * F('order_products__count')
+        )
+
+        movements = MovementProduct1C.objects.filter(is_active=True,
+                                                     mv_products__product_id=product_id,
+                                                     created_at__range=[start_date, end_date]).values(
+            'created_at',
+            'mv_products__product',
+            'warehouse_recipient',
+            'warehouse_sender'
+        ).annotate(
+            count=Sum('mv_products__count'),
+            recipient_title=F('warehouse_recipient__title'),
+            sender_title=F('warehouse_sender__title'),
+        )
+
+        data = {
+            "sent": sent,
+            "movement": movements
+        }
+        return Response(data)

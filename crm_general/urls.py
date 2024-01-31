@@ -167,6 +167,7 @@ accountant_urlpatterns = [
     path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
     path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
     path('accountant/notifications/', AccountantNotificationView.as_view()),
+    path('accountant/product/history/list/', ProductHistoryView.as_view()),
 
     path('', include(accountant_router.urls)),
 ]
@@ -326,6 +327,7 @@ crm_router.register("crm/dealer-status/list", DealerStatusListView)
 crm_urlpatterns = [
 
     path("crm/product/images/create/", ProductImagesCreate.as_view()),
+    path("crm/product/in-stock/list/", ProductInStockAPIView.as_view()),
     path("crm/city/list/", CityListView.as_view()),
     path("crm/stock/list/", StockListView.as_view()),
     path("crm/category/list/", CategoryListView.as_view()),

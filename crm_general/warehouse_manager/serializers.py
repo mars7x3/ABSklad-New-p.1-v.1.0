@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -28,9 +29,19 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
 
 
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
+    return_product_count = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = OrderProduct
         fields = '__all__'
+
+    def get_return_product_count(self, instance):
+        count = ReturnOrderProduct.objects.filter(product_id=instance.ab_product.id,
+                                                  return_order__order_id=instance.order.id).aggregate(
+            total_count=Sum('count'))['total_count']
+        if count:
+            return count
+        return 0
 
 
 class OrderListSerializer(serializers.ModelSerializer):
@@ -160,20 +171,49 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
 
 
 class InventoryProductSerializer(serializers.ModelSerializer):
-    product_title = serializers.SerializerMethodField(read_only=True)
-    category_title = serializers.SerializerMethodField(read_only=True)
+    # product_title = serializers.SerializerMethodField(read_only=True)
+    # category_title = serializers.SerializerMethodField(read_only=True)
+    # price = serializers.SerializerMethodField(read_only=True)
+    # count_1c = serializers.SerializerMethodField(read_only=True)
+    # accounting_amount = serializers.SerializerMethodField(read_only=True)
+    #
+    # class Meta:
+    #     model = InventoryProduct
+    #     exclude = ('inventory',)
+    #
+    # @staticmethod
+    # def get_product_title(obj):
+    #     return obj.product.title
+    #
+    # @staticmethod
+    # def get_category_title(obj):
+    #     return obj.product.category.title
+    #
+    # @staticmethod
+    # def get_count_1c(obj):
+    #     product = obj.product
+    #     stock = obj.inventory.sender.warehouse_profile.stock
+    #     return sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+    #
+    # @staticmethod
+    # def get_price(instance):
+    #     stock = instance.inventory.sender.warehouse_profile.stock
+    #     city = stock.city
+    #     product = instance.product
+    #     return instance.product.prices.filter(city=city, product=product).first().price
 
-    class Meta:
-        model = InventoryProduct
-        exclude = ('inventory', )
-
-    @staticmethod
-    def get_product_title(obj):
-        return obj.product.title
-
-    @staticmethod
-    def get_category_title(obj):
-        return obj.product.category.title
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        product = instance.product
+        stock = instance.inventory.sender.warehouse_profile.stock
+        city = stock.city
+        count_1c = sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
+        price = instance.product.prices.filter(city=city, product=product).first().price
+        rep['product_title'] = instance.product.title
+        rep['count_1c'] = count_1c
+        rep['price'] = price
+        rep['accounting_amount'] = count_1c * price
+        return rep
 
 
 class WareHouseInventorySerializer(serializers.ModelSerializer):
@@ -206,7 +246,7 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         if self.context.get('retrieve'):
-            rep['products'] = InventoryProductSerializer(instance.products.all(),  read_only=True, many=True).data
+            rep['products'] = InventoryProductSerializer(instance.products.all(), read_only=True, many=True).data
         return rep
 
     def update(self, instance, validated_data):
@@ -236,9 +276,15 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
 
 
 class InventoryProductListSerializer(serializers.ModelSerializer):
+    count_1c = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title')
+        fields = ('id', 'title', 'count_1c')
+
+    def get_count_1c(self, instance):
+        stock_id = self.context.get('stock_id')
+        return sum(instance.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
 
 
 class ReturnOrderSerializer(serializers.ModelSerializer):
@@ -263,6 +309,7 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
         request_body = self.context['request'].data
         order_id = request_body.get('order')
@@ -272,16 +319,17 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
         files = self.context['request'].FILES.getlist('files')
         return_order = ReturnOrder.objects.filter(order_id=order_id).first()
         if return_order:
-            create_order_return_product(return_order, comment, int(count), files, product_id)
-            return return_order
+            return_product = create_order_return_product(return_order, comment, int(count), files, product_id)
+            if return_product:
+                return return_order
         else:
             instance = super().create(validated_data)
-            create_order_return_product(instance, comment, int(count), files, product_id)
-            return instance
+            return_product = create_order_return_product(instance, comment, int(count), files, product_id)
+            if return_product:
+                return instance
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['name'] = instance.order.author.user.name
         rep['status'] = instance.order.status
         return rep
-

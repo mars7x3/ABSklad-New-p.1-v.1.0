@@ -318,12 +318,21 @@ class WareHouseInventoryView(ListModelMixin,
 
     @action(methods=['GET'], detail=False, url_path='products')
     def get_products(self, request, *args, **kwargs):
-        category_id = self.request.query_params.get('category_id')
-        search = self.request.query_params.get('search')
-        products = AsiaProduct.objects.filter(is_active=True, category__id=category_id)
-        if search:
-            products = products.filter(title__icontains=search)
-        serializer = InventoryProductListSerializer(products, many=True)
+        user = self.request.user
+        if user.warehouse_profile is None:
+            return Response({'detail': 'User does not have warehouse profile'})
+        stock_id = user.warehouse_profile.stock.id
+        products = AsiaProduct.objects.all()
+        products_in_stock = []
+        for product in products:
+            crm_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
+            ones_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+            price = product.prices.filter().first()
+            total_price = price.price * crm_count if price else 0
+            if crm_count != 0 or ones_count != 0 or total_price != 0:
+                products_in_stock.append(product)
+
+        serializer = InventoryProductListSerializer(products_in_stock, context={'stock_id': stock_id}, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

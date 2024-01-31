@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from account.models import MyUser, DealerStatus, DealerProfile
+from crm_general.accountant.serializers import AccountantStockProductSerializer
 from crm_general.models import CRMTask, CRMTaskFile
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
@@ -276,4 +277,21 @@ class VillageListView(APIView):
     def get(self, request, *args, **kwargs):
         villages = Village.objects.all()
         serializer = VillageSerializer(villages, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductInStockAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        stock_id = self.request.query_params.get('stock_id')
+        products = AsiaProduct.objects.all()
+        products_in_stock = []
+        for product in products:
+            crm_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
+            ones_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+            price = product.prices.filter().first()
+            total_price = price.price * crm_count if price else 0
+            if crm_count != 0 or ones_count != 0 or total_price != 0:
+                products_in_stock.append(product)
+
+        serializer = AccountantStockProductSerializer(products_in_stock, context={'stock_id': stock_id}, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
