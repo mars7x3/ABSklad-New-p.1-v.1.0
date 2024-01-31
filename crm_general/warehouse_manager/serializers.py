@@ -174,6 +174,7 @@ class InventoryProductSerializer(serializers.ModelSerializer):
     product_title = serializers.SerializerMethodField(read_only=True)
     category_title = serializers.SerializerMethodField(read_only=True)
     price = serializers.SerializerMethodField(read_only=True)
+    count_1c = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = InventoryProduct
@@ -261,9 +262,15 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
 
 
 class InventoryProductListSerializer(serializers.ModelSerializer):
+    count_1c = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title')
+        fields = ('id', 'title', 'count_1c')
+
+    def get_count_1c(self, instance):
+        stock_id = self.context.get('stock_id')
+        return sum(instance.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
 
 
 class ReturnOrderSerializer(serializers.ModelSerializer):
