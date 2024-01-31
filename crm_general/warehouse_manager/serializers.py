@@ -288,6 +288,7 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
         request_body = self.context['request'].data
         order_id = request_body.get('order')
