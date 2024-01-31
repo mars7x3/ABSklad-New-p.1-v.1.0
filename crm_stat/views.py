@@ -154,6 +154,7 @@ class DealerSalesView(views.APIView):
                 sales_avg_check=Case(
                     When(
                         sales_amount__gt=0,
+                        sales_count__gt=0,
                         then=F("sales_amount") / F("sales_count")
                     ),
                     default=Value(0.0),
@@ -199,7 +200,8 @@ class DealerProductView(views.APIView):
             .annotate(
                 sales_avg_check=Case(
                     When(
-                        products_amount__gt=0, sales_count__gt=0,
+                        products_amount__gt=0,
+                        sales_count__gt=0,
                         then=F("products_amount") / F("sales_count")
                     ),
                     default=Value(0.0),
@@ -241,6 +243,7 @@ class DealerView(views.APIView):
                     Case(
                         When(
                             dealers_amount__gt=0,
+                            purchases_count__gt=0,
                             then=F("dealers_amount") / Sum("purchases_count")
                         ),
                         default=Value(0.0),
@@ -310,6 +313,7 @@ class ProductSalesView(views.APIView):
                 sales_avg_check=Case(
                     When(
                         sales_amount__gt=0,
+                        sales_count__gt=0,
                         then=F("sales_amount") / F("sales_count")
                     ),
                     default=Value(0.0),
@@ -357,7 +361,11 @@ class ProductDealersView(views.APIView):
             )
             .annotate(
                 dealers_avg_check=Case(
-                    When(dealers_amount__gt=0, then=F("dealers_amount") / Sum("purchases_count")),
+                    When(
+                        dealers_amount__gt=0,
+                        purchases_count__gt=0,
+                        then=F("dealers_amount") / Sum("purchases_count")
+                    ),
                     default=Value(0.0),
                     output_field=DecimalField()
                 )
@@ -400,7 +408,11 @@ class ProductView(views.APIView):
             )
             .annotate(
                 products_avg_check=Case(
-                    When(products_amount__gt=0, then=F("products_amount") / Sum("purchases_count")),
+                    When(
+                        products_amount__gt=0,
+                        purchases_count__gt=0,
+                        then=F("products_amount") / Sum("purchases_count")
+                    ),
                     default=Value(0.0),
                     output_field=DecimalField()
                 )
