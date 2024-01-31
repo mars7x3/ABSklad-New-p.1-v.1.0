@@ -91,7 +91,9 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
 
         discount = request.query_params.get('discount')
         if discount:
-            kwargs['is_discount'] = True
+            queryset = queryset.filter(discount_prices__user=request.user,
+                                       discount_prices__is_active=True,
+                                       is_active=True).distinct()
 
         category = request.query_params.get('category')
         if category:
