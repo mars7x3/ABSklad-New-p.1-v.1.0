@@ -428,8 +428,8 @@ def sync_1c_money_doc_crud(data):
         money_doc.is_active = not bool(data.get('delete'))
         money_doc.amount = data.get('amount')
         money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
-
         money_doc.save()
+
         if is_check:
             money_doc.is_checked = not money_doc.is_checked
             money_doc.save()
@@ -524,7 +524,7 @@ def sync_category_1c_to_crm(data):
 def order_1c_to_crm(data):
     order_data = dict()
     products = data.get('products')
-    user = MyUser.objects.get(uid=data.get('user_uid'))
+    user = MyUser.objects.filter(uid=data.get('user_uid')).first()
     city_stock = Stock.objects.filter(uid=data.get('cityUID')).first()
 
     if user and city_stock:
@@ -546,7 +546,7 @@ def order_1c_to_crm(data):
             order_data.pop('paid_at')
             order_data.pop('created_at')
             is_check = False
-            if not order.is_active == bool(data['delete']):
+            if order.is_active == bool(data['delete']):
                 is_check = True
 
             if order.is_active:
