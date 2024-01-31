@@ -3,7 +3,7 @@ from datetime import datetime
 from logging import getLogger
 from typing import Iterable, Self
 
-from django.db.models import F, Sum, Count, Case, When, Subquery, Value, DecimalField, QuerySet
+from django.db.models import F, Sum, Count, Case, When, Subquery, Value, DecimalField, QuerySet, Q
 from django.utils import timezone
 from django.utils.functional import cached_property
 from rest_framework.request import Request
@@ -128,9 +128,9 @@ def update_purchase_stat_group(group: StockGroupStat, queryset) -> None:
                 .annotate(count=Count("id", distinct=True))
                 .values('count')[:1]
             ),
-            sales_users_count=Count("user_id", distinct=True),
         )
         .annotate(
+            sales_users_count=Count("user_id", distinct=True, filter=Q(spent_amount__gt=0, count__gt=0)),
             sales_avg_check=Case(
                 When(
                     sales_amount__gt=0,
@@ -165,7 +165,8 @@ def update_tx_stat_group(group: StockGroupStat, queryset):
         .aggregate(
             incoming_bank_amount=Sum("bank_income"),
             incoming_cash_amount=Sum("cash_income"),
-            incoming_users_count=Count("user_id"),
+            incoming_users_count=Count("user_id", filter=Q(bank_income__gt=0) | Q(cash_income__gt=0),
+                                       distinct=True),
             dealers_incoming_funds=Sum("bank_income") + Sum("cash_income")
         )
     )
@@ -191,6 +192,7 @@ def update_transaction_stat(tx: MoneyDoc) -> None:
         stock=tx.cash_box.stock
     ).first()
 
+    created = True
     if not tx_stat:
         tx_stat = UserTransactionsStat(
             date=tx.created_at.date(),
@@ -199,16 +201,20 @@ def update_transaction_stat(tx: MoneyDoc) -> None:
             bank_income=0,
             cash_income=0
         )
+        created = False
 
     update_field = "cash_income" if tx.status != "Без нал" else "bank_income"
     if tx.is_active:
         setattr(tx_stat, update_field, tx.amount + getattr(tx_stat, update_field))
     else:
         saved_amount = getattr(tx_stat, update_field)
+
         if saved_amount < tx.amount:
-            setattr(tx_stat, update_field, 0)
-        else:
-            setattr(tx_stat, update_field, saved_amount - tx.amount)
+            if created:
+                tx_stat.delete()
+            return
+
+        setattr(tx_stat, update_field, saved_amount - tx.amount)
 
     tx_stat.save()
 
@@ -230,6 +236,7 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
         product=order_product.ab_product
     ).first()
 
+    created = True
     if not purchase_stat:
         purchase_stat = PurchaseStat(
             date=order.created_at.date(),
@@ -241,6 +248,7 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
             purchases_count=0,
             avg_check=0
         )
+        created = False
 
     if order.is_active:
         purchase_stat.count += order_product.count
@@ -267,6 +275,12 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
             purchase_stat.avg_check = purchase_stat.spent_amount / purchase_stat.purchases_count
         else:
             purchase_stat.avg_check = 0
+
+        values = (purchase_stat.count, purchase_stat.spent_amount)
+        if all(value == 0 for value in values):
+            if created:
+                purchase_stat.delete()
+            return
 
     purchase_stat.save()
 
