@@ -244,6 +244,10 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
         if is_moderation:
             kwargs['is_moderation'] = bool(int(is_moderation))
 
+        name = request.query_params.get('name')
+        if name:
+            kwargs['author__user__name__icontains'] = name
+
         queryset = queryset.filter(**kwargs)
         paginator = GeneralPurposePagination()
         page = paginator.paginate_queryset(queryset, request)
@@ -523,8 +527,8 @@ class ProductHistoryView(APIView):
         movements = MovementProduct1C.objects.filter(mv_products__product_id=product_id,
                                                      created_at__range=[start_date, end_date]).values(
             'mv_products__product',
-            'warehouse_recipient_uid',
-            'warehouse_sender_uid'
+            'warehouse_recipient',
+            'warehouse_sender'
         ).annotate(
             count=Sum('mv_products__count'),
         )
