@@ -133,3 +133,21 @@ class InventoryProduct(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='inventory_products')
     count = models.PositiveIntegerField(default=0)
 
+
+class AutoNotification(models.Model):
+    STATUS = (
+        ('order', 'Заказ'),
+        ('balance', 'Пополнение баланса')
+    )
+    OBJ_STATUS = (
+        ('created', 'created'),
+        ('paid', 'paid'),
+        ('sent', 'sent'),
+        ('wait', 'wait'),
+        ('rejected', 'rejected'),
+        ('success', 'success')
+    )
+    title = models.CharField(max_length=200)
+    text = models.CharField(max_length=1000)
+    status = models.CharField(choices=STATUS, max_length=20)
+    obj_status = models.CharField(max_length=20, choices=OBJ_STATUS)
