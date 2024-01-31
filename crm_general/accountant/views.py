@@ -229,6 +229,7 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
     queryset = BalancePlus.objects.all()
     serializer_class = BalancePlusListSerializer
+    pagination_class = GeneralPurposePagination
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
@@ -244,8 +245,10 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
             kwargs['is_moderation'] = bool(int(is_moderation))
 
         queryset = queryset.filter(**kwargs)
-        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(serializer, status=status.HTTP_200_OK)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
       
 
 class BalancePlusModerationView(APIView):
