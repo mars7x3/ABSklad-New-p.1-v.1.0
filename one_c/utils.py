@@ -10,7 +10,7 @@ from transliterate import translit
 
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
-from crm_general.models import Inventory
+from crm_general.models import Inventory, InventoryProduct
 from crm_kpi.utils import update_dealer_kpi_by_order
 from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock, City, PriceType, CashBox
@@ -51,7 +51,7 @@ def plus_quantity(order):
 def generate_products_data(products):
     result = []
     for p in products:
-        product = AsiaProduct.objects.get(uid=p.get('uid'))
+        product = AsiaProduct.objects.filter(uid=p.get('uid')).first()
         total_price = int(p.get('price')) * int(p.get('count'))
         cost_price = product.cost_prices.filter(is_active=True).first()
         result.append({'title': product.title, 'category': product.category, 'count': int(p.get('count')),
@@ -156,6 +156,9 @@ def sync_prods_list():
 
 
 def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
+    if data.get('products'):
+        return
+
     print('***Product CRUD***')
     print(data)
     dealer_statuses = DealerStatus.objects.all()
@@ -725,17 +728,63 @@ def sync_1c_prod_price_crud(data):
 
 
 def sync_1c_inventory_crud(data):
+    stock = Stock.objects.filter(uid=data.get('cityUID')).first()
+    if not stock:
+        return False, 'Stock не найден!'
+    sender = stock.warehouse_profiles.filter(user__is_active=True, is_main=True).first()
+
+    inventory_data = {
+        'uid': 'd4c3a57d-bfa4-11ee-8a3c-2c59e53ae4c1',
+        'is_active': not bool(data.get('delete')),
+        'created_at': datetime.datetime.strptime(
+            data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+        'updated_at': datetime.datetime.strptime(
+            data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+        'stock': stock,
+        'sender': sender,
+        'status': 'moderated',
+         }
+
     inventory = Inventory.objects.filter(uid=data['uid']).first()
     if inventory:
-        update_data = []
-        for p in data['products']:
-            stock = Stock.objects.filter(uid=p['stock_uid']).first()
-            count = product.counts.filter(stock=stock)
-            if stock:
-                count.count_1c = p['count']
-                update_data.append(count)
+        for key, value in inventory_data.items():
+            setattr(inventory, key, value)
+        inventory.save()
 
-        ProductCount.objects.bulk_update(update_data, ['count_1c'])
+        update_data = []
+        create_data = []
+        for p in data['products']:
+            prod = inventory.products.filter(product__uid=p['prod_uid']).first()
+            if prod:
+                prod.count = p['count']
+                update_data.append(prod)
+            else:
+                product = AsiaProduct.objects.filter(uid=p['prod_uid']).first()
+                if product:
+                    create_data.append(
+                        InventoryProduct(
+                            inventory=inventory,
+                            product=product,
+                            count=p['count']
+                        )
+                    )
+        InventoryProduct.objects.bulk_update(update_data, ['count'])
+        InventoryProduct.objects.bulk_create(create_data)
+
         return True, 'Success!'
-    return False, 'Inventory не найден!'
+    else:
+        inventory = Inventory.objects.create(**inventory_data)
+        create_data = []
+        for p in data['products']:
+            product = AsiaProduct.objects.filter(uid=p['prod_uid']).first()
+            if product:
+                create_data.append(
+                    InventoryProduct(
+                        inventory=inventory,
+                        product=product,
+                        count=p['count']
+                    )
+                )
+        InventoryProduct.objects.bulk_create(create_data)
+        return True, 'Success!'
 

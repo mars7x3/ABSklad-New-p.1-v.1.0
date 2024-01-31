@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from one_c.utils import sync_prod_crud_1c_crm, sync_category_1c_to_crm, sync_dealer_1C_to_back, \
     order_1c_to_crm, sync_1c_money_doc_crud, sync_1c_price_city_crud, sync_1c_user_city_crud, sync_1c_stock_crud, \
-    sync_1c_prod_count_crud, sync_1c_prod_price_crud
+    sync_1c_prod_count_crud, sync_1c_prod_price_crud, sync_1c_inventory_crud
 
 
 class SyncProductCRUDView(APIView):
@@ -84,9 +84,18 @@ class SyncProdCountCRUDView(APIView):
 class SyncProdPriceCRUDView(APIView):
     def post(self, request):
         print(request.data)
-        is_ok, text = sync_1c_prod_price_crud(request.data)
+        # is_ok, text = sync_1c_prod_price_crud(request.data)
+        # if is_ok:
+        #     return Response(text, status=status.HTTP_200_OK)
+        return Response("text", status=status.HTTP_400_BAD_REQUEST)
+
+
+class SyncInventoryCRUDView(APIView):
+    def post(self, request):
+        print(request.data)
+        is_ok, text = sync_1c_inventory_crud(request.data)
         if is_ok:
             return Response(text, status=status.HTTP_200_OK)
-        return Response(text, status=status.HTTP_400_BAD_REQUEST)
+        return Response("text", status=status.HTTP_400_BAD_REQUEST)
 
 
