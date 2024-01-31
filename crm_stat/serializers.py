@@ -73,11 +73,11 @@ class OrderSerializer(serializers.ModelSerializer):
 class OrderProductSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField(read_only=True)
     count = serializers.IntegerField()
-    created_at = serializers.DateTimeField(source="order.created_at")
+    released_at = serializers.DateTimeField(source="order.released_at")
 
     class Meta:
         model = OrderProduct
-        fields = ("id", "title", "count", "total_price", "created_at")
+        fields = ("id", "title", "count", "total_price", "released_at")
 
     def get_title(self, obj):
         if obj.ab_product:

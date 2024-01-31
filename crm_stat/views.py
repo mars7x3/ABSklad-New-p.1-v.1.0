@@ -551,7 +551,7 @@ class OrderDetailsView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        date_filter = DateFilter.for_request(request, date, date_field="order__created_at__date")
+        date_filter = DateFilter.for_request(request, date, date_field="order__released_at__date")
         query = date_filter.queries
 
         product_id = request.query_params.get("product_id", "")
