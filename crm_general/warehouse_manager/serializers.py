@@ -6,6 +6,7 @@ from rest_framework import serializers
 from crm_general.models import CRMTask, CRMTaskFile, Inventory, InventoryProduct
 from crm_general.serializers import VerboseChoiceField
 from crm_general.warehouse_manager.utils import create_order_return_product
+from general_service.models import Stock
 from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
@@ -171,36 +172,9 @@ class MarketerProductSizeSerializer(serializers.ModelSerializer):
 
 
 class InventoryProductSerializer(serializers.ModelSerializer):
-    # product_title = serializers.SerializerMethodField(read_only=True)
-    # category_title = serializers.SerializerMethodField(read_only=True)
-    # price = serializers.SerializerMethodField(read_only=True)
-    # count_1c = serializers.SerializerMethodField(read_only=True)
-    # accounting_amount = serializers.SerializerMethodField(read_only=True)
-    #
-    # class Meta:
-    #     model = InventoryProduct
-    #     exclude = ('inventory',)
-    #
-    # @staticmethod
-    # def get_product_title(obj):
-    #     return obj.product.title
-    #
-    # @staticmethod
-    # def get_category_title(obj):
-    #     return obj.product.category.title
-    #
-    # @staticmethod
-    # def get_count_1c(obj):
-    #     product = obj.product
-    #     stock = obj.inventory.sender.warehouse_profile.stock
-    #     return sum(product.counts.filter(stock=stock).values_list('count_1c', flat=True))
-    #
-    # @staticmethod
-    # def get_price(instance):
-    #     stock = instance.inventory.sender.warehouse_profile.stock
-    #     city = stock.city
-    #     product = instance.product
-    #     return instance.product.prices.filter(city=city, product=product).first().price
+    class Meta:
+        model = InventoryProduct
+        exclude = ('inventory', )
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -276,15 +250,21 @@ class WareHouseInventorySerializer(serializers.ModelSerializer):
 
 
 class InventoryProductListSerializer(serializers.ModelSerializer):
-    count_1c = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = AsiaProduct
-        fields = ('id', 'title', 'count_1c')
+        fields = ('id', 'title')
 
-    def get_count_1c(self, instance):
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
         stock_id = self.context.get('stock_id')
-        return sum(instance.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+        stock = Stock.objects.get(id=stock_id)
+        city = stock.city
+        count_1c = sum(instance.counts.filter(stock=stock).values_list('count_1c', flat=True))
+        price = instance.prices.filter(city=city).first().price
+        rep['count_1c'] = count_1c
+        rep['price'] = price
+        rep['accounting_amount'] = count_1c * price
+        return rep
 
 
 class ReturnOrderSerializer(serializers.ModelSerializer):
