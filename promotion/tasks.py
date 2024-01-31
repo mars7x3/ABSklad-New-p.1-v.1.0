@@ -46,8 +46,9 @@ def activate_discount():
                     total_discount_percent = discount_amount + dealer_discount_amount
                     final_price = calculate_discount(int(product_base_price), total_discount_percent)
                 elif discount.status == 'Sum':
-                    amount_without_abc = product_base_price - discount_amount
-                    final_price = calculate_discount(int(amount_without_abc), int(dealer.dealer_status.discount))
+                    abc_discount_amount = dealer.dealer_status.discount
+                    abc_price = calculate_discount(product_base_price, abc_discount_amount)
+                    final_price = abc_price - discount_amount
 
                     for price_type in price_types:
                         discount_prices_to_create.append(
