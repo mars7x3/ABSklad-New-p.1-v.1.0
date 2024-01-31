@@ -580,8 +580,8 @@ def order_1c_to_crm(data):
                 for p in order.order_products.all():
                     p.is_checked = not p.is_checked
                     update_data.append(p)
-                prods = OrderProduct.objects.bulk_update(update_data, ['is_checked'])
-                for i in prods:
+                OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+                for i in order.order_products.all():
                     print(i.is_checked)
 
         else:
@@ -600,8 +600,8 @@ def order_1c_to_crm(data):
             for p in order.order_products.all():
                 p.is_checked = not p.is_checked
                 update_data.append(p)
-            prods = OrderProduct.objects.bulk_update(update_data, ['is_checked'])
-            for i in prods:
+            OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+            for i in order.order_products.all():
                 print(i.is_checked)
 
             kwargs = {'user': user, 'title': f'Заказ #{order.id}', 'description': "Заказ успешно создан.",
