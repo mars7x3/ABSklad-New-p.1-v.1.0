@@ -130,15 +130,16 @@ class CartAddView(generics.GenericAPIView):
         if serializer.is_valid():
             dealer = request.user.dealer_profile
             carts = request.data.get('carts')
-
+            dont_delete_ids = []
             for c in carts:
                 cart, _ = Cart.objects.get_or_create(dealer=dealer, stock_id=c.get('stock'))
                 cart.cart_products.all().delete()
                 cart_product_list = [CartProduct(cart=cart, product_id=p.get('id'), count=p.get('count')) for p in
                                      c.get('products')]
                 CartProduct.objects.bulk_create(cart_product_list)
-                if not cart.cart_products.exists():
-                    cart.delete()
+                dont_delete_ids.append(cart.id)
+
+            request.user.dealer_profile.carts.exclude(id__in=dont_delete_ids).delete()
             return Response({"text": "Success!"}, status=status.HTTP_200_OK)
         else:
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
