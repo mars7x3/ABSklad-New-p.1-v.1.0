@@ -211,6 +211,7 @@ def update_transaction_stat(tx: MoneyDoc) -> None:
 
         if saved_amount < tx.amount:
             if created:
+                logger.info("UserTransactionsStat with ID %s will be deleted!" % tx_stat.id)
                 tx_stat.delete()
             return
 
@@ -279,6 +280,7 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
         values = (purchase_stat.count, purchase_stat.spent_amount)
         if all(value == 0 for value in values):
             if created:
+                logger.info("PurchaseStat with ID %s will be deleted!" % purchase_stat.id)
                 purchase_stat.delete()
             return
 
