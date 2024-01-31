@@ -272,6 +272,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True
         },
+        'statistics': {
+            'handlers': ['mongolog', 'console'],
+            'level': 'INFO',
+            'propagate': True
+        },
         'tasks_management': {
             'handlers': ['mongolog', 'console'],
             'level': 'INFO',
