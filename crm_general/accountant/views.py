@@ -29,7 +29,7 @@ from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
 from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
-from one_c.models import MoneyDoc, MovementProduct1C
+from one_c.models import MoneyDoc, MovementProduct1C, MovementProducts
 from order.models import MyOrder, ReturnOrder, ReturnOrderProduct
 from crm_general.tasks import minus_quantity
 from product.models import AsiaProduct, Collection, Category
@@ -286,8 +286,8 @@ class BalancePlusModerationView(APIView):
                     main_stat_pds_sync(money_doc)
                     money_doc.is_checked = True
                     money_doc.save()
-
-                return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+                serializer = BalancePlusListSerializer(balance, context=self.get_renderer_context())
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AccountantOrderModerationView(APIView):
@@ -528,6 +528,7 @@ class ProductHistoryView(APIView):
         ).annotate(
             count=Sum('mv_products__count'),
         )
+
         data = {
             "sent": sent,
             "movement": movements
