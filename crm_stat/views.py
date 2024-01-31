@@ -6,9 +6,10 @@ from crm_general.filters import FilterByFields
 from crm_general.permissions import IsStaff
 from crm_general.utils import string_date_to_date, list_of_date_stings, string_datetime_datetime
 from one_c.models import MoneyDoc
+from order.models import OrderProduct
 
 from .models import StockGroupStat, PurchaseStat, UserTransactionsStat
-from .serializers import StockGroupSerializer, TransactionSerializer
+from .serializers import StockGroupSerializer, TransactionSerializer, OrderProductSerializer
 from .utils import divide_into_weeks, sum_and_collect_by_map, DateFilter
 
 
@@ -534,37 +535,21 @@ class OrderDetailsView(views.APIView):
     permission_classes = (permissions.IsAuthenticated, IsStaff)
 
     def get(self, request, date):
-        date_filter = DateFilter.for_request(request, date)
+        date_filter = DateFilter.for_request(request, date, date_field="order__created_at__date")
         query = date_filter.queries
 
         product_id = request.query_params.get("product_id", "")
         if product_id.isdigit():
-            query["product_id"] = product_id
+            query["ab_product_id"] = product_id
 
         user_id = request.query_params.get("user_id", "")
         if user_id.isdigit():
-            query["user_id"] = user_id
+            query["order__author__user_id"] = user_id
 
         stock_id = request.query_params.get("stock_id", "")
         if stock_id.isdigit():
-            query["stock_id"] = stock_id
+            query["order__stock_id"] = stock_id
 
-        items = (
-            PurchaseStat.objects.filter(**query)
-            .values("product_id", "date")
-            .annotate(
-                product=JSONObject(
-                    id=F("product_id"),
-                    title=F("product__title")
-                ),
-                total_count=Sum("count"),
-                total_amount=Sum("spent_amount")
-            )
-        )
-        collected_items = []
-        for item in items:
-            item.pop("product_id", None)
-            item["date"] = date_filter.start.date()
-            item["end"] = date_filter.end_date_for_week
-            collected_items.append(item)
-        return response.Response(collected_items)
+        queryset = OrderProduct.objects.filter(**query).distinct()
+        serializer = OrderProductSerializer(instance=queryset, many=True, context={"view": self, "request": request})
+        return response.Response(serializer.data)
