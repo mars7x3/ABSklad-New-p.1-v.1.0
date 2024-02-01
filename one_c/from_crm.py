@@ -266,7 +266,7 @@ def sync_inventory_crm_2_1c(inventory):
     data = {
         'uid': inventory.uid,
         'user_uid': 'fcac9f0f-34d2-11ed-8a2f-2c59e53ae4c3',
-        'delete': not inventory.is_active,
+        'delete': int(not inventory.is_active),
         'created_at': f'{created_at}',
         'cityUID': stock,
         'products': [
