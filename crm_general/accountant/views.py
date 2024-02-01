@@ -420,7 +420,7 @@ class InventoryListUpdateView(ListModelMixin,
                               UpdateModelMixin,
                               GenericViewSet):
 
-    queryset = Inventory.objects.all()
+    queryset = Inventory.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = InventorySerializer
     retrieve_serializer_class = InventoryDetailSerializer

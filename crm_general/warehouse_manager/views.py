@@ -291,8 +291,8 @@ class WareHouseInventoryView(ListModelMixin,
     pagination_class = GeneralPurposePagination
 
     def get_queryset(self):
-        return (Inventory.objects.filter(products__product__counts__stock=self.request.user.warehouse_profile.stock)
-                .distinct())
+        return (Inventory.objects.filter(products__product__counts__stock=self.request.user.warehouse_profile.stock,
+                                         is_active=True).distinct())
 
     def get_serializer_context(self):
         if self.detail:
