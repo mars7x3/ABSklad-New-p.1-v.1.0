@@ -85,7 +85,7 @@ def sync_balance_history(data, type_status):
         'balance': balance
     }
 
-    history = BalanceHistory.objects.filter(status=type_status, action_id=data.id)
+    history = BalanceHistory.objects.filter(status=type_status, action_id=data.id).first()
     if history:
         pprint(validated_data)
         for key, value in validated_data.items():
