@@ -798,3 +798,17 @@ def sync_1c_inventory_crud(data):
         InventoryProduct.objects.bulk_create(create_data)
         return True, 'Success!'
 
+
+def sync_1c_movement_crud(data):
+    a = {
+        "delete": False,
+        "warehouse_recipient_uid": "822cb2e2-37fd-11ed-8a2f-2c59e53ae4c3",
+        "warehouse_sender_uid": "c10ad4ab-35f9-11ed-8a2f-2c59e53ae4c3",
+        "journey_uid": "415396d9-2c72-11ee-8a38-2c59e53ae4c2",
+        "products": [
+            {
+                "product_uid": "0a8446af-196c-11ee-8a36-2c59e53ae4c3",
+                "counts": 2
+            }
+        ]
+    }

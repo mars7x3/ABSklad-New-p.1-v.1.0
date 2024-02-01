@@ -263,7 +263,7 @@ def sync_inventory_crm_2_1c(inventory):
 
     created_at = timezone.localtime(inventory.created_at) + datetime.timedelta(hours=6)
     stock = inventory.sender.warehouse_profile.stock.uid
-    data = {
+    data = json.dumps({
         'uid': inventory.uid,
         'user_uid': 'fcac9f0f-34d2-11ed-8a2f-2c59e53ae4c3',
         'delete': int(not inventory.is_active),
@@ -273,7 +273,7 @@ def sync_inventory_crm_2_1c(inventory):
             {'prod_uid': p.product.uid, 'count': p.count}
             for p in inventory.products.all()
         ]
-    }
+    })
 
     print(data)
     response = requests.request("POST", url, data=data, auth=(username.encode('utf-8'), password.encode('utf-8')))
