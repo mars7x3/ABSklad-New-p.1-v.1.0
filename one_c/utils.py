@@ -738,9 +738,11 @@ def sync_1c_prod_price_crud(data):
 
 def sync_1c_inventory_crud(data):
     stock = Stock.objects.filter(uid=data.get('cityUID')).first()
+    print(stock.title)
     if not stock:
         return False, 'Stock не найден!'
-    sender = stock.warehouse_profiles.filter(user__is_active=True, is_main=True).first()
+    sender = stock.warehouse_profiles.filter(user__is_active=True).first()
+    print(sender.user.name)
 
     inventory_data = {
         'uid': 'd4c3a57d-bfa4-11ee-8a3c-2c59e53ae4c1',
