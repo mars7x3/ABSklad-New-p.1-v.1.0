@@ -341,7 +341,7 @@ class DealerBalanceHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BalanceHistory
-        fields = ("id", "created_at", "status", "balance_crm", "amount")
+        fields = ("id", "created_at", "status", "balance_crm", "amount", 'files')
 
     def get_balance_crm(self, instance) -> Decimal:
         match instance.status:
