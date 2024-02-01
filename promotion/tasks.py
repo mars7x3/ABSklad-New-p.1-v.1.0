@@ -1,6 +1,7 @@
 import datetime
 
 from absklad_commerce.celery import app
+from crm_general.utils import create_notifications_for_users
 from promotion.utils import calculate_discount
 from general_service.models import PriceType, City
 from product.models import ProductPrice, AsiaProduct
@@ -77,9 +78,9 @@ def activate_discount():
                                 is_active=True
                             )
                         )
-
         DiscountPrice.objects.bulk_create(discount_prices_to_create)
         AsiaProduct.objects.bulk_update(products_to_update, fields=['is_discount'])
+        create_notifications_for_users(crm_status='action', link_id=discount.id)
     Discount.objects.bulk_update(discounts_to_activate, fields=['is_active'])
 
 

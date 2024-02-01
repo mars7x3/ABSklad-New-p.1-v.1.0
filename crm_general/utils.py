@@ -7,7 +7,7 @@ from django.db.models import F, Q, Count, Value, Case, When, Sum, FloatField, Ex
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from account.models import DealerStatus, DealerProfile
+from account.models import DealerStatus, DealerProfile, CRMNotification, MyUser, Notification
 from order.models import MyOrder
 
 
@@ -198,3 +198,38 @@ def change_dealer_profile_status_after_deactivating_dealer_status(dealers: Query
     for dealer in dealers:
         dealer.dealer_status = base_dealer_status
         dealer.save()
+
+
+def create_notifications_for_users(crm_status, link_id=None):
+    if crm_status == 'notif':
+        crm_notif = CRMNotification.objects.filter(status=crm_status).first()
+    else:
+        crm_notif = CRMNotification.objects.filter(status=crm_status, link_id=link_id).first()
+
+    if crm_notif:
+        notifications_to_create = []
+        dealer_profiles = crm_notif.dealer_profiles.all()
+        dealer_profile_ids = [dealer_profile.id if isinstance(dealer_profile, DealerProfile) else dealer_profile for
+                              dealer_profile in dealer_profiles]
+        users = MyUser.objects.filter(dealer_profile__id__in=dealer_profile_ids)
+        if crm_notif.image:
+            image_full_url = str(crm_notif.image.url).split('/')[-2:]
+            image_url = '/'.join(image_full_url)
+        else:
+            image_url = None
+        for user in users:
+            notification_data = {
+                'user': user,
+                'title': crm_notif.title,
+                'description': crm_notif.description,
+                'status': crm_notif.status,
+                'link_id': link_id,
+                'image': image_url
+            }
+            notifications_to_create.append(notification_data)
+
+        notification_to_create = [Notification(**n) for n in notifications_to_create]
+        Notification.objects.bulk_create(notification_to_create)
+        crm_notif.is_pushed = True
+        crm_notif.save()
+        print('Discount notifications were created')
