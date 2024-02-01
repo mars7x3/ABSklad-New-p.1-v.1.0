@@ -309,7 +309,7 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                 products = discount.products.all()
                 if instance in products:
                     raise serializers.ValidationError(
-                        'Cannot deactivate a product that is in an active Discount'
+                        'Невозможно деактивировать продукт который находится в активной акции'
                     )
 
         if stocks:
