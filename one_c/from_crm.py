@@ -152,7 +152,7 @@ def sync_1c_money_doc(money_doc):
     money_doc.uid = uid
     money_doc.save()
     main_stat_pds_sync(money_doc)
-    money_doc.is_checked = not money_doc.is_checked
+    money_doc.is_checked = True
     money_doc.save()
 
 
@@ -189,7 +189,7 @@ def sync_money_doc_to_1C(order):
             order.save()
             m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
             main_stat_pds_sync(m_d)
-            m_d.is_checked = not m_d.is_checked
+            m_d.is_checked = True
             m_d.save()
     except Exception as e:
         raise TypeError
