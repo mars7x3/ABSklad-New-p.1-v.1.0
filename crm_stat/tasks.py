@@ -102,11 +102,11 @@ def task_update_purchase_stat_group(purchase_stat_id):
 def main_stat_order_sync(order):
     update_stat_group_by_order(order)
     update_dealer_kpi_by_order(order)
-    # sync_balance_history(order, 'order')
+    sync_balance_history(order, 'order')
 
 
 @app.task()
 def main_stat_pds_sync(money_doc):
     update_dealer_kpi_by_tx(money_doc)
     update_transaction_stat(money_doc)
-    # sync_balance_history(money_doc, 'wallet')
+    sync_balance_history(money_doc, 'wallet')
