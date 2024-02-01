@@ -94,7 +94,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
                 main_stat_order_sync(order)
                 update_data = []
                 for p in order.order_products.all():
-                    p.is_checked = not p.is_checked
+                    p.is_checked = True
                     update_data.append(p)
                 OrderProduct.objects.bulk_update(update_data, ['is_checked'])
 
