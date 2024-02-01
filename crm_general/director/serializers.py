@@ -101,7 +101,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 class WarehouseProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = WarehouseProfile
-        exclude = ('id', 'user', 'is_main')
+        exclude = ('id', 'user')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
