@@ -742,7 +742,7 @@ def sync_1c_inventory_crud(data):
     if not stock:
         return False, 'Stock не найден!'
     sender = stock.warehouse_profiles.filter(user__is_active=True).first()
-    print(sender.user.name)
+    print(sender)
 
     inventory_data = {
         'uid': 'd4c3a57d-bfa4-11ee-8a3c-2c59e53ae4c1',
@@ -751,7 +751,7 @@ def sync_1c_inventory_crud(data):
             data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
         'updated_at': datetime.datetime.strptime(
             data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
-        'sender': sender,
+        'sender_id': sender.user_id,
         'status': 'moderated',
          }
 
