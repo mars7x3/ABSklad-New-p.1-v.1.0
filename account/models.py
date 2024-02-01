@@ -233,6 +233,7 @@ class CRMNotification(models.Model):
     status = models.CharField(choices=STATUS, max_length=100, default='notif')
     link_id = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_pushed = models.BooleanField(default=False)
 
     @classmethod
     def get_status_choices(cls):

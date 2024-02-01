@@ -47,7 +47,7 @@ app.conf.beat_schedule = {
     'create_notifications': {
         'task': 'crm_general.marketer.tasks.create_notifications',
         # 'schedule': crontab(hour=8, minute=0),
-        'schedule': 1800.0,
+        'schedule': 600.0,
     },
 
     # sync 1c task
