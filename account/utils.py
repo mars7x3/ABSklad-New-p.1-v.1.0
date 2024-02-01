@@ -1,4 +1,5 @@
 import re
+from pprint import pprint
 
 import requests
 import json
@@ -86,9 +87,11 @@ def sync_balance_history(data, type_status):
 
     history = BalanceHistory.objects.filter(status=type_status, action_id=data.id)
     if history:
+        pprint(validated_data)
         for key, value in validated_data.items():
             setattr(history, key, value)
         history.save()
+        print(history.is_active)
     else:
         BalanceHistory.objects.create(**validated_data)
 
