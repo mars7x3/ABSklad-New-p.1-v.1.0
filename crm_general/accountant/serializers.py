@@ -324,7 +324,7 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
             inventory_product.rejected = product['rejected']
             inventory_product_to_update.append(inventory_product)
         InventoryProduct.objects.bulk_update(inventory_product_to_update, ['rejected'])
-        if instance.status == 'moderated' and instance.is_active:
+        if instance.status == 'moderated':
             sync_inventory_crm_2_1c(instance)
         return instance
 
