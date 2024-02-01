@@ -84,7 +84,7 @@ def sync_balance_history(data, type_status):
         'balance': balance
     }
 
-    history = BalanceHistory.objecs.filter(status=type_status, action_id=data.id)
+    history = BalanceHistory.objects.filter(status=type_status, action_id=data.id)
     if history:
         for key, value in validated_data.items():
             setattr(history, key, value)
