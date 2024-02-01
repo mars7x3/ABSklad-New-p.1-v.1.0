@@ -33,7 +33,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'username', 'status', 'phone', 'pwd', 'email', 'is_active', 'date_joined', 'image',
-                  'updated_at', 'password', 'name', 'only_wh_in_stock', 'is_main')
+                  'updated_at', 'password', 'name', 'only_wh_in_stock')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -62,15 +62,6 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         with transaction.atomic():
-            # username = validated_data.get('username')
-            # pwd = validated_data.get('password')
-            # if username:
-            #     if not username_is_valid(username):
-            #         raise serializers.ValidationError({"username": "Некорректный username"})
-            # if pwd:
-            #     if not pwd_is_valid(pwd):
-            #         raise serializers.ValidationError({"password": "Некорректный password"})
-
             request = self.context['request']
             for key, value in validated_data.items():
                 setattr(instance, key, value)
@@ -89,6 +80,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
             elif instance.status == 'warehouse':
                 warehouse_profile = instance.warehouse_profile
                 warehouse_profile.stock_id = request.data.get('stock')
+                warehouse_profile.is_main = request.data.get('is_main')
                 warehouse_profile.save()
 
             return instance
@@ -109,7 +101,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 class WarehouseProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = WarehouseProfile
-        exclude = ('id', 'user')
+        exclude = ('id', 'user', 'is_main')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
