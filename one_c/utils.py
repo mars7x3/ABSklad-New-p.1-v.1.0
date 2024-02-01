@@ -749,7 +749,6 @@ def sync_1c_inventory_crud(data):
             data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
         'updated_at': datetime.datetime.strptime(
             data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
-        'stock': stock,
         'sender': sender,
         'status': 'moderated',
          }
