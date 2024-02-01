@@ -8,7 +8,7 @@ from django.utils import timezone
 from absklad_commerce.celery import app
 from account.models import MyUser
 from order.models import OrderProduct
-from product.models import AsiaProduct
+from product.models import AsiaProduct, ProductPrice
 
 from .models import DealerKPI, DealerKPIProduct, ManagerKPI, ManagerKPISVD
 from .utils import get_tmz_of_user_for_kpi
@@ -139,11 +139,20 @@ def create_dealer_kpi():
                             increase_count = int(avg_total_count) * tmz_percent
                             increased_total_count = round(int(avg_total_count) + increase_count)
 
-                            total_price = tmz_data['total_price']
-
-                            total_pds += int(total_price)
-
                             product = AsiaProduct.objects.get(id=tmz_data['order_products__ab_product__id'])
+
+                            price_type = user.dealer_profile.price_type
+                            city = user.dealer_profile.village.city
+                            if price_type:
+                                product_price = ProductPrice.objects.filter(price_type=price_type,
+                                                                            product=product,
+                                                                            d_status__discount=0).first().price
+                            else:
+                                product_price = ProductPrice.objects.filter(city=city,
+                                                                            product=product,
+                                                                            d_status__discount=0).first().price
+                            total_price = increased_total_count * product_price
+                            total_pds += int(total_price)
 
                             dealer_kpi_products.append(
                                 DealerKPIProduct(
