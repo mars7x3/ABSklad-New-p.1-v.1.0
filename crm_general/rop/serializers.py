@@ -27,7 +27,7 @@ class ManagerProfileSerializer(BaseProfileSerializer):
 
     class Meta:
         model = ManagerProfile
-        fields = ("user", "city", "city_id")
+        fields = ("user", "city", "city_id", 'is_main')
         user_status = "manager"
 
     def validate(self, attrs):

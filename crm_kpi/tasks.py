@@ -144,13 +144,13 @@ def create_dealer_kpi():
                             price_type = user.dealer_profile.price_type
                             city = user.dealer_profile.village.city
                             if price_type:
-                                product_price = ProductPrice.objects.filter(price_type=price_type,
-                                                                            product=product,
-                                                                            d_status__discount=0).first().price
+                                product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
+                                                                            price_type=price_type,
+                                                                            product=product).first().price
                             else:
-                                product_price = ProductPrice.objects.filter(city=city,
-                                                                            product=product,
-                                                                            d_status__discount=0).first().price
+                                product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
+                                                                            city=city,
+                                                                            product=product).first().price
                             total_price = increased_total_count * product_price
                             total_pds += int(total_price)
 

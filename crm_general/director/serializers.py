@@ -33,7 +33,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'username', 'status', 'phone', 'pwd', 'email', 'is_active', 'date_joined', 'image',
-                  'updated_at', 'password', 'name', 'only_wh_in_stock')
+                  'updated_at', 'password', 'name', 'only_wh_in_stock', 'is_main')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -45,18 +45,9 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         with transaction.atomic():
-            # username = validated_data.get('username')
-            # pwd = validated_data.get('password')
-            # if username:
-            #     if not username_is_valid(username):
-            #         raise serializers.ValidationError({"username": "Некорректный username"})
-            # if pwd:
-            #     if not pwd_is_valid(pwd):
-            #         raise serializers.ValidationError({"password": "Некорректный password"})
-
             request = self.context['request']
             user = MyUser.objects.create_user(**validated_data)
-
+            is_main = request.data.get('is_main')
             if user.status == 'rop':
                 rop_profile = RopProfile.objects.create(user=user)
                 cities = request.data.get('cities', [])
@@ -65,7 +56,7 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
 
             elif user.status == 'warehouse':
                 stock_id = request.data.get('stock')
-                WarehouseProfile.objects.create(user=user, stock_id=stock_id)
+                WarehouseProfile.objects.create(user=user, stock_id=stock_id, is_main=is_main)
 
             return user
 
