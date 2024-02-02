@@ -515,8 +515,6 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
         rep['balance_crm'] = instance.wallet.amount_crm
         rep['balance_1c'] = instance.wallet.amount_1c
         rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores, many=True, context=self.context).data
-        rep['motivations'] = get_motivation_done(instance)
-
         return rep
 
 
