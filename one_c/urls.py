@@ -17,8 +17,8 @@ urlpatterns = [
     path('crm/1c/sync/prod/count/', SyncProdCountCRUDView.as_view()),  # prod count crud
     path('crm/1c/sync/prod/price/', SyncProdPriceCRUDView.as_view()),  # prod price crud
     path('crm/1c/sync/inventory/', SyncInventoryCRUDView.as_view()),
-    path('crm/1c/sync/movement/', SyncProdPriceCRUDView.as_view()),
-    path('crm/1c/sync/return/', SyncProdPriceCRUDView.as_view()),
+    path('crm/1c/sync/movement/', SyncMovementCRUDView.as_view()),
+    path('crm/1c/sync/return/', SyncReturnCRUDView.as_view()),
 
     path('', include(router.urls)),
 ]

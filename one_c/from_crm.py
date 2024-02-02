@@ -19,6 +19,8 @@ from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Co
 
 
 def sync_category_crm_to_1c(category):
+    print("<--======= CATEGORY sync =======-->")
+
     url = "http://91.211.251.134/testcrm/hs/asoi/CategoryGoodsCreate"
     payload = json.dumps({
         "NomenclatureName": '',
@@ -43,6 +45,8 @@ def sync_category_crm_to_1c(category):
 
 
 def sync_product_crm_to_1c(product):
+    print("<--======= PRODUCT sync =======-->")
+
     url = "http://91.211.251.134/testcrm/hs/asoi/GoodsCreate"
     payload = json.dumps({
         "NomenclatureName": product.title,
@@ -66,6 +70,8 @@ def sync_product_crm_to_1c(product):
 
 
 def sync_dealer_back_to_1C(dealer):
+    print("<--======= DEALER sync =======-->")
+
     username = 'Директор'
     password = '757520ля***'
     url = "http://91.211.251.134/testcrm/hs/asoi/clients"
@@ -101,28 +107,9 @@ def sync_dealer_back_to_1C(dealer):
         dealer.save()
 
 
-def sync_return_order_to_1C(returns_order):
-    url = "http://91.211.251.134/testcrm/hs/asoi/ReturnGoods"
-    products = returns_order.products.all()
-    payload = json.dumps({
-        "uid": returns_order.order.author.user.uid,
-        "created_at": f'{timezone.localtime(returns_order.created_at) + datetime.timedelta(hours=6)}',
-        "products_return": [
-            {
-                "uid": p.product.uid,
-                "count": int(p.count),
-            }
-            for p in products
-        ]
-    })
-    print(payload)
-    username = 'Директор'
-    password = '757520ля***'
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
-    print('return - ', response.text)
-
-
 def sync_1c_money_doc(money_doc):
+    print("<--======= MONEY sync =======-->")
+
     url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
     if 'Нал' == money_doc.status:
         type_status = 'Наличка'
@@ -133,7 +120,7 @@ def sync_1c_money_doc(money_doc):
     payload = json.dumps({
         "user_uid": money_doc.user.uid,
         "amount": int(money_doc.amount),
-        "created_at": f'{timezone.localtime(money_doc.created_at) + datetime.timedelta(hours=6)}',
+        "created_at": f'{timezone.localtime(money_doc.created_at)}',
         "order_type": type_status,
         "cashbox_uid": cash_box_uid,
         "delete": 0,
@@ -159,6 +146,8 @@ def sync_1c_money_doc(money_doc):
 def sync_money_doc_to_1C(order):
     try:
         with transaction.atomic():
+            print("<--======= MONEY sync =======-->")
+
             url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
             if 'cash' == order.type_status or order.type_status == 'kaspi':
                 type_status = 'Наличка'
@@ -169,13 +158,13 @@ def sync_money_doc_to_1C(order):
             payload = json.dumps({
                 "user_uid": order.author.user.uid,
                 "amount": int(order.price),
-                "created_at": f'{timezone.localtime(order.created_at) + datetime.timedelta(hours=6)}',
+                "created_at": f'{timezone.localtime(order.created_at)}',
                 "order_type": type_status,
                 "cashbox_uid": cash_box_uid,
                 "delete": 0,
                 "uid": "00000000-0000-0000-0000-000000000000"
             })
-            print('***ORDER PAY***')
+
             print('sync_order_pay_to_1C: ', payload)
             username = 'Директор'
             password = '757520ля***'
@@ -198,9 +187,11 @@ def sync_money_doc_to_1C(order):
 def sync_order_to_1C(order):
     try:
         with transaction.atomic():
+            print("<--======= ORDER sync =======-->")
+
             url = "http://91.211.251.134/testcrm/hs/asoi/CreateSale"
             products = order.order_products.all()
-            released_at = timezone.localtime(order.released_at) + datetime.timedelta(hours=6)
+            released_at = timezone.localtime(order.released_at)
             money = order.money_docs.filter(is_active=True).first()
             payload = json.dumps({
                 "user_uid": order.author.user.uid,
@@ -220,7 +211,7 @@ def sync_order_to_1C(order):
 
             username = 'Директор'
             password = '757520ля***'
-            print('***ORDER CREATE***')
+
             print(payload)
             response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
             print(response.text)
@@ -256,12 +247,13 @@ def sync_stock_1c_2_crm(stock):
 
 
 def sync_inventory_crm_2_1c(inventory):
-    print("*** INVENTORY sync ***")
+    print("<--======= INVENTORY sync =======-->")
+
     url = 'http://91.211.251.134/testcrm/hs/asoi/CreateInventory'
     username = 'Директор'
     password = '757520ля***'
 
-    created_at = timezone.localtime(inventory.created_at) + datetime.timedelta(hours=6)
+    created_at = timezone.localtime(inventory.created_at)
     stock = inventory.sender.warehouse_profile.stock.uid
     data = json.dumps({
         'uid': inventory.uid,
@@ -282,3 +274,29 @@ def sync_inventory_crm_2_1c(inventory):
     uid = response_data.get('result_uid')
     inventory.uid = uid
     inventory.save()
+
+
+def sync_return_order_to_1C(return_order):
+    print("<--======= RETURN sync =======-->")
+
+    url = "http://91.211.251.134/testcrm/hs/asoi/ReturnGoods"
+    products = return_order.products.all()
+
+    payload = json.dumps({
+        "uid_return": return_order.uid,
+        "uid": return_order.order.uid,
+        "is_active": not return_order.is_active,
+        "created_at": f'{timezone.localtime(return_order.created_at)}',
+        "products_return": [
+            {
+                "uid": p.product.uid,
+                "count": int(p.count),
+            }
+            for p in products
+        ]
+    })
+    print(payload)
+    username = 'Директор'
+    password = '757520ля***'
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    print(response.text)

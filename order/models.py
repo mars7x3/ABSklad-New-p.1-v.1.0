@@ -72,6 +72,7 @@ class ReturnOrder(models.Model):
     order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='return_orders')
     created_at = models.DateTimeField(auto_now_add=True)
     uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ('-created_at',)
@@ -87,8 +88,8 @@ class ReturnOrderProduct(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='returns')
     status = models.CharField(max_length=8, choices=STATUS, default='created')
     count = models.PositiveIntegerField(default=0)
-    price = models.DecimalField(max_digits=100, decimal_places=2)
-    comment = models.CharField(max_length=1000, null=True)
+    price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    comment = models.CharField(max_length=1000, blank=True, null=True)
 
 
 class ReturnOrderProductFile(models.Model):
