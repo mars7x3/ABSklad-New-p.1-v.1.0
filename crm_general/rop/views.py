@@ -153,7 +153,7 @@ class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.List
 
     def get_queryset(self):
         return super().get_queryset().filter(
-            dealer__managers__city__in=self.rop_profile.cities.all(),
+            dealer__managers__manager_profile__city__in=self.rop_profile.cities.all(),
             **{self.lookup_field: self.kwargs[self.lookup_url_kwarg]}
         )
 

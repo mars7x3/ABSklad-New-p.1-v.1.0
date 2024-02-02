@@ -523,7 +523,7 @@ class DirectorDealerOrderListView(APIView):
     "end": "14-12-2023",
     "user_id": user_id,
     """
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user_id = request.data.get('user_id')

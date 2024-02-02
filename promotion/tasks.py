@@ -86,10 +86,8 @@ def activate_discount():
                             is_active=True
                         )
                     )
-                    print(discount_prices_to_create)
         create_notifications_for_users(crm_status='action', link_id=discount.id)
 
-    print(discount_prices_to_create)
     DiscountPrice.objects.bulk_create(discount_prices_to_create)
     AsiaProduct.objects.bulk_update(products_to_update, fields=['is_discount'])
     Discount.objects.bulk_update(discounts_to_activate, fields=['is_active'])
