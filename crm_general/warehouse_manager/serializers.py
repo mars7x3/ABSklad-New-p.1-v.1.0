@@ -20,6 +20,7 @@ class ReturnOrderProductFileSerializer(serializers.ModelSerializer):
 class ReturnOrderProductSerializer(serializers.ModelSerializer):
     files = ReturnOrderProductFileSerializer(many=True)
     title = serializers.SerializerMethodField(read_only=True)
+    price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ReturnOrderProduct
@@ -27,6 +28,10 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
 
     def get_title(self, instance):
         return instance.product.title
+
+    def get_price(self, instance):
+        product_price = instance.return_order.order.order_products.filter(ab_product_id=instance.product.id).first()
+        return product_price.price if product_price else None
 
 
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
