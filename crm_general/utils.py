@@ -9,6 +9,8 @@ from rest_framework.exceptions import ValidationError
 
 from account.models import DealerStatus, DealerProfile, CRMNotification, MyUser, Notification
 from order.models import MyOrder
+from product.models import AsiaProduct
+from promotion.models import Banner, Story
 
 
 def today_on_true(field_value):
@@ -237,3 +239,17 @@ def create_notifications_for_users(crm_status, link_id=None):
         crm_notif.is_pushed = True
         crm_notif.save()
         print('Discount notifications were created')
+
+
+def remove_product_from_banner_story(product: AsiaProduct):
+    banners = Banner.objects.filter()
+    stories = Story.objects.filter()
+    for banner in banners:
+        banner_products = banner.products.all()
+        if product in banner_products:
+            banner.products.remove(product)
+
+    for story in stories:
+        story_products = story.products.all()
+        if product in story_products:
+            story.products.remove(product)

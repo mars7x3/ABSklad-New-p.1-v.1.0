@@ -9,6 +9,7 @@ from order.models import OrderProduct
 from product.models import AsiaProduct
 
 from .tasks import create_dealer_kpi_plan_stats, create_dealer_kpi_plan_product_stats
+from .utils import remove_product_from_banner_story
 
 
 # @receiver(post_save, sender=MoneyDoc)
@@ -76,7 +77,9 @@ def check_product_before_activation(sender, instance, created, **kwargs):
     count = 0
 
     if not instance.is_active:
+        remove_product_from_banner_story(instance)
         return
+
     d_status_city_counts = DealerStatus.objects.all().count() * City.objects.filter(is_active=True).count()
     d_status_type_counts = DealerStatus.objects.all().count() * PriceType.objects.filter(is_active=True).count()
     final_price_count = d_status_city_counts + d_status_type_counts
