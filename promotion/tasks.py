@@ -19,6 +19,9 @@ def activate_discount():
     cities = City.objects.all()
 
     discounts_to_activate = []
+    discount_prices_to_create = []
+    products_to_update = []
+
     for discount in discounts:
         print(f'---Activating discount {discount.id} | Discount status -> {discount.status}')
         discount.is_active = True
@@ -27,8 +30,6 @@ def activate_discount():
         products = discount.products.all()
         dealers = discount.dealer_profiles.all()
         discount_amount = discount.amount
-        discount_prices_to_create = []
-        products_to_update = []
 
         for product in products:
             product.is_discount = True
@@ -82,10 +83,13 @@ def activate_discount():
                                 is_active=True
                             )
                         )
-        print(discount_prices_to_create)
-        DiscountPrice.objects.bulk_create(discount_prices_to_create)
-        AsiaProduct.objects.bulk_update(products_to_update, fields=['is_discount'])
+                        print(discount_prices_to_create)
         create_notifications_for_users(crm_status='action', link_id=discount.id)
+
+
+    print(discount_prices_to_create)
+    DiscountPrice.objects.bulk_create(discount_prices_to_create)
+    AsiaProduct.objects.bulk_update(products_to_update, fields=['is_discount'])
     Discount.objects.bulk_update(discounts_to_activate, fields=['is_active'])
 
 
