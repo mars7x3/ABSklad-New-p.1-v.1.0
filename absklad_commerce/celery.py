@@ -55,10 +55,16 @@ app.conf.beat_schedule = {
         'schedule': 3600.0,
     },
 
-    # sync 1c task
+    # sync 1c task: BALANCE
     'sync_balance_1c_to_crm_task': {
         'task': 'one_c.tasks.sync_balance_1c_to_crm',
         'schedule': 5.0,
+    },
+
+    # sync 1c task: COUNT
+    'sync_product_count_task': {
+        'task': 'one_c.tasks.sync_product_count',
+        'schedule': 20.0,
     },
     'day_stat_task': {
         'task': "crm_stat.tasks.day_stat_task",
