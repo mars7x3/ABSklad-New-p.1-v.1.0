@@ -189,7 +189,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                     'price': round(discount_price.price),
                     'old_price': round(discount_price.old_price),
                     'discount': round(discount_price.discount.amount),
-                    'discount_status': round(discount_price.discount.status)
+                    'discount_status': discount_price.discount.status
                 }
                 return rep
 
@@ -202,7 +202,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                     'price': round(discount_price.price),
                     'old_price': round(discount_price.old_price),
                     'discount': round(discount_price.discount.amount),
-                    'discount_status': round(discount_price.discount.status)
+                    'discount_status': discount_price.discount.status
                 }
                 return rep
 
