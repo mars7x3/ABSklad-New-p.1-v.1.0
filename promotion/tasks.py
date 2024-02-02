@@ -49,43 +49,45 @@ def activate_discount():
                     dealer_discount_amount = int(dealer.dealer_status.discount)
                 else:
                     dealer_discount_amount = 0
+
                 if discount.status == 'Per':
                     total_discount_percent = discount_amount + dealer_discount_amount
                     final_price = calculate_discount(int(product_base_price), total_discount_percent)
                 elif discount.status == 'Sum':
                     abc_price = calculate_discount(product_base_price, dealer_discount_amount)
                     final_price = abc_price - discount_amount
+                else:
+                    return 'Discount type incorrect!!!'
 
-                    for price_type in price_types:
-                        discount_prices_to_create.append(
-                            DiscountPrice(
-                                user=dealer.user,
-                                discount=discount,
-                                product=product,
-                                city=None,
-                                price_type=price_type,
-                                price=final_price,
-                                old_price=product_base_price,
-                                is_active=True
-                            )
+                for price_type in price_types:
+                    discount_prices_to_create.append(
+                        DiscountPrice(
+                            user=dealer.user,
+                            discount=discount,
+                            product=product,
+                            city=None,
+                            price_type=price_type,
+                            price=final_price,
+                            old_price=product_base_price,
+                            is_active=True
                         )
+                    )
 
-                    for city in cities:
-                        discount_prices_to_create.append(
-                            DiscountPrice(
-                                user=dealer.user,
-                                discount=discount,
-                                product=product,
-                                city=city,
-                                price_type=None,
-                                price=final_price,
-                                old_price=product_base_price,
-                                is_active=True
-                            )
+                for city in cities:
+                    discount_prices_to_create.append(
+                        DiscountPrice(
+                            user=dealer.user,
+                            discount=discount,
+                            product=product,
+                            city=city,
+                            price_type=None,
+                            price=final_price,
+                            old_price=product_base_price,
+                            is_active=True
                         )
-                        print(discount_prices_to_create)
+                    )
+                    print(discount_prices_to_create)
         create_notifications_for_users(crm_status='action', link_id=discount.id)
-
 
     print(discount_prices_to_create)
     DiscountPrice.objects.bulk_create(discount_prices_to_create)
