@@ -14,8 +14,8 @@ from crm_general.models import Inventory, InventoryProduct
 from crm_kpi.utils import update_dealer_kpi_by_order
 from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock, City, PriceType, CashBox
-from one_c.models import MoneyDoc
-from order.models import MyOrder, OrderProduct
+from one_c.models import MoneyDoc, MovementProduct1C, MovementProducts
+from order.models import MyOrder, OrderProduct, ReturnOrder, ReturnOrderProduct
 from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Collection, ProductCostPrice
 
 
@@ -322,9 +322,9 @@ def sync_order_histories_1c_to_crm():
                             'author': author.dealer_profile,
                             'price': o.get('total_price'),
                             'type_status': o.get('type_status') if o.get('type_status') else 'Карта',
-                            'created_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
-                            'released_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
-                            'paid_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+                            'created_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
+                            'released_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
+                            'paid_at': datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S"),
                             'uid': o.get('uid'),
                             'status': 'success',
                             'stock': stock,
@@ -372,7 +372,7 @@ def sync_order_histories_1c_to_crm():
         print('*** ', x)
         order = MyOrder.objects.filter(uid=o.get('uid')).first()
         if order:
-            order.created_at = datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
+            order.created_at = datetime.datetime.strptime(o.get('created_at'), "%d.%m.%Y %H:%M:%S")
             order.save()
 
 
@@ -402,7 +402,7 @@ def sync_pay_doc_histories():
 
     update_data = []
     for p in payments:
-        date_object = datetime.datetime.strptime(p['created_at'], "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
+        date_object = datetime.datetime.strptime(p['created_at'], "%d.%m.%Y %H:%M:%S")
         money_doc = MoneyDoc.objects.filter(uid=p['uid']).first()
         if money_doc:
             money_doc.created_at = date_object
@@ -430,7 +430,7 @@ def sync_1c_money_doc_crud(data):
         money_doc.status = data.get('doc_type')
         money_doc.is_active = not bool(data.get('delete'))
         money_doc.amount = data.get('amount')
-        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
+        money_doc.created_at = datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S')
         money_doc.save()
 
         if is_check:
@@ -451,7 +451,7 @@ def sync_1c_money_doc_crud(data):
             'status': data.get('doc_type'),
             'is_active': not bool(data.get('delete')),
             'amount': data.get('amount'),
-            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S') - datetime.timedelta(hours=6)
+            'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S')
         }
         money_doc = MoneyDoc.objects.create(**data)
         print('Check stat')
@@ -538,9 +538,9 @@ def order_1c_to_crm(data):
         order_data['price'] = data.get('total_price')
         order_data['type_status'] = 'wallet'
         order_data['stock'] = city_stock
-        order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
-        order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
-        order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6)
+        order_data['created_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
+        order_data['released_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
+        order_data['paid_at'] = datetime.datetime.strptime(data.get('created_at'), "%d.%m.%Y %H:%M:%S")
         order_data['is_active'] = not bool(data['delete'])
 
         order = MyOrder.objects.filter(uid=data.get("order_uid")).first()
@@ -748,9 +748,9 @@ def sync_1c_inventory_crud(data):
         'uid': 'd4c3a57d-bfa4-11ee-8a3c-2c59e53ae4c1',
         'is_active': not bool(data.get('delete')),
         'created_at': datetime.datetime.strptime(
-            data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+            data.get('created_at'), "%d.%m.%Y %H:%M:%S"),
         'updated_at': datetime.datetime.strptime(
-            data.get('created_at'), "%d.%m.%Y %H:%M:%S") - datetime.timedelta(hours=6),
+            data.get('created_at'), "%d.%m.%Y %H:%M:%S"),
         'sender_id': sender.user_id,
         'status': 'moderated',
          }
@@ -800,15 +800,83 @@ def sync_1c_inventory_crud(data):
 
 
 def sync_1c_movement_crud(data):
-    a = {
-        "delete": False,
-        "warehouse_recipient_uid": "822cb2e2-37fd-11ed-8a2f-2c59e53ae4c3",
-        "warehouse_sender_uid": "c10ad4ab-35f9-11ed-8a2f-2c59e53ae4c3",
-        "journey_uid": "415396d9-2c72-11ee-8a38-2c59e53ae4c2",
-        "products": [
-            {
-                "product_uid": "0a8446af-196c-11ee-8a36-2c59e53ae4c3",
-                "counts": 2
-            }
-        ]
+    sender_stock = Stock.objects.filter(uid=data['warehouse_sender_uid']).first()
+    recipient_stock = Stock.objects.filter(uid=data['warehouse_recipient_uid']).first()
+    movement_data = {
+        'is_active': not bool(data['delete']),
+        'uid': data['journey_uid'],
+        'warehouse_recipient': recipient_stock,
+        'warehouse_sender': sender_stock,
+        'created_at': datetime.datetime.strptime(
+            data.get('created_at'), "%d.%m.%Y %H:%M:%S"),
+        'updated_at': datetime.datetime.strptime(
+            data.get('created_at'), "%d.%m.%Y %H:%M:%S"),
     }
+    movement = MovementProduct1C.objects.filter(uid=data['uid'])
+    if movement:
+        for key, value in movement_data.items():
+            setattr(movement, key, value)
+        movement.save()
+
+    else:
+        movement = MovementProduct1C.objects.create(**movement_data)
+
+    result = {i['product_uid']: i['counts'] for i in data['products']}
+    products = AsiaProduct.objects.filter(uid__in=result.keys()).values_list('uid', 'id')
+    products = {i[0]: i[1] for i in products}
+    create_data = []
+    for p_uid, p_id in products:
+        create_data.append(
+            MovementProducts(
+                movement=movement,
+                product_id=p_id,
+                count=result[p_uid]
+            )
+        )
+
+    MovementProducts.objects.bulk_create(create_data)
+
+    return True, 'Success!'
+
+
+def sync_1c_return_crud(data):
+    order = MyOrder.objects.filter(uid=data['uid_sale']).first()
+    if not order:
+        return False, 'Заказ отсутствует!'
+
+    return_data = {
+        'order': order,
+        'created_at': datetime.datetime.strptime(
+            data.get('created_at'), "%d.%m.%Y %H:%M:%S"),
+        'uid': data['uid'],
+        'is_active': not bool(data['delete'])
+    }
+
+    order_return = ReturnOrder.objects.filter(uid=data['uid']).first()
+    if order_return:
+        for key, value in return_data.items():
+            setattr(order_return, key, value)
+        order_return.save()
+
+    else:
+        order_return = ReturnOrder.objects.create(**return_data)
+
+    result = {i['uid']: i['count'] for i in data['products_return']}
+    products = AsiaProduct.objects.filter(uid__in=result.keys()).values_list('uid', 'id')
+    products = {i[0]: i[1] for i in products}
+
+    create_data = []
+    for p_uid, p_id in products:
+        create_data.append(
+            ReturnOrderProduct(
+                return_order=order_return,
+                product_id=p_id,
+                status='success',
+                count=result[p_uid]
+            )
+        )
+    order_return.products.all().delete()
+    ReturnOrderProduct.objects.bulk_create(create_data)
+
+    return True, 'Success!'
+
