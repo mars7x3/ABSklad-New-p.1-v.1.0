@@ -474,9 +474,12 @@ def sync_dealer_1C_to_back(request):
         'password': generate_pwd(),
         'is_active': not bool(request.data.get('delete'))
     }
+    d_status = DealerStatus.objects.filter(discount=0).first()
+
     profile_data = {
         "liability": request.data.get('Liability'),
         "address": request.data.get("Address"),
+        "dealer_status": d_status
     }
     if len(data.get('email')) < 6:
         data['email'] = str(uuid4()) + '@absklad.com'

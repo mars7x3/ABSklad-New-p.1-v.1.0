@@ -47,7 +47,6 @@ def order_cost_price(product_list, products):
     return amount
 
 
-@query_debugger
 def generate_order_products(product_list, products, dealer):
     result_data = []
     for p in product_list:

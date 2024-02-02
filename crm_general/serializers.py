@@ -11,6 +11,7 @@ from transliterate import translit
 from account.models import MyUser, DealerStatus, DealerProfile
 from crm_general.models import CRMTaskFile, CRMTask
 from general_service.models import Stock, City, PriceType, Village
+from one_c.from_crm import sync_dealer_back_to_1C
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
 
@@ -133,6 +134,8 @@ class BaseProfileSerializer(serializers.ModelSerializer):
         # calling this method `create` should not return an error.
         # Therefore, the validation must be perfect,
         # otherwise if there is an error, the user will be created but the dealer profile will not
+        if validated_data['user'].status == 'dealer':
+            sync_dealer_back_to_1C(validated_data['user'])
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
