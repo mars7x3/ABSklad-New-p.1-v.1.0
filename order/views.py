@@ -98,13 +98,13 @@ class OrderReceiptAddView(APIView):
         order_id = request.data.get('order_id')
         if receipts and order_id:
             order = MyOrder.objects.filter(id=order_id).first()
-            if order.author.user != request.user or request.user.status != 'manager':
-                return Response({'text': 'Доступ ограничен!'}, status=status.HTTP_400_BAD_REQUEST)
-            if order:
-                OrderReceipt.objects.bulk_create([OrderReceipt(order=order, file=i) for i in receipts])
-                response_data = MyOrderDetailSerializer(order, context=self.get_renderer_context()).data
-                return Response(response_data, status=status.HTTP_200_OK)
-            return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+            if order.author.user == request.user or request.user.status == 'manager':
+                if order:
+                    OrderReceipt.objects.bulk_create([OrderReceipt(order=order, file=i) for i in receipts])
+                    response_data = MyOrderDetailSerializer(order, context=self.get_renderer_context()).data
+                    return Response(response_data, status=status.HTTP_200_OK)
+                return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'text': 'Доступ ограничен!'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'receipts': 'Обязательное поле!',
                          'order_id': 'Обязательное поле!'
                          }, status=status.HTTP_400_BAD_REQUEST)
