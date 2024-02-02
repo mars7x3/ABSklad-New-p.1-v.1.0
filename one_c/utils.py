@@ -517,11 +517,11 @@ def sync_category_1c_to_crm(data):
     category = Category.objects.filter(uid=data.get('category_uid')).first()
     if category:
         category.title = data.get('category_title')
-        category.is_active = not bool(data.get('is_active'))
+        category.is_active = not bool(data.get('delete'))
         category.save()
     else:
         Category.objects.create(title=data.get('category_title'), uid=data.get('category_uid'),
-                                slug=data.get('category_uid'), is_active=not bool(data.get('is_active')))
+                                slug=data.get('category_uid'), is_active=not bool(data.get('delete')))
 
 
 def order_1c_to_crm(data):
@@ -658,7 +658,7 @@ def sync_1c_user_city_crud(data):
     title = translit(data['title'], 'ru', reversed=True)
     slug = title.replace(' ', '_').lower()
     if city:
-        city.is_active = not bool(data['is_active'])
+        city.is_active = not bool(data['delete'])
         city.title = data['title']
         city.slug = slug
         city.save()
@@ -666,7 +666,7 @@ def sync_1c_user_city_crud(data):
         data = {
             'uid': data['uid'],
             'title': data['title'],
-            'is_active': not bool(data['is_active']),
+            'is_active': not bool(data['delete']),
             'slug': slug
         }
         City.objects.create(**data)
