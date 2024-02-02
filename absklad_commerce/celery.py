@@ -52,7 +52,7 @@ app.conf.beat_schedule = {
 
     'set_story': {
         'task': 'promotion.tasks.story_setter',
-        'schedule': 3600.0,
+        'schedule': 1800.0,
     },
 
     # sync 1c task

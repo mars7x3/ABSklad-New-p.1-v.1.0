@@ -12,8 +12,9 @@ from promotion.models import Discount, DiscountPrice, Story
 
 @app.task
 def activate_discount():
-    crn_date = datetime.date.today()
-    discounts = Discount.objects.filter(start_date=crn_date)
+    naive_time = timezone.localtime().now()
+    crn_date = timezone.make_aware(naive_time)
+    discounts = Discount.objects.filter(start_date=crn_date, is_active=False)
     price_types = PriceType.objects.all()
     cities = City.objects.all()
 
@@ -43,14 +44,15 @@ def activate_discount():
                                                                 d_status__discount=0,
                                                                 city=dealer.village.city).first()
                 product_base_price = product_price.price
-
-                if discount.status == 'Per':
+                if dealer.dealer_status:
                     dealer_discount_amount = int(dealer.dealer_status.discount)
+                else:
+                    dealer_discount_amount = 0
+                if discount.status == 'Per':
                     total_discount_percent = discount_amount + dealer_discount_amount
                     final_price = calculate_discount(int(product_base_price), total_discount_percent)
                 elif discount.status == 'Sum':
-                    abc_discount_amount = dealer.dealer_status.discount
-                    abc_price = calculate_discount(product_base_price, abc_discount_amount)
+                    abc_price = calculate_discount(product_base_price, dealer_discount_amount)
                     final_price = abc_price - discount_amount
 
                     for price_type in price_types:
@@ -80,6 +82,7 @@ def activate_discount():
                                 is_active=True
                             )
                         )
+        print(discount_prices_to_create)
         DiscountPrice.objects.bulk_create(discount_prices_to_create)
         AsiaProduct.objects.bulk_update(products_to_update, fields=['is_discount'])
         create_notifications_for_users(crm_status='action', link_id=discount.id)
@@ -88,8 +91,9 @@ def activate_discount():
 
 @app.task
 def deactivate_discount():
-    crn_date = datetime.date.today()
-    discounts = Discount.objects.filter(end_date__lt=crn_date)
+    naive_time = timezone.localtime().now()
+    crn_date = timezone.make_aware(naive_time)
+    discounts = Discount.objects.filter(end_date__lt=crn_date, is_active=True)
 
     discounts_to_deactivate = []
     for discount in discounts:
