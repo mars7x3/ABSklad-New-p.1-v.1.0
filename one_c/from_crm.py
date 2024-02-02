@@ -179,7 +179,9 @@ def sync_money_doc_to_1C(order):
             today = timezone.make_aware(naive_time)
             order.paid_at = today
             order.save()
-            m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
+            cash_box = order.stock.cash_box
+            m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid,
+                                          cash_box=cash_box)
             main_stat_pds_sync(m_d)
             m_d.is_checked = True
             m_d.save()
