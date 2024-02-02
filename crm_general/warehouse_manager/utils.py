@@ -10,7 +10,7 @@ def create_order_return_product(instance: ReturnOrder, comment, count: int, file
         product=product,
         comment=comment,
         count=count,
-        price=count * product_price.price
+        # price=count * product_price.price
     )
     files_to_create = []
     for file in files:

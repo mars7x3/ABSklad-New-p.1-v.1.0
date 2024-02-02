@@ -460,7 +460,7 @@ class InventoryListUpdateView(ListModelMixin,
 class ReturnOrderView(ListModelMixin,
                       RetrieveModelMixin,
                       GenericViewSet):
-    queryset = ReturnOrder.objects.all()
+    queryset = ReturnOrder.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = ReturnOrderSerializer
     retrieve_serializer_class = ReturnOrderDetailSerializer
@@ -468,7 +468,7 @@ class ReturnOrderView(ListModelMixin,
     def get_queryset(self):
         search = self.request.query_params.get('search')
         order_status = self.request.query_params.get('status')
-        queryset = ReturnOrder.objects.all()
+        queryset = ReturnOrder.objects.filter(is_active=True)
         if search:
             queryset = queryset.filter(order__author__user__name__icontains=search)
         if order_status:

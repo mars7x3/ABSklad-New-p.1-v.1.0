@@ -346,7 +346,7 @@ class ReturnOrderProductView(ListModelMixin,
                              RetrieveModelMixin,
                              CreateModelMixin,
                              GenericViewSet):
-    queryset = ReturnOrder.objects.all()
+    queryset = ReturnOrder.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     serializer_class = ReturnOrderSerializer
 
