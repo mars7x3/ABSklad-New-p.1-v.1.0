@@ -7,7 +7,7 @@ from django.db.models import Case, F, When, IntegerField, Value, Sum
 from absklad_commerce.celery import app
 from account.models import MyUser, Wallet
 from order.models import OrderProduct
-from product.models import ProductCount
+from product.models import ProductCount, AsiaProduct
 
 
 @app.task
@@ -61,28 +61,46 @@ def sync_product_count():
     data = json.loads(response.content)
 
     products_data = data.get('products')
-    start_time = datetime.datetime.now()
-
-    converted_data_map = {
-        product_data['NomenclatureUID']: {
-            wh_data['WarehouseUID']: wh_data['NomenclatureAmount']
-            for wh_data in product_data['WarehousesCount']
-        }
-        for product_data in products_data
-    }
-
-    product_counts = ProductCount.objects.select_related('product', 'stock')
-
-    updated_warehouses = []
-    for product_count in product_counts:
-        product_uid = product_count.product.uid
-        wh_uid = product_count.stock.uid
-        product_count.count = converted_data_map.get(product_uid, {}).get(wh_uid, 0)
-        updated_warehouses.append(product_count)
-
-    ProductCount.objects.bulk_update(updated_warehouses, fields=['count_1c'])
-
-    end_time = datetime.datetime.now()
-    print("***END SYNC PRODUCT COUNT***", end_time - start_time)
+    # start_time = datetime.datetime.now()
+    #
+    # data_map = {
+    #     product_data['NomenclatureUID']: {
+    #         wh_data['WarehouseUID']: wh_data['NomenclatureAmount']
+    #         for wh_data in product_data['WarehousesCount']
+    #     }
+    #     for product_data in products_data
+    # }
+    #
+    # cases = [When(dealer__user__uid=user_uid, then=Value(amount, output_field=IntegerField())) for user_uid, amount in
+    #          users_uid.items()]
+    #
+    # annotated_wallets = Wallet.objects.filter(
+    #     dealer__user__uid__in=users_uid.keys()
+    # ).annotate(
+    #     amount_1c_new=Case(*cases, default=F('amount_1c'), output_field=IntegerField()),
+    #     amount_paid=Sum(
+    #         Case(
+    #             When(dealer__orders__status='paid', dealer__orders__is_active=True,
+    #                  then=F('dealer__orders__price')),
+    #             default=0,
+    #             output_field=IntegerField()
+    #         )
+    #     )
+    # )
+    # products = AsiaProduct.objects.filter(uid__in=data_map.keys()).annotate(
+    #
+    # )
+    #
+    # updated_warehouses = []
+    # for product_count in product_counts:
+    #     product_uid = product_count.product.uid
+    #     wh_uid = product_count.stock.uid
+    #     product_count.count = converted_data_map.get(product_uid, {}).get(wh_uid, 0)
+    #     updated_warehouses.append(product_count)
+    #
+    # ProductCount.objects.bulk_update(updated_warehouses, fields=['count_1c'])
+    #
+    # end_time = datetime.datetime.now()
+    # print("***END SYNC PRODUCT COUNT***", end_time - start_time)
 
 

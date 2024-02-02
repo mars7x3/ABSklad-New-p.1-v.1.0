@@ -166,7 +166,6 @@ def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
     p_types = PriceType.objects.all()
 
     price_create = []
-    cost_price_create = []
     uid = data.get('product_uid')
     product = AsiaProduct.objects.filter(uid=uid).first()
     if product:
