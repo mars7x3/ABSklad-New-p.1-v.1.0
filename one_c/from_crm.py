@@ -307,5 +307,5 @@ def sync_return_order_to_1C(return_order):
     print(payload)
     username = 'Директор'
     password = '757520ля***'
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')), timeout=10)
     print(response.text)
