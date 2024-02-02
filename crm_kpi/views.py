@@ -116,7 +116,8 @@ class DealerKPIView(viewsets.ModelViewSet):
 
             queryset = queryset.filter(month__month=date.month, month__year=date.year)
         else:
-            today = timezone.now()
+            naive_time = timezone.localtime().now()
+            today = timezone.make_aware(naive_time)
             queryset = queryset.filter(month__month=today.month, month__year=today.year)
 
         search = request_query.get('search')

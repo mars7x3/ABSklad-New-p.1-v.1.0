@@ -231,13 +231,17 @@ class CRMNotificationView(ListModelMixin,
 
     @action(methods=['GET'], detail=False, url_path='motivations')
     def get_motivations(self, request):
-        motivations = Motivation.objects.filter(start_date__gte=timezone.now())
+        naive_time = timezone.localtime().now()
+        today = timezone.make_aware(naive_time)
+        motivations = Motivation.objects.filter(start_date__gte=today)
         serializer = MotivationSerializer(motivations, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['GET'], detail=False, url_path='actions')
     def get_actions(self, request):
-        actions = Discount.objects.filter(start_date__gte=timezone.now())
+        naive_time = timezone.localtime().now()
+        today = timezone.make_aware(naive_time)
+        actions = Discount.objects.filter(start_date__gte=today)
         serializer = DiscountSerializer(actions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

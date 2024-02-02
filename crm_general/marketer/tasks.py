@@ -11,7 +11,8 @@ def create_notifications():
     """
     Create every notification for user
     """
-    crn_time = timezone.now()
+    naive_time = timezone.localtime().now()
+    crn_time = timezone.make_aware(naive_time)
     crm_notifs = CRMNotification.objects.filter(dispatch_date__lte=crn_time, is_pushed=False, status='notif')
     if crm_notifs:
         for notif in crm_notifs:
@@ -20,7 +21,8 @@ def create_notifications():
 
 @app.task
 def set_banner_false():
-    current_date = timezone.now()
+    naive_time = timezone.localtime().now()
+    current_date = timezone.make_aware(naive_time)
     banners = Banner.objects.filter(is_active=True, end_time__month=current_date.month,
                                     end_time__day=current_date.day, end_time__year=current_date.year)
     for banner in banners:
@@ -31,7 +33,8 @@ def set_banner_false():
 
 @app.task
 def set_banner_true():
-    current_date = timezone.now()
+    naive_time = timezone.localtime().now()
+    current_date = timezone.make_aware(naive_time)
     banners = Banner.objects.filter(is_active=False, start_time__month=current_date.month,
                                     start_time__day=current_date.day, start_time__year=current_date.year)
     for banner in banners:

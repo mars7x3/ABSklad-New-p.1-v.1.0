@@ -1,11 +1,13 @@
 import datetime
 
+from django.utils import timezone
+
 from absklad_commerce.celery import app
 from crm_general.utils import create_notifications_for_users
 from promotion.utils import calculate_discount
 from general_service.models import PriceType, City
 from product.models import ProductPrice, AsiaProduct
-from promotion.models import Discount, DiscountPrice
+from promotion.models import Discount, DiscountPrice, Story
 
 
 @app.task
@@ -112,3 +114,17 @@ def deactivate_discount():
     Discount.objects.bulk_update(discounts_to_deactivate, fields=['is_active'])
 
 
+def story_setter():
+    naive_time = timezone.localtime().now()
+    now = timezone.make_aware(naive_time)
+    activate_stories = Story.objects.filter(is_active=False, start_date__lte=now, end_date__gte=now)
+    deactivate_stories = Story.objects.filter(is_active=True, start_date__lte=now, end_date__lte=now)
+    stories_to_update = []
+    for story in activate_stories:
+        story.is_active = True
+        stories_to_update.append(story)
+
+    for story in deactivate_stories:
+        story.is_active = False
+        stories_to_update.append(story)
+    Story.objects.bulk_update(stories_to_update, fields=['is_active'])

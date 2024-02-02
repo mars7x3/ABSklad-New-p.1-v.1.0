@@ -84,7 +84,8 @@ def kpi_info(kpi):
                 ).annotate(amount=Sum("order_products__count")).values("amount")
             )
 
-    now = timezone.now()
+    naive_time = timezone.localtime().now()
+    now = timezone.make_aware(naive_time)
     return (
         kpi.kpi_items.filter(start_date__lte=now, end_date__gte=now)
         .annotate(

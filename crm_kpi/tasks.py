@@ -24,7 +24,8 @@ def create_kpi():
 
 @app.task()
 def create_manager_kpi():
-    today = timezone.now()
+    naive_time = timezone.localtime().now()
+    today = timezone.make_aware(naive_time)
     current_date = datetime(month=today.month, year=today.year, day=1).date()
     month_ago = today - relativedelta(months=1)
     three_month_ago = today - relativedelta(months=3)
@@ -85,10 +86,12 @@ def create_manager_kpi():
 
 @app.task()
 def create_dealer_kpi():
-    current_date = timezone.now().date()
+    naive_time = timezone.localtime().now()
+    today = timezone.make_aware(naive_time)
+    current_date = today.date()
     current_month = current_date.month
     last_month = current_date - relativedelta(months=1)
-    last_three_month = timezone.now() - relativedelta(months=3)
+    last_three_month = today - relativedelta(months=3)
     users = MyUser.objects.filter(status='dealer',
                                   dealer_profile__orders__isnull=False,
                                   dealer_profile__orders__created_at__gte=last_three_month,
@@ -177,7 +180,8 @@ def create_dealer_kpi():
 
 @app.task
 def confirm_dealer_kpis():
-    current_date = timezone.now()
+    naive_time = timezone.localtime().now()
+    current_date = timezone.make_aware(naive_time)
     unconfirmed_dealer_kpis = DealerKPI.objects.filter(month__month=current_date.month,
                                                        month__year=current_date.year,
                                                        is_confirmed=False)

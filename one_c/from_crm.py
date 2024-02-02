@@ -185,7 +185,9 @@ def sync_money_doc_to_1C(order):
             response_data = json.loads(response.content)
             payment_doc_uid = response_data.get('result_uid')
             order.payment_doc_uid = payment_doc_uid
-            order.paid_at = timezone.now()
+            naive_time = timezone.localtime().now()
+            today = timezone.make_aware(naive_time)
+            order.paid_at = today
             order.save()
             m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid)
             main_stat_pds_sync(m_d)
@@ -228,7 +230,9 @@ def sync_order_to_1C(order):
 
             uid = response_data.get('result_uid')
             order.uid = uid
-            order.released_at = timezone.now()
+            naive_time = timezone.localtime().now()
+            today = timezone.make_aware(naive_time)
+            order.released_at = today
             order.save()
     except Exception as e:
         raise TypeError

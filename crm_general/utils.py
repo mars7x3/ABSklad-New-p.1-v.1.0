@@ -12,7 +12,9 @@ from order.models import MyOrder
 
 
 def today_on_true(field_value):
-    return timezone.now().date() if field_value and field_value == 'true' else None
+    naive_time = timezone.localtime().now()
+    today = timezone.make_aware(naive_time)
+    return today.date() if field_value and field_value == 'true' else None
 
 
 def string_datetime_datetime(datetime_string: str, datetime_format: str = "%Y-%m-%d %H:%M:%S"):
@@ -141,7 +143,9 @@ def round_up(n, decimals=0):
 
 def collect_orders_data_for_kpi_plan(check_months_ago, increase_threshold: float):
     assert 0 < check_months_ago < 13
-    months_ago = timezone.now() - relativedelta(months=check_months_ago)
+    naive_time = timezone.localtime().now()
+    today = timezone.make_aware(naive_time)
+    months_ago = today - relativedelta(months=check_months_ago)
 
     return (
         MyOrder.objects.filter(

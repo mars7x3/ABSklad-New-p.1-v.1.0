@@ -129,8 +129,9 @@ class WareHouseProductListSerializer(serializers.ModelSerializer):
         rep['stocks_count'] = sum(instance.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
         cost_price = instance.cost_prices.filter(is_active=True).first()
         rep['cost_price'] = cost_price.price if cost_price else '---'
-
-        last_15_days = timezone.now() - timezone.timedelta(days=15)
+        naive_time = timezone.localtime().now()
+        today = timezone.make_aware(naive_time)
+        last_15_days = today - timezone.timedelta(days=15)
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
                                                                   order__status__in=['sent', 'paid', 'success'])

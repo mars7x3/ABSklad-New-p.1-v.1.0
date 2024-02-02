@@ -315,7 +315,9 @@ class ShortProductSerializer(serializers.ModelSerializer):
         return instance.category.title
 
     def get_last_fifteen_days_ratio(self, instance):
-        fifteen_days_ago = timezone.now() - timezone.timedelta(days=15)
+        naive_time = timezone.localtime().now()
+        today = timezone.make_aware(naive_time)
+        fifteen_days_ago = today - timezone.timedelta(days=15)
         return instance.order_products.aggregate(
             last_fifteen_days_ratio=Round(
                 Sum(
