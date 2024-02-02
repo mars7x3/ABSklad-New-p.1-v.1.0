@@ -1,5 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q, Sum, F
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin, \
@@ -77,6 +78,8 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
 
         if order_status == 'paid':
             if order.type_status == 'cash':
+                paid_at = timezone.localtime().now()
+                order.paid_at = paid_at
                 order.status = 'paid'
                 order.save()
                 sync_money_doc_to_1C(order)
@@ -87,7 +90,9 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
 
         if order_status == 'sent':
             if order.status == 'paid':
+                released_at = timezone.localtime().now()
                 order.status = order_status
+                order.released_at = released_at
                 order.save()
 
                 sync_order_to_1C.delay(order.id)
