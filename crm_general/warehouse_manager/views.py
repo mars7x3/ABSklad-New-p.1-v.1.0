@@ -90,7 +90,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
                 order.status = order_status
                 order.save()
 
-                sync_order_to_1C(order)
+                sync_order_to_1C.delay(order)
                 main_stat_order_sync(order)
                 update_data = []
                 for p in order.order_products.all():

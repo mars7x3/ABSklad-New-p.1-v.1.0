@@ -8,6 +8,7 @@ from django.db.models import F, Case, When, Value, IntegerField
 from django.utils import timezone
 from transliterate import translit
 
+from absklad_commerce.celery import app
 from account.models import DealerStatus, MyUser, Wallet, DealerProfile, Notification
 from account.utils import generate_pwd
 from crm_kpi.utils import update_dealer_kpi_by_tx
@@ -186,6 +187,7 @@ def sync_money_doc_to_1C(order):
         raise TypeError
 
 
+@app.task
 def sync_order_to_1C(order):
     try:
         with transaction.atomic():
