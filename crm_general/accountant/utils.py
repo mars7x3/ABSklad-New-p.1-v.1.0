@@ -13,7 +13,9 @@ def deduct_returned_product_from_order_and_stock(order: MyOrder, product_id: int
         order_product.count -= count
         order_product.price = (order_product.count - count) * product_price
         order_product.save()
-
+    total_order_price = sum(order.order_products.filter().values_list('total_price', flat=True))
+    order.price = total_order_price
+    order.save()
     stock = ProductCount.objects.filter(stock_id=order.stock.id).first()
     stock.count_crm += count
     stock.save()
