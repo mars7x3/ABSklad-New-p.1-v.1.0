@@ -7,6 +7,7 @@ from crm_general.models import CRMTask, CRMTaskFile, Inventory, InventoryProduct
 from crm_general.serializers import VerboseChoiceField
 from crm_general.warehouse_manager.utils import create_order_return_product
 from general_service.models import Stock
+from one_c.from_crm import sync_return_order_to_1C
 from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
@@ -302,11 +303,13 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
         if return_order:
             return_product = create_order_return_product(return_order, comment, int(count), files, product_id)
             if return_product:
+                sync_return_order_to_1C(return_order)
                 return return_order
         else:
             instance = super().create(validated_data)
             return_product = create_order_return_product(instance, comment, int(count), files, product_id)
             if return_product:
+                sync_return_order_to_1C(return_order)
                 return instance
 
     def to_representation(self, instance):
