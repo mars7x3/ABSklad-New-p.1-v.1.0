@@ -1,8 +1,8 @@
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import F, Q, Sum, Count, Value, DecimalField, FloatField
+from django.db.models import Sum, Count, FloatField
 from django.db.models.functions import Round
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
@@ -14,9 +14,9 @@ from account.models import (
 from account.serializers import BalancePlusFileSerializer
 from crm_general.models import CRMTask
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer, VillageSerializer
-from crm_general.utils import get_motivation_done
 from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
+from one_c.from_crm import sync_dealer_back_to_1C
 from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct
 from order.tasks import create_order_notification
 from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage, ProductCount
@@ -333,6 +333,10 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         if dealer_status:
             attrs["dealer_status"] = dealer_status
         return attrs
+
+    def save(self, **kwargs):
+        dealer = super().save(**kwargs)
+        sync_dealer_back_to_1C(dealer)
 
 
 class DealerBalanceHistorySerializer(serializers.ModelSerializer):
