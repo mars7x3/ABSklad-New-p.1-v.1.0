@@ -391,8 +391,10 @@ class DirectorDiscountCRUDView(viewsets.ModelViewSet):
 
         planned = request.query_params.get('planned')
         if planned:
+            naive_time = timezone.localtime().now()
+            today = timezone.make_aware(naive_time)
             kwargs['is_active'] = True
-            kwargs['start_date__gte'] = timezone.now()
+            kwargs['start_date__gte'] = today
 
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data

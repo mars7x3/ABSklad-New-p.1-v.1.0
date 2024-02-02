@@ -50,6 +50,11 @@ app.conf.beat_schedule = {
         'schedule': 600.0,
     },
 
+    'set_story': {
+        'task': 'promotion.tasks.story_setter',
+        'schedule': 3600.0,
+    },
+
     # sync 1c task
     'sync_balance_1c_to_crm_task': {
         'task': 'one_c.tasks.sync_balance_1c_to_crm',
