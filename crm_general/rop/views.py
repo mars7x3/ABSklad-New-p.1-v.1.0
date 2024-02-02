@@ -295,7 +295,7 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
     queryset = (
         Wallet.objects.select_related("dealer")
                       .only("id", "dealer", "amount_1c", "amount_crm")
-                      .all()
+                      .filter(Q(amount_crm__gt=0) | Q(amount_1c__gt=0))
     )
     dealers_queryset = DealerProfile.objects.all()
     serializer_class = WalletListSerializer

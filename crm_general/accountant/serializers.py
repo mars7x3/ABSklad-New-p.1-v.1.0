@@ -376,7 +376,7 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         if instance.status == 'success':
             sync_return_order_to_1C(instance.return_order)
-        return
+        return instance
 
     def get_title(self, instance):
         return instance.product.title
