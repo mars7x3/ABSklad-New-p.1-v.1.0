@@ -190,7 +190,8 @@ def sync_money_doc_to_1C(order):
 
 
 @app.task
-def sync_order_to_1C(order):
+def sync_order_to_1C(order_id):
+    order = MyOrder.objects.get(id=order_id)
     try:
         with transaction.atomic():
             print("<--======= ORDER sync =======-->")
