@@ -36,7 +36,8 @@ def sync_category_crm_to_1c(category):
     username = 'Директор'
     password = '757520ля***'
     print(payload)
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
+                                timeout=60)
     print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('category_uid')
@@ -62,7 +63,8 @@ def sync_product_crm_to_1c(product):
     password = '757520ля***'
     print('***PRODUCT SYNC***')
     print(payload)
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
+                                timeout=60)
     print(response.text)
     response_data = json.loads(response.content)
     product_uid = response_data.get('NomenclatureUID')
@@ -77,12 +79,7 @@ def sync_dealer_back_to_1C(dealer):
     password = '757520ля***'
     url = "http://91.211.251.134/testcrm/hs/asoi/clients"
     profile = dealer.dealer_profile
-    if not dealer.is_active:
-        payload = {"uid": dealer.uid}
-        print(payload)
-        response = requests.request("DELETE", url, data=payload,
-                                    auth=(username.encode('utf-8'), password.encode('utf-8')))
-        print(response.text)
+
     payload = json.dumps({
         "clients": [{
             "delete": int(not dealer.is_active),
@@ -98,7 +95,8 @@ def sync_dealer_back_to_1C(dealer):
 
     print('***DEALER SYNC***')
     print(payload)
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
+                                timeout=60)
     print(response.text)
     response_data = json.loads(response.content)
 
@@ -132,7 +130,8 @@ def sync_1c_money_doc(money_doc):
 
     username = 'Директор'
     password = '757520ля***'
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
+                                timeout=60)
     print('return - ', response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
@@ -169,7 +168,8 @@ def sync_money_doc_to_1C(order):
             print('sync_order_pay_to_1C: ', payload)
             username = 'Директор'
             password = '757520ля***'
-            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
+                                                                         password.encode('utf-8')), timeout=60)
             print('1C return - ', response.text)
 
             response_data = json.loads(response.content)
@@ -220,7 +220,8 @@ def sync_order_to_1C(order_id):
             password = '757520ля***'
 
             print(payload)
-            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')))
+            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
+                                                                         password.encode('utf-8')), timeout=60)
             print(response.text)
             response_data = json.loads(response.content)
 
@@ -247,7 +248,7 @@ def sync_stock_1c_2_crm(stock):
     password = '757520ля***'
     print(payload)
     response = requests.request("POST", url, data=payload,
-                                auth=(username.encode('utf-8'), password.encode('utf-8')))
+                                auth=(username.encode('utf-8'), password.encode('utf-8')), timeout=60)
     print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
@@ -277,7 +278,8 @@ def sync_inventory_crm_2_1c(inventory):
     })
 
     print(data)
-    response = requests.request("POST", url, data=data, auth=(username.encode('utf-8'), password.encode('utf-8')))
+    response = requests.request("POST", url, data=data, auth=(username.encode('utf-8'), password.encode('utf-8')),
+                                timeout=60)
     print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
@@ -307,5 +309,6 @@ def sync_return_order_to_1C(return_order):
     print(payload)
     username = 'Директор'
     password = '757520ля***'
-    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')), timeout=10)
+    response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
+                                                                 password.encode('utf-8')), timeout=60)
     print(response.text)
