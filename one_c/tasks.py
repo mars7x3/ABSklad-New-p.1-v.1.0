@@ -2,7 +2,7 @@ import datetime
 import json
 
 import requests
-from django.db.models import Case, F, When, IntegerField, Value, Sum
+from django.db.models import Case, F, When, IntegerField, Value, Sum, Subquery
 
 from absklad_commerce.celery import app
 from account.models import MyUser, Wallet
@@ -61,46 +61,65 @@ def sync_product_count():
     data = json.loads(response.content)
 
     products_data = data.get('products')
-    # start_time = datetime.datetime.now()
-    #
-    # data_map = {
-    #     product_data['NomenclatureUID']: {
-    #         wh_data['WarehouseUID']: wh_data['NomenclatureAmount']
-    #         for wh_data in product_data['WarehousesCount']
-    #     }
-    #     for product_data in products_data
-    # }
-    #
-    # cases = [When(dealer__user__uid=user_uid, then=Value(amount, output_field=IntegerField())) for user_uid, amount in
-    #          users_uid.items()]
-    #
-    # annotated_wallets = Wallet.objects.filter(
-    #     dealer__user__uid__in=users_uid.keys()
-    # ).annotate(
-    #     amount_1c_new=Case(*cases, default=F('amount_1c'), output_field=IntegerField()),
-    #     amount_paid=Sum(
-    #         Case(
-    #             When(dealer__orders__status='paid', dealer__orders__is_active=True,
-    #                  then=F('dealer__orders__price')),
-    #             default=0,
-    #             output_field=IntegerField()
-    #         )
-    #     )
-    # )
-    # products = AsiaProduct.objects.filter(uid__in=data_map.keys()).annotate(
-    #
-    # )
-    #
-    # updated_warehouses = []
-    # for product_count in product_counts:
-    #     product_uid = product_count.product.uid
-    #     wh_uid = product_count.stock.uid
-    #     product_count.count = converted_data_map.get(product_uid, {}).get(wh_uid, 0)
-    #     updated_warehouses.append(product_count)
-    #
-    # ProductCount.objects.bulk_update(updated_warehouses, fields=['count_1c'])
-    #
-    # end_time = datetime.datetime.now()
-    # print("***END SYNC PRODUCT COUNT***", end_time - start_time)
+    start_time = datetime.datetime.now()
+
+    converted_data_map = {
+        product_data["NomenclatureUID"]: {
+            wh_data["WarehouseUID"]: wh_data['NomenclatureAmount']
+            for wh_data in product_data['WarehousesCount']
+        }
+        for product_data in products_data
+    }
+
+    product_counts = (
+        ProductCount.objects
+        .select_related('product', 'stock')
+        .filter(product__uid__in=converted_data_map.keys())
+    )
+
+    order_counts = (
+        OrderProduct.objects
+        .filter(
+            order__stock__isnull=False,
+            order__is_active=True,
+            order__status="paid",
+            ab_product_id__in=Subquery(product_counts.values("product_id"))
+        )
+        .values(product_uid=F("ab_product__uid"))
+        .annotate(
+            wh_uid=F("order__stock__uid"),
+            count_amount=Sum("count")
+        )
+    )
+
+    converted_order_counts = {}
+    for count_data in order_counts:
+        product_uid, wh_uid, count = count_data["product_uid"], count_data["wh_uid"], count_data["count_amount"]
+
+        if product_uid not in converted_order_counts:
+            converted_order_counts[product_uid] = {}
+
+        converted_order_counts[product_uid][wh_uid] = count
+
+    updated_warehouses = []
+    for product_count in product_counts.distinct():
+        product_uid, wh_uid = product_count.product.uid, product_count.stock.uid
+
+        count_1c = converted_data_map.get(product_uid, {}).get(wh_uid, 0)
+        product_count.count_1c = count_1c
+
+        count_order = converted_order_counts.get(product_uid, {}).get(wh_uid, 0)
+        product_count.count_order = count_order
+
+        count_crm = count_1c - count_order if count_1c >= count_order else 0
+        product_count.count_crm = count_crm
+
+        updated_warehouses.append(product_count)
+
+    ProductCount.objects.bulk_update(updated_warehouses, fields=['count_1c', 'count_order', 'count_crm'])
+
+    end_time = datetime.datetime.now()
+    print("***END SYNC PRODUCT COUNT***", end_time - start_time)
+
 
 
