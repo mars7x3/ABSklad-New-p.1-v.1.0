@@ -267,31 +267,30 @@ class BalancePlusModerationView(APIView):
         type_status = request.data.get('type_status')
 
         if balance_id:
-            with transaction.atomic():
-                balance = BalancePlus.objects.get(is_moderation=False, id=balance_id)
+            balance = BalancePlus.objects.get(is_moderation=False, id=balance_id)
 
-                balance.is_success = is_success
-                balance.is_moderation = True
-                balance.save()
-                if balance.is_success:
-                    data = {
-                        "status": type_status,
-                        "user": balance.dealer.user,
-                        "amount": balance.amount,
-                        "cash_box": balance.dealer.village.city.stocks.first().cash_box
-                    }
-                    if type_status == 'cash':
-                        data['status'] = 'Нал'
-                    elif type_status == 'visa':
-                        data['status'] = 'Без нал'
+            balance.is_success = is_success
+            balance.is_moderation = True
+            balance.save()
+            if balance.is_success:
+                data = {
+                    "status": type_status,
+                    "user": balance.dealer.user,
+                    "amount": balance.amount,
+                    "cash_box": balance.dealer.village.city.stocks.first().cash_box
+                }
+                if type_status == 'cash':
+                    data['status'] = 'Нал'
+                elif type_status == 'visa':
+                    data['status'] = 'Без нал'
 
-                    money_doc = MoneyDoc.objects.create(**data)
-                    sync_1c_money_doc(money_doc)
-                    main_stat_pds_sync(money_doc)
-                    money_doc.is_checked = True
-                    money_doc.save()
-                serializer = BalancePlusListSerializer(balance, context=self.get_renderer_context())
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                money_doc = MoneyDoc.objects.create(**data)
+                sync_1c_money_doc(money_doc)
+                main_stat_pds_sync(money_doc)
+                money_doc.is_checked = True
+                money_doc.save()
+            serializer = BalancePlusListSerializer(balance, context=self.get_renderer_context())
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AccountantOrderModerationView(APIView):
@@ -301,23 +300,22 @@ class AccountantOrderModerationView(APIView):
         order_id = request.data.get('order_id')
         order_status = request.data.get('status')
 
-        with transaction.atomic():
-            if order_id:
-                if order_status in ['paid', 'rejected']:
-                    order = MyOrder.objects.get(id=order_id)
-                    order.status = order_status
-                    order.save()
-                    if order.status == 'paid':
-                        minus_quantity(order.id, order.stock.id)
-                        sync_money_doc_to_1C(order)
+        if order_id:
+            if order_status in ['paid', 'rejected']:
+                order = MyOrder.objects.get(id=order_id)
+                order.status = order_status
+                order.save()
+                if order.status == 'paid':
+                    minus_quantity(order.id, order.stock.id)
+                    sync_money_doc_to_1C(order)
 
-                    kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
-                              'link_id': order.id, 'status': 'order'}
-                    Notification.objects.create(**kwargs)
+                kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
+                          'link_id': order.id, 'status': 'order'}
+                Notification.objects.create(**kwargs)
 
-                    return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
-                return Response({'status': 'Error', 'text': 'Permission denied!'}, status=status.HTTP_403_FORBIDDEN)
-            return Response({'status': 'Error', 'text': 'order_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+            return Response({'status': 'Error', 'text': 'Permission denied!'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'status': 'Error', 'text': 'order_id required!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AccountantProductListView(ListModelMixin, GenericViewSet):

@@ -44,46 +44,44 @@ class StaffCRUDSerializer(serializers.ModelSerializer):
         return rep
 
     def create(self, validated_data):
-        with transaction.atomic():
-            request = self.context['request']
-            user = MyUser.objects.create_user(**validated_data)
-            is_main = request.data.get('is_main')
-            if user.status == 'rop':
-                rop_profile = RopProfile.objects.create(user=user)
-                cities = request.data.get('cities', [])
-                cities = City.objects.filter(id__in=cities)
-                rop_profile.cities.add(*cities)
+        request = self.context['request']
+        user = MyUser.objects.create_user(**validated_data)
+        is_main = request.data.get('is_main')
+        if user.status == 'rop':
+            rop_profile = RopProfile.objects.create(user=user)
+            cities = request.data.get('cities', [])
+            cities = City.objects.filter(id__in=cities)
+            rop_profile.cities.add(*cities)
 
-            elif user.status == 'warehouse':
-                stock_id = request.data.get('stock')
-                WarehouseProfile.objects.create(user=user, stock_id=stock_id, is_main=is_main)
+        elif user.status == 'warehouse':
+            stock_id = request.data.get('stock')
+            WarehouseProfile.objects.create(user=user, stock_id=stock_id, is_main=is_main)
 
-            return user
+        return user
 
     def update(self, instance, validated_data):
-        with transaction.atomic():
-            request = self.context['request']
-            for key, value in validated_data.items():
-                setattr(instance, key, value)
-            # instance.pwd = validated_data.get('password')
-            # instance.set_password(validated_data.get('password'))
-            instance.save()
+        request = self.context['request']
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        # instance.pwd = validated_data.get('password')
+        # instance.set_password(validated_data.get('password'))
+        instance.save()
 
-            if instance.status == 'rop':
-                city_ids = request.data.get('cities', [])
-                cities = City.objects.filter(id__in=city_ids)
-                rop_profile = instance.rop_profile
-                rop_profile.cities.clear()
-                rop_profile.cities.add(*cities)
-                rop_profile.save()
+        if instance.status == 'rop':
+            city_ids = request.data.get('cities', [])
+            cities = City.objects.filter(id__in=city_ids)
+            rop_profile = instance.rop_profile
+            rop_profile.cities.clear()
+            rop_profile.cities.add(*cities)
+            rop_profile.save()
 
-            elif instance.status == 'warehouse':
-                warehouse_profile = instance.warehouse_profile
-                warehouse_profile.stock_id = request.data.get('stock')
-                warehouse_profile.is_main = request.data.get('is_main')
-                warehouse_profile.save()
+        elif instance.status == 'warehouse':
+            warehouse_profile = instance.warehouse_profile
+            warehouse_profile.stock_id = request.data.get('stock')
+            warehouse_profile.is_main = request.data.get('is_main')
+            warehouse_profile.save()
 
-            return instance
+        return instance
 
     @staticmethod
     def get_only_wh_in_stock(obj):
@@ -459,47 +457,45 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
         return rep
 
     def create(self, validated_data):
-        with transaction.atomic():
-            # username = validated_data.get('username')
-            # pwd = validated_data.get('password')
-            # if username:
-            #     if not username_is_valid(username):
-            #         raise serializers.ValidationError({"username": "Некорректный username"})
-            # if pwd:
-            #     if not pwd_is_valid(pwd):
-            #         raise serializers.ValidationError({"password": "Некорректный password"})
+        # username = validated_data.get('username')
+        # pwd = validated_data.get('password')
+        # if username:
+        #     if not username_is_valid(username):
+        #         raise serializers.ValidationError({"username": "Некорректный username"})
+        # if pwd:
+        #     if not pwd_is_valid(pwd):
+        #         raise serializers.ValidationError({"password": "Некорректный password"})
 
-            profile = self.context.get('request').data.get('profile')
-            user = MyUser.objects.create_user(**validated_data)
-            profile_serializer = DirectorDealerProfileSerializer(data=profile)
-            profile_serializer.is_valid(raise_exception=True)
-            profile_serializer.save(user=user)
-            sync_dealer_back_to_1C(user)
-            return user
+        profile = self.context.get('request').data.get('profile')
+        user = MyUser.objects.create_user(**validated_data)
+        profile_serializer = DirectorDealerProfileSerializer(data=profile)
+        profile_serializer.is_valid(raise_exception=True)
+        profile_serializer.save(user=user)
+        sync_dealer_back_to_1C(user)
+        return user
 
     def update(self, instance, validated_data):
-        with transaction.atomic():
-            # username = validated_data.get('username')
-            # pwd = validated_data.get('password')
-            # if username:
-            #     if not username_is_valid(username):
-            #         raise serializers.ValidationError({"username": "Некорректный username"})
-            # if pwd:
-            #     if not pwd_is_valid(pwd):
-            #         raise serializers.ValidationError({"password": "Некорректный password"})
+        # username = validated_data.get('username')
+        # pwd = validated_data.get('password')
+        # if username:
+        #     if not username_is_valid(username):
+        #         raise serializers.ValidationError({"username": "Некорректный username"})
+        # if pwd:
+        #     if not pwd_is_valid(pwd):
+        #         raise serializers.ValidationError({"password": "Некорректный password"})
 
-            profile = self.context.get('request').data.get('profile')
-            for key, value in validated_data.items():
-                setattr(instance, key, value)
-            # instance.pwd = validated_data.get('password')
-            # instance.set_password(validated_data.get('password'))
-            instance.save()
+        profile = self.context.get('request').data.get('profile')
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        # instance.pwd = validated_data.get('password')
+        # instance.set_password(validated_data.get('password'))
+        instance.save()
 
-            profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
-            profile_serializer.is_valid(raise_exception=True)
-            profile_serializer.save()
-            sync_dealer_back_to_1C(instance)
-            return instance
+        profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
+        profile_serializer.is_valid(raise_exception=True)
+        profile_serializer.save()
+        sync_dealer_back_to_1C(instance)
+        return instance
 
 
 class DirectorDealerProfileSerializer(serializers.ModelSerializer):
@@ -619,41 +615,40 @@ class DirectorMotivationCRUDSerializer(serializers.ModelSerializer):
         return rep
 
     def create(self, validated_data):
-        with transaction.atomic():
-            conditions = self.context['request'].data['conditions']
-            dealers = validated_data.pop('dealers')
+        conditions = self.context['request'].data['conditions']
+        dealers = validated_data.pop('dealers')
 
-            motivation = Motivation.objects.create(**validated_data)
-            motivation.dealers.add(*dealers)
-            motivation.save()
+        motivation = Motivation.objects.create(**validated_data)
+        motivation.dealers.add(*dealers)
+        motivation.save()
 
-            condition_cats = []
-            condition_prods = []
-            presents = []
+        condition_cats = []
+        condition_prods = []
+        presents = []
 
-            for c in conditions:
-                condition = MotivationCondition.objects.create(motivation=motivation, status=c['status'],
-                                                               money=c['money'], text=c['text'])
-                match c['status']:
-                    case 'category':
-                        for cat in c['condition_cats']:
-                            condition_cats.append(ConditionCategory(condition=condition, count=cat['count'],
-                                                                    category_id=cat['category']))
+        for c in conditions:
+            condition = MotivationCondition.objects.create(motivation=motivation, status=c['status'],
+                                                           money=c['money'], text=c['text'])
+            match c['status']:
+                case 'category':
+                    for cat in c['condition_cats']:
+                        condition_cats.append(ConditionCategory(condition=condition, count=cat['count'],
+                                                                category_id=cat['category']))
 
-                    case 'product':
-                        for prod in c['condition_prods']:
-                            condition_prods.append(ConditionProduct(condition=condition, count=prod['count'],
-                                                                    product_id=prod['product']))
-                for pres in c['presents']:
-                    presents.append(MotivationPresent(
-                        condition=condition, status=pres['status'], money=pres['money'], text=pres['text'],
-                        expense=pres['expense']
-                    ))
-            ConditionCategory.objects.bulk_create(condition_cats)
-            ConditionProduct.objects.bulk_create(condition_prods)
-            MotivationPresent.objects.bulk_create(presents)
+                case 'product':
+                    for prod in c['condition_prods']:
+                        condition_prods.append(ConditionProduct(condition=condition, count=prod['count'],
+                                                                product_id=prod['product']))
+            for pres in c['presents']:
+                presents.append(MotivationPresent(
+                    condition=condition, status=pres['status'], money=pres['money'], text=pres['text'],
+                    expense=pres['expense']
+                ))
+        ConditionCategory.objects.bulk_create(condition_cats)
+        ConditionProduct.objects.bulk_create(condition_prods)
+        MotivationPresent.objects.bulk_create(presents)
 
-            return motivation
+        return motivation
 
     def update(self, instance, validated_data):
         with transaction.atomic():

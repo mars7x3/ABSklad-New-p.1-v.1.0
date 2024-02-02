@@ -37,7 +37,7 @@ def sync_category_crm_to_1c(category):
     password = '757520ля***'
     print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
-                                timeout=60)
+                                timeout=120)
     print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('category_uid')
@@ -64,7 +64,7 @@ def sync_product_crm_to_1c(product):
     print('***PRODUCT SYNC***')
     print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
-                                timeout=60)
+                                timeout=120)
     print(response.text)
     response_data = json.loads(response.content)
     product_uid = response_data.get('NomenclatureUID')
@@ -96,7 +96,7 @@ def sync_dealer_back_to_1C(dealer):
     print('***DEALER SYNC***')
     print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
-                                timeout=60)
+                                timeout=120)
     print(response.text)
     response_data = json.loads(response.content)
 
@@ -131,7 +131,7 @@ def sync_1c_money_doc(money_doc):
     username = 'Директор'
     password = '757520ля***'
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
-                                timeout=60)
+                                timeout=120)
     print('return - ', response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
@@ -145,46 +145,45 @@ def sync_1c_money_doc(money_doc):
 
 def sync_money_doc_to_1C(order):
     try:
-        with transaction.atomic():
-            print("<--======= MONEY sync =======-->")
+        print("<--======= MONEY sync =======-->")
 
-            url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
-            if 'cash' == order.type_status or order.type_status == 'kaspi':
-                type_status = 'Наличка'
-                cash_box_uid = order.stock.cash_box.uid
-            else:
-                type_status = 'Без нал'
-                cash_box_uid = ''
-            payload = json.dumps({
-                "user_uid": order.author.user.uid,
-                "amount": int(order.price),
-                "created_at": f'{timezone.localtime(order.created_at)}',
-                "order_type": type_status,
-                "cashbox_uid": cash_box_uid,
-                "delete": 0,
-                "uid": "00000000-0000-0000-0000-000000000000"
-            })
+        url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
+        if 'cash' == order.type_status or order.type_status == 'kaspi':
+            type_status = 'Наличка'
+            cash_box_uid = order.stock.cash_box.uid
+        else:
+            type_status = 'Без нал'
+            cash_box_uid = ''
+        payload = json.dumps({
+            "user_uid": order.author.user.uid,
+            "amount": int(order.price),
+            "created_at": f'{timezone.localtime(order.created_at)}',
+            "order_type": type_status,
+            "cashbox_uid": cash_box_uid,
+            "delete": 0,
+            "uid": "00000000-0000-0000-0000-000000000000"
+        })
 
-            print('sync_order_pay_to_1C: ', payload)
-            username = 'Директор'
-            password = '757520ля***'
-            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
-                                                                         password.encode('utf-8')), timeout=60)
-            print('1C return - ', response.text)
+        print('sync_order_pay_to_1C: ', payload)
+        username = 'Директор'
+        password = '757520ля***'
+        response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
+                                                                     password.encode('utf-8')), timeout=120)
+        print('1C return - ', response.text)
 
-            response_data = json.loads(response.content)
-            payment_doc_uid = response_data.get('result_uid')
-            order.payment_doc_uid = payment_doc_uid
-            naive_time = timezone.localtime().now()
-            today = timezone.make_aware(naive_time)
-            order.paid_at = today
-            order.save()
-            cash_box = order.stock.cash_box
-            m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid,
-                                          cash_box=cash_box)
-            main_stat_pds_sync(m_d)
-            m_d.is_checked = True
-            m_d.save()
+        response_data = json.loads(response.content)
+        payment_doc_uid = response_data.get('result_uid')
+        order.payment_doc_uid = payment_doc_uid
+        naive_time = timezone.localtime().now()
+        today = timezone.make_aware(naive_time)
+        order.paid_at = today
+        order.save()
+        cash_box = order.stock.cash_box
+        m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid,
+                                      cash_box=cash_box)
+        main_stat_pds_sync(m_d)
+        m_d.is_checked = True
+        m_d.save()
     except Exception as e:
         raise TypeError
 
@@ -193,44 +192,44 @@ def sync_money_doc_to_1C(order):
 def sync_order_to_1C(order_id):
     order = MyOrder.objects.get(id=order_id)
     try:
-        with transaction.atomic():
-            print("<--======= ORDER sync =======-->")
 
-            url = "http://91.211.251.134/testcrm/hs/asoi/CreateSale"
-            products = order.order_products.all()
-            released_at = timezone.localtime(order.released_at)
-            money = order.money_docs.filter(is_active=True).first()
-            payload = json.dumps({
-                "user_uid": order.author.user.uid,
-                "created_at": f'{released_at}',
-                "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
-                "cityUID": order.stock.uid,
-                "delete": int(not order.is_active),
-                "uid": order.uid,
-                "products": [
-                    {"title": p.title,
-                     "uid": p.ab_product.uid,
-                     "count": int(p.count),
-                     'price': int(p.price)}
-                    for p in products
-                ]
-            })
+        print("<--======= ORDER sync =======-->")
 
-            username = 'Директор'
-            password = '757520ля***'
+        url = "http://91.211.251.134/testcrm/hs/asoi/CreateSale"
+        products = order.order_products.all()
+        released_at = timezone.localtime(order.released_at)
+        money = order.money_docs.filter(is_active=True).first()
+        payload = json.dumps({
+            "user_uid": order.author.user.uid,
+            "created_at": f'{released_at}',
+            "payment_doc_uid": money.uid if money else '00000000-0000-0000-0000-000000000000',
+            "cityUID": order.stock.uid,
+            "delete": int(not order.is_active),
+            "uid": order.uid,
+            "products": [
+                {"title": p.title,
+                 "uid": p.ab_product.uid,
+                 "count": int(p.count),
+                 'price': int(p.price)}
+                for p in products
+            ]
+        })
 
-            print(payload)
-            response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
-                                                                         password.encode('utf-8')), timeout=60)
-            print(response.text)
-            response_data = json.loads(response.content)
+        username = 'Директор'
+        password = '757520ля***'
 
-            uid = response_data.get('result_uid')
-            order.uid = uid
-            naive_time = timezone.localtime().now()
-            today = timezone.make_aware(naive_time)
-            order.released_at = today
-            order.save()
+        print(payload)
+        response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
+                                                                     password.encode('utf-8')), timeout=120)
+        print(response.text)
+        response_data = json.loads(response.content)
+
+        uid = response_data.get('result_uid')
+        order.uid = uid
+        naive_time = timezone.localtime().now()
+        today = timezone.make_aware(naive_time)
+        order.released_at = today
+        order.save()
     except Exception as e:
         raise TypeError
 
@@ -248,7 +247,7 @@ def sync_stock_1c_2_crm(stock):
     password = '757520ля***'
     print(payload)
     response = requests.request("POST", url, data=payload,
-                                auth=(username.encode('utf-8'), password.encode('utf-8')), timeout=60)
+                                auth=(username.encode('utf-8'), password.encode('utf-8')), timeout=120)
     print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
@@ -279,7 +278,7 @@ def sync_inventory_crm_2_1c(inventory):
 
     print(data)
     response = requests.request("POST", url, data=data, auth=(username.encode('utf-8'), password.encode('utf-8')),
-                                timeout=60)
+                                timeout=120)
     print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
@@ -310,5 +309,5 @@ def sync_return_order_to_1C(return_order):
     username = 'Директор'
     password = '757520ля***'
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
-                                                                 password.encode('utf-8')), timeout=60)
+                                                                 password.encode('utf-8')), timeout=120)
     print(response.text)
