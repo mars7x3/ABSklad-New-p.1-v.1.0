@@ -310,7 +310,7 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
             if return_product:
                 return return_order
         else:
-            instance = super().create(validated_data)
+            instance = ReturnOrder.objects.create(validated_data)
             return_product = create_order_return_product(instance, comment, int(count), files, product_id)
             if return_product:
                 return instance
