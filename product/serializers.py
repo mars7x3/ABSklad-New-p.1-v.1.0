@@ -186,10 +186,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                 price_type=dealer.price_type).first()
             if discount_price:
                 rep['price_info'] = {
-                    'price': discount_price.price,
-                    'old_price': discount_price.old_price,
-                    'discount': discount_price.discount.amount,
-                    'discount_status': discount_price.discount.status
+                    'price': round(discount_price.price),
+                    'old_price': round(discount_price.old_price),
+                    'discount': round(discount_price.discount.amount),
+                    'discount_status': round(discount_price.discount.status)
                 }
                 return rep
 
@@ -199,17 +199,17 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                 city=dealer.price_city).first()
             if discount_price:
                 rep['price_info'] = {
-                    'price': discount_price.price,
-                    'old_price': discount_price.old_price,
-                    'discount': discount_price.discount.amount,
-                    'discount_status': discount_price.discount.status
+                    'price': round(discount_price.price),
+                    'old_price': round(discount_price.old_price),
+                    'discount': round(discount_price.discount.amount),
+                    'discount_status': round(discount_price.discount.status)
                 }
                 return rep
 
             rep['price_info'] = {
-                'price': 0.0,
-                'old_price': 0.0,
-                'discount': 0.0,
+                'price': 0,
+                'old_price': 0,
+                'discount': 0,
                 'discount_status': "Per"
             }
             return rep
@@ -228,9 +228,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
             else:
                 rep['price_info'] = {
-                    'price': 0.0,
-                    'old_price': 0.0,
-                    'discount': 0.0,
+                    'price': 0,
+                    'old_price': 0,
+                    'discount': 0,
                     'discount_status': "Per"
                 }
 
