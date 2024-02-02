@@ -863,7 +863,9 @@ def sync_1c_return_crud(data):
 
     result = {i['uid']: i['count'] for i in data['products_return']}
     products = AsiaProduct.objects.filter(uid__in=result.keys()).values_list('uid', 'id')
+    print(products)
     products = {i[0]: i[1] for i in products}
+    print(products)
 
     create_data = []
     for p_uid, p_id in products:
