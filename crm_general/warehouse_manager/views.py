@@ -83,6 +83,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
                 order.status = 'paid'
                 order.save()
                 sync_money_doc_to_1C(order)
+
                 return Response({'detail': 'Order type status successfully changed to "paid"'},
                                 status=status.HTTP_200_OK)
             return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
@@ -97,6 +98,7 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
 
                 sync_order_to_1C.delay(order.id)
                 main_stat_order_sync(order)
+
                 update_data = []
                 for p in order.order_products.all():
                     p.is_checked = True

@@ -106,22 +106,21 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        with transaction.atomic():
-            products = validated_data.pop('products')
+        products = validated_data.pop('products')
 
-            order = MyOrder.objects.create(**validated_data)
-            OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
+        order = MyOrder.objects.create(**validated_data)
+        OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
 
-            create_order_notification(order.id)  # TODO: delay() add here
-            kwargs = {
-                "users": [order.author.user],
-                "title": f"Заказ #{order.id}",
-                "text": "Ваш заказ успешно создан.",
-                "link_id": f"{order.id}",
-                "status": "order"
-            }
-            send_push_notification(**kwargs)  # TODO: delay() add here
-            return order
+        create_order_notification(order.id)  # TODO: delay() add here
+        kwargs = {
+            "users": [order.author.user],
+            "title": f"Заказ #{order.id}",
+            "text": "Ваш заказ успешно создан.",
+            "link_id": f"{order.id}",
+            "status": "order"
+        }
+        send_push_notification(**kwargs)  # TODO: delay() add here
+        return order
 
 
 class CartListSerializer(serializers.ModelSerializer):

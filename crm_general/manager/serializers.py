@@ -188,11 +188,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         products = validated_data.pop("products")
-        with transaction.atomic():
-            order = MyOrder.objects.create(**validated_data)
-            OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
-            create_order_notification(order.id)  # TODO: delay() add here
-            return order
+        order = MyOrder.objects.create(**validated_data)
+        OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
+        create_order_notification(order.id)  # TODO: delay() add here
+        return order
 
 
 # ---------------------------------------------- DEALER
