@@ -303,13 +303,11 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
         if return_order:
             return_product = create_order_return_product(return_order, comment, int(count), files, product_id)
             if return_product:
-                sync_return_order_to_1C(return_order)
                 return return_order
         else:
             instance = super().create(validated_data)
             return_product = create_order_return_product(instance, comment, int(count), files, product_id)
             if return_product:
-                sync_return_order_to_1C(return_order)
                 return instance
 
     def to_representation(self, instance):
