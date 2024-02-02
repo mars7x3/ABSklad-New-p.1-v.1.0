@@ -303,7 +303,7 @@ class ReturnOrderSerializer(serializers.ModelSerializer):
         count = request_body.get('count')
         product_id = request_body.get('product')
         files = self.context['request'].FILES.getlist('files')
-        return_order = ReturnOrder.objects.filter(order_id=order_id).first()
+        return_order = ReturnOrder.objects.filter(order_id=order_id, is_active=True).first()
         if return_order:
             return_product = create_order_return_product(return_order, comment, int(count), files, product_id)
             if return_product:
