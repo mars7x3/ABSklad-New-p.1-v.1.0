@@ -294,7 +294,7 @@ def sync_return_order_to_1C(return_order):
     payload = json.dumps({
         "uid_return": return_order.uid,
         "uid": return_order.order.uid,
-        "is_active": int(not return_order.is_active),
+        "delete": int(not return_order.is_active),
         "created_at": f'{timezone.localtime(return_order.created_at)}',
         "products_return": [
             {
