@@ -299,8 +299,8 @@ def update_stat_group_by_order(order: MyOrder) -> None:
 
 def collect_stats_for_all() -> None:
     orders = MyOrder.objects.filter(
-        status__in=("send", "success"),
-        is_active=True,
+        status__in=("sent", "success"),
+        author__isnull=False,
         stock__isnull=False,
         order_products__isnull=False
     ).distinct()
@@ -310,7 +310,7 @@ def collect_stats_for_all() -> None:
 
         order.order_products.update(is_checked=True)
 
-    txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False, is_active=True).distinct()
+    txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False).distinct()
     for tx in txs:
         update_transaction_stat(tx)
 
