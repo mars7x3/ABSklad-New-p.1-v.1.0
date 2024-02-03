@@ -187,7 +187,7 @@ def update_transaction_stat(tx: MoneyDoc) -> None:
         return
 
     tx_stat = UserTransactionsStat.objects.filter(
-        date=tx.created_at.date(),
+        date=tx.created_at,
         user=tx.user,
         stock=tx.cash_box.stock
     ).first()
@@ -195,7 +195,7 @@ def update_transaction_stat(tx: MoneyDoc) -> None:
     created = True
     if not tx_stat:
         tx_stat = UserTransactionsStat(
-            date=tx.created_at.date(),
+            date=tx.created_at,
             user=tx.user,
             stock=tx.cash_box.stock,
             bank_income=0,
@@ -204,11 +204,11 @@ def update_transaction_stat(tx: MoneyDoc) -> None:
         created = False
 
     update_field = "cash_income" if tx.status != "Без нал" else "bank_income"
-    if tx.is_active:
-        setattr(tx_stat, update_field, tx.amount + getattr(tx_stat, update_field))
-    else:
-        saved_amount = getattr(tx_stat, update_field)
+    saved_amount = getattr(tx_stat, update_field)
 
+    if tx.is_active:
+        setattr(tx_stat, update_field, tx.amount + saved_amount)
+    else:
         if saved_amount < tx.amount:
             if created:
                 logger.info("UserTransactionsStat with ID %s will be deleted!" % tx_stat.id)
@@ -231,7 +231,7 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
 
     order = order_product.order
     purchase_stat = PurchaseStat.objects.filter(
-        date=order.created_at.date(),
+        date=order.created_at,
         user=order.author.user,
         stock=order.stock,
         product=order_product.ab_product
@@ -240,7 +240,7 @@ def update_purchase_stat(order_product: OrderProduct) -> None:
     created = True
     if not purchase_stat:
         purchase_stat = PurchaseStat(
-            date=order.created_at.date(),
+            date=order.created_at,
             user=order.author.user,
             stock=order.stock,
             product=order_product.ab_product,
@@ -297,20 +297,24 @@ def update_stat_group_by_order(order: MyOrder) -> None:
         PurchaseStat.objects.bulk_create(new_purchase_stats)
 
 
-def collect_stats_for_all() -> None:
+def collect_stats_for_all(date: datetime = None) -> None:
     orders = MyOrder.objects.filter(
         status__in=("sent", "success"),
         author__isnull=False,
         stock__isnull=False,
         order_products__isnull=False
     ).distinct()
+    txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False).distinct()
+
+    if date:
+        orders = orders.filter(released_at__date=date.date())
+        txs = txs.filter(created_at__date=date.date())
 
     for order in orders:
         update_stat_group_by_order(order)
 
         order.order_products.update(is_checked=True)
 
-    txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False).distinct()
     for tx in txs:
         update_transaction_stat(tx)
 
