@@ -53,7 +53,8 @@ class BaseDealerRelationViewMixin:
         return self.request.user.rop_profile
 
     def get_dealers_queryset(self):
-        return DealerProfile.objects.filter(user__status="dealer", managers__city__in=self.rop_profile.cities.all())
+        return DealerProfile.objects.filter(user__status="dealer",
+                                            village__city__in=self.rop_profile.cities.all())
 
     def get_dealer_profile(self) -> DealerProfile:
         queryset = self.get_dealers_queryset()
