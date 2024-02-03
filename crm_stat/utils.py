@@ -304,17 +304,20 @@ def collect_stats_for_all(date: datetime = None) -> None:
         stock__isnull=False,
         order_products__isnull=False
     ).distinct()
+
     txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False).distinct()
 
     if date:
         orders = orders.filter(released_at__date=date.date())
         txs = txs.filter(created_at__date=date.date())
 
+    OrderProduct.objects.filter(order__in=orders).update(is_checked=False)
     for order in orders:
         update_stat_group_by_order(order)
 
         order.order_products.update(is_checked=True)
 
+    txs.update(is_checked=False)
     for tx in txs:
         update_transaction_stat(tx)
 
