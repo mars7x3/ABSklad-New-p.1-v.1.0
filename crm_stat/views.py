@@ -501,6 +501,7 @@ class TransactionView(views.APIView):
         queryset = MoneyDoc.objects.filter(
             is_active=True,
             user__isnull=False,
+            status__isnull=False,
             **query
         ).order_by("-created_at").distinct()
         serializer = TransactionSerializer(instance=queryset, many=True, context={"request": request, "view": self})

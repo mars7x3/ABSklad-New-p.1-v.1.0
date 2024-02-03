@@ -302,10 +302,16 @@ def collect_stats_for_all(date: datetime = None) -> None:
         status__in=("sent", "success"),
         author__isnull=False,
         stock__isnull=False,
-        order_products__isnull=False
+        order_products__isnull=False,
+        is_active=True
     ).distinct()
 
-    txs = MoneyDoc.objects.filter(user__isnull=False, cash_box__isnull=False).distinct()
+    txs = MoneyDoc.objects.filter(
+        user__isnull=False,
+        cash_box__isnull=False,
+        is_active=True,
+        status__isnull=False
+    ).distinct()
 
     if date:
         orders = orders.filter(released_at__date=date.date())
