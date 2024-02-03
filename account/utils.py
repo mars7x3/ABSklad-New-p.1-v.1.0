@@ -5,7 +5,9 @@ import requests
 import json
 from django.utils.crypto import get_random_string
 from decouple import config
-from account.models import MyUser, BalanceHistory
+from account.models import MyUser, BalanceHistory, Notification, Wallet, BalancePlus
+from crm_general.models import AutoNotification
+from order.models import MyOrder
 
 
 def random_code():
@@ -107,3 +109,32 @@ def pwd_is_valid(username):
         return True
     return False
 
+
+def create_notification_by_order(order: MyOrder):
+    auto_not = AutoNotification.objects.filter(status='order', obj_status=order.status).first()
+    if auto_not:
+        Notification.objects.create(
+            user=order.author.user,
+            status='order',
+            title=auto_not.title,
+            description=auto_not.text,
+            link_id=order.id,
+        )
+
+
+def create_notification_by_wallet(balance: BalancePlus):
+    if not balance.is_moderation:
+        auto_not = AutoNotification.objects.filter(status='balance', obj_status='created').first()
+    elif balance.is_success:
+        auto_not = AutoNotification.objects.filter(status='balance', obj_status='success').first()
+    else:
+        auto_not = AutoNotification.objects.filter(status='balance', obj_status='rejected').first()
+
+    if auto_not:
+        Notification.objects.create(
+            user=balance.dealer.user,
+            status='balance',
+            title=auto_not.title,
+            description=auto_not.text,
+            link_id=balance.id,
+        )
