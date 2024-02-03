@@ -150,10 +150,13 @@ def sync_money_doc_to_1C(order):
         url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
         if 'cash' == order.type_status or order.type_status == 'kaspi':
             type_status = 'Наличка'
+            create_type_status = 'Нал'
             cash_box_uid = order.stock.cash_box.uid
         else:
             type_status = 'Без нал'
             cash_box_uid = ''
+            create_type_status = 'Без нал'
+
         payload = json.dumps({
             "user_uid": order.author.user.uid,
             "amount": int(order.price),
@@ -180,7 +183,7 @@ def sync_money_doc_to_1C(order):
         order.save()
         cash_box = order.stock.cash_box
         m_d = MoneyDoc.objects.create(order=order, user=order.author.user, amount=order.price, uid=payment_doc_uid,
-                                      cash_box=cash_box)
+                                      cash_box=cash_box, status=create_type_status)
         main_stat_pds_sync(m_d)
         m_d.is_checked = True
         m_d.save()
