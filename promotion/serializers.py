@@ -8,7 +8,7 @@ from product.models import AsiaProduct, ProductImage, ProductPrice
 class StoryListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = ('id', 'file', 'title')
+        fields = ('id', 'file', 'slogan')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
