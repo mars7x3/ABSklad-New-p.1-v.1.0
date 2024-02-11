@@ -8,9 +8,9 @@ from product.models import AsiaProduct, Category
 
 class Story(models.Model):
     is_active = models.BooleanField(default=False)
-    title = models.CharField(max_length=300)
-    slogan = models.CharField(max_length=300)
-    text = models.TextField()
+    title = models.CharField(max_length=16, blank=True, null=True)
+    slogan = models.CharField(max_length=16, blank=True, null=True)
+    text = models.TextField(blank=True, null=True)
     file = models.FileField(upload_to='stories_files', blank=True, null=True)
     clicks = models.PositiveIntegerField(default=0)
     created_at = models.DateField(auto_now_add=True)
