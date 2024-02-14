@@ -1,5 +1,3 @@
-import datetime
-
 from django.utils import timezone
 
 from absklad_commerce.celery import app
@@ -122,6 +120,7 @@ def deactivate_discount():
     Discount.objects.bulk_update(discounts_to_deactivate, fields=['is_active'])
 
 
+@app.task
 def story_setter():
     naive_time = timezone.localtime().now()
     now = timezone.make_aware(naive_time)
