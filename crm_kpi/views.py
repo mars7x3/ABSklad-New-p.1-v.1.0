@@ -164,7 +164,7 @@ class DealerKPIView(viewsets.ModelViewSet):
         if category_slug:
             products = products.filter(category__slug=category_slug)
 
-        serializer = ProductListKPISerializer(products, many=True)
+        serializer = ProductListKPISerializer(products, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

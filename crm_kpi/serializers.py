@@ -154,6 +154,7 @@ class DealerKPITMZTotalSerializer(serializers.Serializer):
 class DealerListSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField(read_only=True)
     city_title = serializers.SerializerMethodField(read_only=True)
+    has_kpi = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyUser
@@ -165,6 +166,12 @@ class DealerListSerializer(serializers.ModelSerializer):
     def get_city_title(self, instance):
         return instance.dealer_profile.village.city.title if instance.dealer_profile.village else ''
 
+    def get_has_kpi(self, instance):
+        naive_date = timezone.localtime().now()
+        current_date = timezone.make_aware(naive_date)
+        kpi = DealerKPI.objects.filter(user=instance, month__month=current_date.month).first()
+        return True if kpi else False
+
 
 class ProductListKPISerializer(serializers.ModelSerializer):
     class Meta:
@@ -173,6 +180,20 @@ class ProductListKPISerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        user_id = self.context['request'].query_params.get('user_id')
+        if user_id:
+            user = MyUser.objects.filter(id=user_id).first()
+            if not user:
+                raise serializers.ValidationError({'detail': 'User not found'})
+            price_type = user.dealer_profile.price_type
+            city = user.dealer_profile.village.city
+            dealer_status = user.dealer_profile.dealer_status
+            if price_type:
+                rep['price_title'] = price_type.title
+                rep['price'] = instance.prices.filter(price_type=price_type, d_status=dealer_status).first().price
+            else:
+                rep['price_title'] = user.dealer_profile.city.title
+                rep['price'] = instance.prices.filter(city=city, d_status=dealer_status).first().price
         rep['collection__title'] = instance.collection.title if instance.collection else None
         rep['category__title'] = instance.category.title if instance.category else None
         return rep

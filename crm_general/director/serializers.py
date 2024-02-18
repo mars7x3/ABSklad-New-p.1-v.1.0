@@ -15,6 +15,7 @@ from crm_general.director.utils import get_motivation_margin, kpi_info, get_moti
 from crm_general.models import CRMTask, CRMTaskFile, KPI, KPIItem
 
 from crm_general.serializers import CRMCitySerializer, CRMStockSerializer, ABStockSerializer
+from crm_kpi.models import DealerKPI
 from promotion.utils import calculate_discount
 from crm_general.utils import change_dealer_profile_status_after_deactivating_dealer_status
 from general_service.models import Stock, City, StockPhone, PriceType
@@ -298,6 +299,8 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         request = self.context['request']
+        date = timezone.localtime().now()
+        aware_date = timezone.make_aware(date)
         stocks = request.data.get('stocks')
         cost_price = request.data.get('cost_price')
         type_prices = request.data.get('type_prices')
@@ -311,6 +314,12 @@ class DirectorProductCRUDSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         'Невозможно деактивировать продукт который находится в активной акции'
                     )
+            kpi_product = DealerKPI.objects.filter(is_confirmed=True, kpi_products__product_id=instance.id,
+                                                   month__month=aware_date.month, month__year=aware_date.year)
+            if kpi_product:
+                raise serializers.ValidationError(
+                    'Невозможно деактивировать продукт который находится в активном KPI'
+                )
 
         if stocks:
             stock_norm_counts_to_update = []

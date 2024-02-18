@@ -26,11 +26,11 @@ app.conf.beat_schedule = {
     # kpi tasks
     'create_kpi': {
         'task': 'crm_kpi.tasks.create_kpi',
-        'schedule': crontab(day_of_month='1'),
+        'schedule': crontab(day_of_month='25'),
     },
     'confirm_dealer_kpis': {
         'task': 'crm_kpi.tasks.confirm_dealer_kpis',
-        'schedule': crontab(day_of_month='5'),
+        'schedule': crontab(day_of_month='1'),
     },
 
     # discount tasks

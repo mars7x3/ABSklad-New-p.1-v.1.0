@@ -363,7 +363,7 @@ class WareHouseNotificationView(APIView):
 
     def get(self, request):
         user = self.request.user
-        order_count = MyOrder.objects.filter(stock=user.warehouse_profile.stock, status='created').count()
+        order_count = MyOrder.objects.filter(stock=user.warehouse_profile.stock, status='paid').count()
         inventory_count = Inventory.objects.filter(status='new').count()
         tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
 

@@ -88,16 +88,15 @@ def create_manager_kpi():
 def create_dealer_kpi():
     naive_time = timezone.localtime().now()
     today = timezone.make_aware(naive_time)
-    current_date = today.date()
-    current_month = current_date.month
-    last_month = current_date - relativedelta(months=1)
+    date = today.date() + relativedelta(months=1)
+    next_month = date.month
+    last_month = date - relativedelta(months=2)
     last_three_month = today - relativedelta(months=3)
     users = MyUser.objects.filter(status='dealer',
                                   dealer_profile__orders__isnull=False,
                                   dealer_profile__orders__created_at__gte=last_three_month,
                                   dealer_profile__orders__order_products__isnull=False).distinct()
-
-    last_kpi = DealerKPI.objects.filter(month__month=last_month.month, month__year=current_date.year).first()
+    last_kpi = DealerKPI.objects.filter(month__month=last_month.month, month__year=last_month.year).first()
     if last_kpi:
         pds_percent = last_kpi.per_cent_pds / 100
         tmz_percent = last_kpi.per_cent_tmz / 100
@@ -109,8 +108,8 @@ def create_dealer_kpi():
         tmz_percent = 0.25
         last_kpi_percent_pds = 25
         last_kpi_percent_tmz = 25
-    created_dealer_kpi = DealerKPI.objects.filter(month__month=current_month,
-                                                  month__year=current_date.year).values_list('user__id', flat=True)
+    created_dealer_kpi = DealerKPI.objects.filter(month__month=next_month,
+                                                  month__year=date.year).values_list('user__id', flat=True)
 
     update_dealer_kpi_pds = []
 
@@ -123,7 +122,7 @@ def create_dealer_kpi():
                 if user_tmz_data:
                     new_kpi = DealerKPI.objects.create(
                         user=user,
-                        month=current_date,
+                        month=next_month,
                         is_confirmed=False,
                         per_cent_pds=last_kpi_percent_pds,
                         per_cent_tmz=last_kpi_percent_tmz
@@ -170,12 +169,13 @@ def create_dealer_kpi():
                     total_pds = round(int(total_pds) + increase_amount)
                     kpi = DealerKPI.objects.get(id=new_kpi.id)
                     kpi.pds = total_pds
+                    kpi.created_by_user = False
                     update_dealer_kpi_pds.append(kpi)
-                    print(f'Created new KPI {kpi.id} for user {user.id}. date: {current_date}')
+                    print(f'Created new KPI {kpi.id} for user {user.id}. date: {next_month}')
 
         else:
-            print(f'DealerKPI for user id {user.id} id being skipped as it was already created. {current_date}')
-    DealerKPI.objects.bulk_update(update_dealer_kpi_pds, ['pds'])
+            print(f'DealerKPI for user id {user.id} id being skipped as it was already created. {next_month}')
+    DealerKPI.objects.bulk_update(update_dealer_kpi_pds, ['pds', 'created_by_user'])
 
 
 @app.task
