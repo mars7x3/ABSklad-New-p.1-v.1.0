@@ -170,7 +170,7 @@ class DealerListSerializer(serializers.ModelSerializer):
         naive_date = timezone.localtime().now()
         current_date = timezone.make_aware(naive_date)
         kpi = DealerKPI.objects.filter(user=instance, month__month=current_date.month,
-                                       month_year=current_date.year).first()
+                                       month__year=current_date.year).first()
         return True if kpi else False
 
 
