@@ -7,6 +7,7 @@ from product.models import AsiaProduct
 class DealerKPI(models.Model):
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='kpis')
     is_confirmed = models.BooleanField(default=False)
+    created_by_user = models.BooleanField(default=True)
     pds = models.DecimalField(decimal_places=2, max_digits=100, default=0)
     fact_pds = models.DecimalField(decimal_places=2, max_digits=100, default=0)
     month = models.DateField()

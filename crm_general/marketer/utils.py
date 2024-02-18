@@ -1,3 +1,6 @@
+from product.models import AsiaProduct
+
+
 def verified_marketer(product):
     n1, n2 = 0, 3
 
@@ -14,3 +17,11 @@ def verified_marketer(product):
             n1 += 1
 
     return f'{n1}/{n2}'
+
+
+def check_product_sizes_and_images(product: AsiaProduct):
+    images = product.images.first()
+    sizes = product.sizes.first()
+    if images and sizes:
+        return True
+    return False
