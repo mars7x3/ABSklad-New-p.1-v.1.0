@@ -456,7 +456,7 @@ class ShortProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
         fields = ("id", "title", "vendor_code", "collection", "category", "is_discount", "is_active",
-                  "created_at", 'price')
+                  "created_at", 'price', 'diagram_link')
 
     def get_collection(self, instance):
         return instance.collection.title if instance.collection else None
