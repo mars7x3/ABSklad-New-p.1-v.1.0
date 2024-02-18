@@ -158,7 +158,7 @@ class DealerListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyUser
-        fields = ('id', 'name', 'city_title', 'status')
+        fields = ('id', 'name', 'city_title', 'status', 'has_kpi')
 
     def get_status(self, instance) -> bool:
         return instance.dealer_profile.wallet.amount_crm >= 50000
@@ -169,7 +169,8 @@ class DealerListSerializer(serializers.ModelSerializer):
     def get_has_kpi(self, instance):
         naive_date = timezone.localtime().now()
         current_date = timezone.make_aware(naive_date)
-        kpi = DealerKPI.objects.filter(user=instance, month__month=current_date.month).first()
+        kpi = DealerKPI.objects.filter(user=instance, month__month=current_date.month,
+                                       month_year=current_date.year).first()
         return True if kpi else False
 
 
