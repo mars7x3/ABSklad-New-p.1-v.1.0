@@ -79,12 +79,14 @@ def check_product_before_activation(sender, instance, created, **kwargs):
     if not instance.is_active:
         remove_product_from_banner_story(instance)
         return
-
-    d_status_city_counts = DealerStatus.objects.all().count() * City.objects.filter(is_active=True).count()
-    d_status_type_counts = DealerStatus.objects.all().count() * PriceType.objects.filter(is_active=True).count()
+    dealer_status_count = DealerStatus.objects.all().count()
+    d_status_city_counts = dealer_status_count * City.objects.filter(is_active=True).count()
+    d_status_type_counts = dealer_status_count * PriceType.objects.filter(is_active=True).count()
     final_price_count = d_status_city_counts + d_status_type_counts
     product_price_count = instance.prices.all().count()
-    if final_price_count == product_price_count:
+    zero_price = instance.prices.filter(price=0).first()
+
+    if final_price_count <= product_price_count and zero_price is None:
         count += 1
 
     cost_prices = instance.cost_prices.filter(price=0).first()

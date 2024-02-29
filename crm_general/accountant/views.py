@@ -203,7 +203,7 @@ class AccountantTotalEcoBalanceView(APIView):
     "end_date": "end_date"
     }
     """
-    permission_classes = [IsAuthenticated, IsAccountant]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user_id = request.query_params.get('user_id')
