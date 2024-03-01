@@ -333,10 +333,6 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
             attrs["dealer_status"] = dealer_status
         return attrs
 
-    def save(self, **kwargs):
-        dealer = super().save(**kwargs)
-        sync_dealer_back_to_1C(dealer)
-
 
 class DealerBalanceHistorySerializer(serializers.ModelSerializer):
     balance_crm = serializers.SerializerMethodField(read_only=True)

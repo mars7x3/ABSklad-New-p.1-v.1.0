@@ -153,11 +153,6 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         return get_motivation_done(instance)
 
     def validate(self, attrs):
-        # village = attrs.pop("village_id", None)
-        #
-        # if village:
-        #     attrs["village"] = village
-
         price_type = attrs.pop("price_type_id", None)
         if price_type:
             attrs["price_type"] = price_type
