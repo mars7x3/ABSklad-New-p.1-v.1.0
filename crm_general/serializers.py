@@ -120,13 +120,15 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
-        if MyUser.objects.filter(
-                Q(username=user_data["username"]) |
-                Q(username=user_data["email"]) |
-                Q(email=user_data["email"])
-        ).exists():
+
+        if MyUser.objects.filter(username=user_data["username"]).exists():
             raise serializers.ValidationError(
                 {"user": {"username": "Пользователь с данным параметром уже существует!"}}
+            )
+
+        if MyUser.objects.filter(email=user_data["email"]).exists():
+            raise serializers.ValidationError(
+                {"user": {"email": "Пользователь с данным параметром уже существует!"}}
             )
 
         validated_data['user'] = MyUser.objects.create_user(status=self._user_status, **user_data)
