@@ -193,7 +193,7 @@ class ProductListKPISerializer(serializers.ModelSerializer):
                 rep['price_title'] = price_type.title
                 rep['price'] = instance.prices.filter(price_type=price_type, d_status=dealer_status).first().price
             else:
-                rep['price_title'] = user.dealer_profile.city.title
+                rep['price_title'] = user.dealer_profile.village.city.title
                 rep['price'] = instance.prices.filter(city=city, d_status=dealer_status).first().price
         rep['collection__title'] = instance.collection.title if instance.collection else None
         rep['category__title'] = instance.category.title if instance.category else None
