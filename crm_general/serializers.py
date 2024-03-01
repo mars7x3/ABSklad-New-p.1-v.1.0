@@ -131,14 +131,11 @@ class BaseProfileSerializer(serializers.ModelSerializer):
                 {"user": {"email": "Пользователь с данным параметром уже существует!"}}
             )
 
-        validated_data['user'] = user = MyUser.objects.create_user(status=self._user_status, **user_data)
+        validated_data['user'] = MyUser.objects.create_user(status=self._user_status, **user_data)
         # calling this method `create` should not return an error.
         # Therefore, the validation must be perfect,
         # otherwise if there is an error, the user will be created but the dealer profile will not
-        dealer = super().create(validated_data)
-        if user.is_dealer:
-            sync_dealer_back_to_1C(user)
-        return dealer
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", None)
@@ -152,6 +149,13 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             serializer.is_valid(raise_exception=True)
             serializer.save()
         return super().update(instance, validated_data)
+
+    def save(self, **kwargs):
+        profile = super().save(**kwargs)
+
+        if profile.user.is_dealer:
+            sync_dealer_back_to_1C(profile.user)
+        return profile
 
 
 class ActivitySerializer(serializers.Serializer):
