@@ -119,10 +119,11 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
 
         if not start_date or not end_date:
             return Response({"detail": "dates required in query!"}, status=status.HTTP_400_BAD_REQUEST)
-
+        print(user_id)
         dealer_profile = generics.get_object_or_404(self.get_queryset(), user_id=user_id)
+        print(dealer_profile)
         saved_amount = MyOrder.objects.filter(
-            author__user_id=dealer_profile,
+            author__user_id=dealer_profile.user.id,
             is_active=True,
             status__in=("paid", "success", "sent"),
             paid_at__date__gte=string_date_to_date(start_date),
