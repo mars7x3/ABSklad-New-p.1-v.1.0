@@ -242,3 +242,57 @@ class CartCreateSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError("not implemented!")
+
+
+class MainOrderCreateSerializer(serializers.ModelSerializer):
+    products = serializers.DictField(
+        child=serializers.IntegerField(min_value=1),
+        write_only=True,
+        allow_empty=False
+    )
+
+    class Meta:
+        model = MainOrder
+        exclude = ('is_active', 'updated_at', 'author')
+        read_only_fields = ("status",)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['receipts'] = OrderReceiptSerializer(instance.order_receipts.all(), many=True, context=self.context).data
+        rep['products'] = OrderProductSerializer(instance.order_products.all(), many=True, context=self.context).data
+        rep['stock'] = StockSerializer(instance.stock, context=self.context).data
+
+        return rep
+
+    def validate(self, data):
+        request = self.context.get('request')
+        products = request.data.pop('products')
+        dealer = request.user.dealer_profile
+
+        if not check_product_count(products, data['stock']):
+            raise serializers.ValidationError({'text': 'Количество товара больше чем есть в наличии!'})
+
+        product_list = get_product_list(products)
+        data['price'] = order_total_price(product_list, products, dealer)
+
+        if data['type_status'] == 'wallet':
+            data['status'] = 'paid'
+            if data['price'] > dealer.wallet.amount_crm:
+                raise serializers.ValidationError({'text': 'У вас недостаточно средств на балансе!'})
+
+        data['author'] = dealer
+        data['cost_price'] = order_cost_price(product_list, products)
+        data['products'] = generate_order_products(product_list, products, dealer)
+
+        return data
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            products = validated_data.pop('products')
+
+            order = MyOrder.objects.create(**validated_data)
+            OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
+
+            create_order_notification(order.id)  # TODO: delay() add here
+
+            return order

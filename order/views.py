@@ -13,9 +13,9 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
 from order.main_functions import purchase_analysis
-from order.models import MyOrder, Cart, CartProduct, OrderReceipt
+from order.models import MyOrder, Cart, CartProduct, OrderReceipt, MainOrder
 from order.serializers import MyOrderListSerializer, MyOrderDetailSerializer, MyOrderCreateSerializer, \
-    CartListSerializer, CartCreateSerializer
+    CartListSerializer, CartCreateSerializer, MainOrderCreateSerializer
 from product.views import AppProductPaginationClass
 
 
@@ -147,6 +147,16 @@ class CartAddView(generics.GenericAPIView):
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+class MainOrderCreateView(generics.CreateAPIView):
+    """
+    "products": {
+    "product_id": product count
+  },
+    "type_status": "cash" ('cash', 'visa', 'wallet', 'kaspi'),
+  "stock": stock id
+    """
+    permission_classes = [IsAuthenticated]
+    queryset = MainOrder.objects.all()
+    serializer_class = MainOrderCreateSerializer
 
 
