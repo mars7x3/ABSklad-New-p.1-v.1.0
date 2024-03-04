@@ -11,6 +11,7 @@ def get_motivation_data(dealer):
             "start_date": motivation.start_date,
             "end_date": motivation.end_date,
             "is_active": motivation.is_active,
+            "description": motivation.description,
             "conditions": []
         }
 
