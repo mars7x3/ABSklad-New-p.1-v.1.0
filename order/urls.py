@@ -15,6 +15,7 @@ urlpatterns = [
     path('dealer/cart/add/', CartAddView.as_view()),  # cart add
     path('dealer/cart/list/', CartListView.as_view()),  # cart list
 
+    path('dealer/main-order/create/', MainOrderCreateView.as_view()),  # dealer order create
 
     path('', include(router.urls)),
 ]

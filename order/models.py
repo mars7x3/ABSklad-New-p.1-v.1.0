@@ -99,3 +99,44 @@ class CartProduct(models.Model):
     count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
+
+class MainOrder(models.Model):
+    STATUS = (
+        ('created', 'created'),
+        ('paid', 'paid'),
+        ('sent', 'sent'),
+        ('partial', 'partial'),
+        ('rejected', 'rejected'),
+        ('success', 'success')
+    )
+    TYPE_STATUS = (
+        ('cash', 'Наличка'),
+        ('visa', 'Виза'),
+        ('wallet', 'Кошелек'),
+        ('kaspi', 'Каспи')
+    )
+    author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True,
+                               related_name='main_orders')
+    stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='main_orders')
+    price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    status = models.CharField(choices=STATUS, max_length=15, default='created')
+    type_status = models.CharField(choices=TYPE_STATUS, max_length=15, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return self.author.user.name
+
+
+class MainOrderProduct(models.Model):
+    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='products')
+    ab_product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, related_name='main_order_products',
+                                   blank=True, null=True)
+    count = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+
