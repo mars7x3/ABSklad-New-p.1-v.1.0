@@ -1,3 +1,5 @@
+import random
+
 import requests
 
 
@@ -36,18 +38,19 @@ import requests
 # Stock.objects.filter(counts__product_id=1)
 
 
-# from product.models import AsiaProduct, ProductCount, ProductPrice, ProductSize
-# from general_service.models import Stock, City
-# from account.models import DealerStatus
-#
+from product.models import AsiaProduct, ProductCount, ProductPrice, ProductSize
+from general_service.models import Stock, PriceType
+from account.models import DealerStatus
+
 # products = AsiaProduct.objects.all()
 # count_list = []
 # price_list = []
 # size_list = []
 #
+# x = 1
 # for p in products:
 #     stocks = Stock.objects.all()
-#     size_list.append(ProductSize(product=p, title='Шкаф', length=100, width=500, height=300))
+#     # size_list.append(ProductSize(product=p, title='Шкаф', length=100, width=500, height=300))
 #     for s in stocks:
 #         count_list.append(
 #             ProductCount(
@@ -55,23 +58,28 @@ import requests
 #                 stock=s,
 #                 count_crm=100,
 #                 count_1c=100,
-#                 count_order=0
+#                 count_order=0,
+#                 count_norm=50
+#
 #             )
 #         )
-#     cities = City.objects.all()
+#     cities = PriceType.objects.all()
+#     amount = 50000 * x
 #     for c in cities:
 #         d_statuses = DealerStatus.objects.all()
 #         for d in d_statuses:
 #             price_list.append(
 #                 ProductPrice(
 #                     product=p,
-#                     city=c,
+#                     price_type=c,
 #                     d_status=d,
-#                     price=100000
+#                     price=amount
 #                 )
 #             )
+#     x += 1
 #
-#
+# ProductPrice.objects.all().delete()
+# ProductCount.objects.all().delete()
 # ProductPrice.objects.bulk_create(price_list)
 # ProductCount.objects.bulk_create(count_list)
 # ProductSize.objects.bulk_create(size_list)
@@ -81,4 +89,18 @@ import requests
 #
 # u = MyUser.objects.filter(name__icontains='Асан', status__in=['rop', 'manager', 'marketer',
 #                                                               'accountant', 'warehouse', 'director'])
+
+# from order.models import MyOrder
+# import random
+# for o in MyOrder.objects.all():
+#     o.status = random.choice([
+#         'created',
+#         'paid',
+#         'sent',
+#         'wait',
+#         'rejected',
+#         'success'])
+#     o.save()
+
+
 
