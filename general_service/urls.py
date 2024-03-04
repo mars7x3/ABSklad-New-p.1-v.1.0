@@ -6,6 +6,7 @@ router = DefaultRouter()
 
 router.register('dealer/stock/list', CategoryListView)
 router.register('dealer/city/list', CityListView)
+router.register('dealer/stock/count/list', StockListView)
 
 
 urlpatterns = [

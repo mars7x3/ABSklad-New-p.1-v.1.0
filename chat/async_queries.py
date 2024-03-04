@@ -1,17 +1,24 @@
+from urllib.parse import urljoin
+
+from django.conf import settings
 from django.db import connection
 from channels.db import database_sync_to_async
 
 from general_service.utils import dictfetchall
-from .constants import CITY_CHATS_SQL, CITY_SEARCH_CHATS_SQL, DEALER_CHAT_SQL
+from .constants import CITY_CHATS_SQL, CITY_SEARCH_CHATS_SQL, DEALER_CHAT_SQL, MANAGER_CHATS_SQL, \
+    MANAGER_CHATS_SEARCH_SQL
 from .models import Message, Chat
 from .serializers import MessageSerializer
 from .utils import get_manager_profile, get_chat_receivers, build_chats_data
 
 
+FILES_BASE_URL = urljoin(settings.SERVER_URL, settings.MEDIA_ROOT)
+
+
 @database_sync_to_async
 def get_chats_for_dealer(dealer):
     with connection.cursor() as cursor:
-        cursor.execute(DEALER_CHAT_SQL, [dealer.status, dealer.id])
+        cursor.execute(DEALER_CHAT_SQL, [dealer.status, FILES_BASE_URL, dealer.id])
         chats = dictfetchall(cursor)
     return build_chats_data(chats)
 
@@ -25,10 +32,27 @@ def get_manager_city_id(user):
 
 @database_sync_to_async
 def get_chats_by_city(current_user, city_id: int, limit: int, offset: int, search: str = None):
-    params = [current_user.status, city_id]
+    params = [current_user.status, FILES_BASE_URL, city_id]
     sql = CITY_CHATS_SQL
     if search:
         sql = CITY_SEARCH_CHATS_SQL
+        params.append(f'%{search}%')
+
+    params += [limit, offset]
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        chats = dictfetchall(cursor)
+
+    return build_chats_data(chats)
+
+
+@database_sync_to_async
+def get_chats_for_manager(current_user, limit: int, offset: int, search: str = None):
+    params = [current_user.status, current_user.id]
+    sql = MANAGER_CHATS_SQL
+    if search:
+        sql = MANAGER_CHATS_SEARCH_SQL
         params.append(f'%{search}%')
 
     params += [limit, offset]
@@ -58,11 +82,7 @@ def get_chat_messages(chat_id: str, limit, offset, search: str = None):
     base_queryset = Message.objects.filter(chat_id=chat_id).select_related("sender").order_by('-created_at')
     if search:
         base_queryset = base_queryset.filter(dealer__name__icontains=search)
-
-    page = list(base_queryset[offset:offset + limit])
-    if page:
-        page.reverse()
-    return MessageSerializer(instance=page, many=True).data
+    return MessageSerializer(instance=list(base_queryset[offset:offset + limit]), many=True).data
 
 
 @database_sync_to_async

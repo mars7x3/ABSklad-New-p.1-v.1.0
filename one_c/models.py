@@ -1,7 +1,7 @@
 from django.db import models
 
 from account.models import MyUser
-from general_service.models import CashBox
+from general_service.models import CashBox, Stock
 from order.models import MyOrder
 from product.models import AsiaProduct
 
@@ -19,13 +19,17 @@ class MoneyDoc(models.Model):
     uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    order = models.ForeignKey(MyOrder, on_delete=models.SET_NULL, blank=True, null=True, related_name='money_docs')
+    is_checked = models.BooleanField(default=False)
 
 
 class MovementProduct1C(models.Model):
     is_active = models.BooleanField(default=True)
     uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
-    warehouse_recipient_uid = models.CharField(max_length=50, blank=True, null=True)
-    warehouse_sender_uid = models.CharField(max_length=50, blank=True, null=True)
+    warehouse_recipient = models.ForeignKey(Stock, on_delete=models.SET_NULL, blank=True, null=True,
+                                            related_name='recipient_movements')
+    warehouse_sender = models.ForeignKey(Stock, on_delete=models.SET_NULL, blank=True, null=True,
+                                         related_name='sender_movements')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

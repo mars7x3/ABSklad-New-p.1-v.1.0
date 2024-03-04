@@ -1,4 +1,5 @@
 import datetime
+from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
@@ -6,6 +7,7 @@ from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, mixins, viewsets, generics
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,8 +17,26 @@ from account.main_functions import notifications_info
 from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile, BalanceHistory, MyUser
 from account.permissions import IsAuthor, IsUserAuthor
 from account.serializers import DealerMeInfoSerializer, NotificationSerializer, AccountStockSerializer, \
-    DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer, DealerProfileUpdateSerializer
-from account.utils import random_code
+    DealerStoreSerializer, BalancePlusSerializer, BalanceHistorySerializer, DealerProfileUpdateSerializer, \
+    UserNotificationSerializer
+from account.utils import random_code, send_code_to_phone
+
+
+class AppNotificationPaginationClass(PageNumberPagination):
+    page_size = 1
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response(OrderedDict([
+            ('total_pages', self.page.paginator.num_pages),
+            ('page', self.page.number),
+            ('next', self.get_next_link()),
+            ('previous', self.get_previous_link()),
+            ('results', data),
+            ('results_count', len(data)),
+            ('total_results', self.page.paginator.count),
+        ]))
 
 
 class DealerMeInfoView(APIView):
@@ -74,6 +94,16 @@ class NotificationCountView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
+class NotificationListView(APIView, AppNotificationPaginationClass):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        notifs = request.user.notifications.all()
+        page = self.paginate_queryset(notifs, request)
+        serializer = UserNotificationSerializer(page, many=True, context=self.get_renderer_context())
+        return self.get_paginated_response(serializer.data)
+
+
 class ForgotPwdView(APIView):
     """
     email
@@ -87,9 +117,9 @@ class ForgotPwdView(APIView):
             user = request.user
 
         if user:
-            # user.verify_codes.all().delete()
-            # verify_code = VerifyCode.objects.create(user=user, code=random_code())
-            # send_code_to_phone(user.phone, verify_code.code)
+            user.verify_codes.all().delete()
+            verify_code = VerifyCode.objects.create(user=user, code=random_code())
+            send_code_to_phone(user.phone, verify_code.code)
 
             return Response({'text': 'Код отправлен на телефон!'}, status=status.HTTP_200_OK)
         return Response({'text': 'Пользователь не найден!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -126,7 +156,7 @@ class ChangePwdView(APIView):
                 user.pwd = password
                 user.set_password(password)
                 user.save()
-                verify_code.delete()
+                # verify_code.delete()
 
                 return Response({'text': 'Пароль успешно изменен!'}, status=status.HTTP_200_OK)
             return Response({'text': 'Неверный код!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -168,6 +198,7 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = BalancePlus.objects.all()
     serializer_class = BalancePlusSerializer
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         queryset = self.request.user.dealer_profile.balances.all()
@@ -184,6 +215,7 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
         if start and end:
             start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
             end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+            end_date = end_date + timezone.timedelta(days=1)
             kwargs['created_at__gte'] = start_date
             kwargs['created_at__lte'] = end_date
 
@@ -191,18 +223,47 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
             kwargs['is_success'] = bool(int(is_success))
 
         queryset = queryset.filter(**kwargs)
-        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class BalanceHistoryListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     queryset = BalanceHistory.objects.filter(is_active=True)
     serializer_class = BalanceHistorySerializer
+    pagination_class = AppNotificationPaginationClass
 
     def get_queryset(self):
         queryset = self.request.user.dealer_profile.balance_histories.all()
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        t_status = request.query_params.get('status')
+
+        if t_status:
+            kwargs['status'] = t_status
+
+        start = request.query_params.get('start')
+        end = request.query_params.get('end')
+
+        if start and end:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
+            end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+            end_date = end_date + timezone.timedelta(days=1)
+            kwargs['created_at__gte'] = start_date
+            kwargs['created_at__lte'] = end_date
+
+        queryset = queryset.filter(**kwargs)
+        paginator = AppNotificationPaginationClass()
+        paginated_queryset = paginator.paginate_queryset(queryset, request)
+        serializer = BalanceHistorySerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 

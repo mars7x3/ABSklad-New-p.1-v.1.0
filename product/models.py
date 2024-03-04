@@ -1,6 +1,7 @@
 from django.db import models
 
 from account.models import DealerStatus, MyUser
+from general_service.compress import WEBPField, product_image_folder
 from general_service.models import City, Stock, PriceType
 
 
@@ -45,7 +46,7 @@ class AsiaProduct(models.Model):
     vendor_code = models.CharField(max_length=50, blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
     collection = models.ForeignKey(Collection, on_delete=models.SET_NULL, null=True, related_name='products')
-    made_in = models.CharField(max_length=50)
+    made_in = models.CharField(max_length=50, blank=True, null=True)
     guarantee = models.IntegerField(default=0)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -56,12 +57,13 @@ class AsiaProduct(models.Model):
     avg_rating = models.DecimalField(max_digits=2, decimal_places=1, default=0)
     reviews_count = models.IntegerField(default=0)
     diagram = models.FileField(upload_to='product_diagrams', blank=True, null=True)
+    diagram_link = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.vendor_code}. {self.title}"
 
     class Meta:
-        ordering = ('-updated_at',)
+        ordering = ('-id',)
 
 
 class ProductCostPrice(models.Model):
@@ -79,7 +81,7 @@ class ProductPrice(models.Model):
         ('Sum', 'Sum'),
     )
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='prices')
-    city = models.ForeignKey(City, on_delete=models.CASCADE, blank=True, null=True, related_name='prices')  # TODO: delete
+    city = models.ForeignKey(City, on_delete=models.CASCADE, blank=True, null=True, related_name='prices')
     d_status = models.ForeignKey(DealerStatus, on_delete=models.CASCADE, related_name='prices')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     old_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
@@ -89,7 +91,7 @@ class ProductPrice(models.Model):
                                    related_name='prices')
 
     def __str__(self):
-        return f'{self.product} - {self.price_type.title} - {self.price}'
+        return f'{self.product} - {self.price}'
 
 
 class ProductCount(models.Model):
@@ -112,7 +114,7 @@ class ProductSize(models.Model):
 
 class ProductImage(models.Model):
     product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='images')
-    image = models.FileField(upload_to='product-images')
+    image = WEBPField(upload_to=product_image_folder)
     position = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:

@@ -5,8 +5,9 @@ from django.db.models.functions import Coalesce, Round
 from django.utils import timezone
 
 from account.models import DealerStatus
+from general_service.models import City, Stock
 from order.models import MyOrder
-from product.models import AsiaProduct, ProductPrice
+from product.models import AsiaProduct, ProductPrice, ProductCount
 
 
 def get_motivation_margin(motivation):
@@ -83,7 +84,8 @@ def kpi_info(kpi):
                 ).annotate(amount=Sum("order_products__count")).values("amount")
             )
 
-    now = timezone.now()
+    naive_time = timezone.localtime().now()
+    now = timezone.make_aware(naive_time)
     return (
         kpi.kpi_items.filter(start_date__lte=now, end_date__gte=now)
         .annotate(
@@ -189,4 +191,45 @@ def get_motivation_done(dealer):
 
     return motivations_data
 
+
+def verified_director(product):
+    n1, n2 = 0, 2
+
+    cost_price = product.cost_prices.filter(is_active=True).first()
+    if cost_price:
+        n1 += 1
+
+    prices = product.prices.all()
+    cities = City.objects.all()
+    d_statuses = DealerStatus.objects.all()
+    number = len(cities) * len(d_statuses)
+    if number == len(prices):
+        n1 += 1
+    return f'{n1}/{n2}'
+
+
+def create_product_counts_for_stock(stock: Stock):
+    product_counts = []
+    products = AsiaProduct.objects.all()
+    for product in products:
+        product_counts.append(
+            ProductCount(
+                product=product,
+                stock=stock
+            )
+        )
+    ProductCount.objects.bulk_create(product_counts)
+    return True
+
+
+def create_prod_counts(stock):
+    create_data = []
+    for p in AsiaProduct.objects.all():
+        create_data.append(
+            ProductCount(
+                product=p,
+                stock=stock
+            )
+        )
+    ProductCount.objects.bulk_create(create_data)
 

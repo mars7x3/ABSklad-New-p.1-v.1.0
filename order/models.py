@@ -1,6 +1,6 @@
 from django.db import models
 
-from account.models import DealerProfile
+from account.models import DealerProfile, MyUser
 from general_service.models import City, Stock, CashBox
 from product.models import AsiaProduct, Category
 
@@ -21,6 +21,7 @@ class MyOrder(models.Model):
         ('kaspi', 'Каспи')
     )
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
+    creator = models.ForeignKey(MyUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     name = models.CharField(max_length=100, blank=True, null=True)  # TODO: delete this
     gmail = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this
     phone = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this
@@ -64,28 +65,36 @@ class OrderProduct(models.Model):
     discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)  # сумма скидки
     image = models.FileField(upload_to='order-product', blank=True, null=True)
     cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    is_checked = models.BooleanField(default=False)
 
 
 class ReturnOrder(models.Model):
+    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='return_orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+    uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+
+class ReturnOrderProduct(models.Model):
     STATUS = (
         ('created', 'created'),
         ('success', 'success'),
         ('rejected', 'rejected'),
     )
-    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='returns')
-    status = models.CharField(max_length=10, choices=STATUS, default='rejected')
-    created_at = models.DateTimeField(auto_now_add=True)
-    moder_comment = models.TextField(blank=True, null=True)
-
-    class Meta:
-        ordering = ('-id',)
-
-
-class ReturnOrderProduct(models.Model):
-    returns_order = models.ForeignKey(ReturnOrder, on_delete=models.CASCADE, related_name='return_products')
-    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='return_products')
-    count = models.IntegerField(default=0)
+    return_order = models.ForeignKey(ReturnOrder, on_delete=models.CASCADE, related_name='products')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='returns')
+    status = models.CharField(max_length=8, choices=STATUS, default='created')
+    count = models.PositiveIntegerField(default=0)
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    comment = models.CharField(max_length=1000, blank=True, null=True)
+
+
+class ReturnOrderProductFile(models.Model):
+    return_product = models.ForeignKey(ReturnOrderProduct, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='return-products')
 
 
 class Cart(models.Model):

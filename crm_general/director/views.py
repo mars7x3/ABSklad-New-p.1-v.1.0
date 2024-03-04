@@ -1,6 +1,7 @@
 import datetime
 
-from django.db.models import Case, When
+from django.db import transaction
+from django.db.models import Case, When, Q
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins, generics, filters
 from rest_framework.decorators import action
@@ -9,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile
+from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile, WarehouseProfile
 from crm_general.director.permissions import IsDirector
 from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSerializer, BalanceHistoryListSerializer, \
     DirectorProductListSerializer, DirectorCollectionListSerializer, CollectionCategoryListSerializer, \
@@ -18,14 +19,19 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
     DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
-    DirectorTaskListSerializer, DirectorMotivationListSerializer, DirectorCRMTaskGradeSerializer, StockListSerializer, \
+    DirectorTaskListSerializer, DirectorMotivationListSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
-    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer
+    DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, \
+    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer, DirectorCategorySerializer
 from crm_general.filters import FilterByFields
-from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskGrade, KPI
+from crm_general.models import CRMTask, KPI
+from crm_general.permissions import IsStaff
+from crm_kpi.models import DealerKPI
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
+from one_c.from_crm import sync_category_crm_to_1c
+from one_c.models import MoneyDoc
 from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
 from product.models import ProductPrice, AsiaProduct, Collection, Category, ProductCostPrice
@@ -44,16 +50,13 @@ class StaffCRUDView(viewsets.ModelViewSet):
         "city": id
     }
 
-    #rop
+    #warehouse
     "profile_data": {
         "stock": id
     }
     """
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = MyUser.objects.prefetch_related('manager_profile', 'rop_profile',
-                                               'warehouse_profile').filter(status__in=['rop', 'manager', 'marketer',
-                                                                                       'accountant', 'warehouse',
-                                                                                       'director'])
+    queryset = MyUser.objects.filter(status__in=['rop', 'warehouse'])
     serializer_class = StaffCRUDSerializer
 
     def destroy(self, request, *args, **kwargs):
@@ -78,10 +81,74 @@ class StaffCRUDView(viewsets.ModelViewSet):
 
         if is_active:
             kwargs['is_active'] = bool(int(is_active))
-        print(kwargs)
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class ROPChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request, *args, **kwargs):
+        data = self.request.data
+        deactivate_rop = data.get('deactivate_rop_id')
+        new_rop = data.get('new_rop_id')
+        if new_rop is None:
+            return Response({'detail:', 'Can not deactivate rop without new rop for his role "new_rop_id"'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            if deactivate_rop:
+                inactive_rop = MyUser.objects.get(id=deactivate_rop)
+                inactive_rop.is_active = False
+                inactive_rop.save()
+                managers = inactive_rop.rop_profile.managers.values_list('id', flat=True)
+                cities = inactive_rop.rop_profile.cities.values_list('id', flat=True)
+                active_rop = MyUser.objects.get(id=new_rop)
+                if managers:
+                    active_rop.rop_profile.managers.add(*managers)
+                    inactive_rop.rop_profile.managers.clear()
+                if cities:
+                    active_rop.rop_profile.cities.add(*cities)
+                    inactive_rop.rop_profile.cities.clear()
+                active_rop.save()
+
+                return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
+            return Response({'detail', 'deactivate_rop_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class WareHouseChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request, *args, **kwargs):
+        data = self.request.data
+        deactivate_wh = data.get('deactivate_wh_id')
+        new_wh = data.get('new_wh_id')
+        if deactivate_wh is None:
+            return Response({'detail:', 'deactivate_wh_id required!'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        inactive_wh = MyUser.objects.get(id=deactivate_wh)
+
+        profile = WarehouseProfile.objects.filter(user=deactivate_wh).first()
+        stock = profile.stock
+        wh_count = stock.warehouse_profiles.filter(user__is_active=True).count()
+        if wh_count < 2:
+            with transaction.atomic():
+                if new_wh:
+                    inactive_wh.is_active = False
+                    inactive_wh.save()
+                    active_wh = MyUser.objects.get(id=1965)
+                    wh_profile = WarehouseProfile.objects.get(user__id=active_wh.id)
+                    wh_profile.stock = stock
+                    wh_profile.save()
+
+                    return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
+                return Response({'detail', 'new_wh_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            inactive_wh.is_active = False
+            inactive_wh.save()
+            return Response({'detail': 'Success'}, status=status.HTTP_200_OK)
 
 
 class BalanceListView(mixins.ListModelMixin, GenericViewSet):
@@ -124,10 +191,10 @@ class BalanceListView(mixins.ListModelMixin, GenericViewSet):
                 kwargs['amount_1c__lte'] = 50000
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-
-        return self.get_paginated_response(serializer)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = BalanceListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class BalanceListTotalView(APIView):
@@ -189,6 +256,7 @@ class BalanceHistoryListView(APIView):
         if start_date and end_date:
             start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
             end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+            end_date = end_date + timezone.timedelta(days=1)
             kwargs['created_at__gte'] = start_date
             kwargs['created_at__lte'] = end_date
 
@@ -245,6 +313,14 @@ class DirectorProductListView(mixins.ListModelMixin, GenericViewSet):
         if is_active:
             kwargs['is_active'] = bool(int(is_active))
 
+        category = request.query_params.get('category')
+        if category:
+            kwargs['category__slug'] = category
+
+        collection = request.query_params.get('collection')
+        if collection:
+            kwargs['collection__slug'] = collection
+
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
 
@@ -294,12 +370,6 @@ class DirectorProductCRUDView(mixins.RetrieveModelMixin,
     queryset = AsiaProduct.objects.all()
     serializer_class = DirectorProductCRUDSerializer
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
-
 
 class DirectorDiscountCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
@@ -321,8 +391,10 @@ class DirectorDiscountCRUDView(viewsets.ModelViewSet):
 
         planned = request.query_params.get('planned')
         if planned:
+            naive_time = timezone.localtime().now()
+            today = timezone.make_aware(naive_time)
             kwargs['is_active'] = True
-            kwargs['start_date__gte'] = timezone.now()
+            kwargs['start_date__gte'] = today
 
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
@@ -337,7 +409,18 @@ class DirectorDiscountAsiaProductView(mixins.ListModelMixin, GenericViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        discounts = Discount.objects.filter(
+            Q(start_date__lte=end_date, end_date__gte=start_date) |
+            Q(start_date__gte=start_date, end_date__lte=end_date) |
+            Q(start_date__lte=start_date, end_date__gte=end_date))
+
         queryset = self.get_queryset()
+        for discount in discounts:
+            d_products = discount.products.all()
+            queryset = queryset.exclude(id__in=d_products)
+
         kwargs = {}
 
         category = request.query_params.get('category')
@@ -382,19 +465,24 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
 
         city_slug = request.query_params.get('city_slug')
         if city_slug:
-            kwargs['city__slug'] = city_slug
+            kwargs['village__city__slug'] = city_slug
+
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['user__is_active'] = bool(int(is_active))
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        response_data = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(response_data)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DirectorDealerSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class DirectorDealerCRUDView(mixins.CreateModelMixin,
-                               mixins.RetrieveModelMixin,
-                               mixins.UpdateModelMixin,
-                               mixins.DestroyModelMixin,
-                               GenericViewSet):
+                             mixins.RetrieveModelMixin,
+                             mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = MyUser.objects.all()
     serializer_class = DirectorDealerCRUDSerializer
@@ -420,10 +508,12 @@ class DirectorBalanceHistoryListView(APIView):
         end = request.data.get('end')
         start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+        end_date = end_date + timezone.timedelta(days=1)
         user = MyUser.objects.filter(id=user_id).first()
         balance_histories = user.dealer_profile.balance_histories.filter(created_at__gte=start_date,
                                                                          created_at__lte=end_date)
-        response_data = DirBalanceHistorySerializer(balance_histories, many=True, context=self.get_renderer_context()).data
+        response_data = DirBalanceHistorySerializer(balance_histories, many=True,
+                                                    context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -433,7 +523,7 @@ class DirectorDealerOrderListView(APIView):
     "end": "14-12-2023",
     "user_id": user_id,
     """
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user_id = request.data.get('user_id')
@@ -482,7 +572,8 @@ class DirectorTotalAmountView(APIView):
                                                           created_at__lte=end_date, dealer_id__in=dealer_ids)
         response_data = {}
         response_data['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
-        response_data['shipment_amount'] = sum(balance_histories.filter(status='order').values_list('amount', flat=True))
+        response_data['shipment_amount'] = sum(
+            balance_histories.filter(status='order').values_list('amount', flat=True))
         response_data['balance'] = balance_histories.last().balance if balance_histories else 0
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -566,7 +657,7 @@ class DirectorPriceListView(mixins.ListModelMixin, GenericViewSet):
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
-        kwargs = {}
+        kwargs = {'is_discount': False}
 
         title = request.query_params.get('title')
         if title:
@@ -576,46 +667,90 @@ class DirectorPriceListView(mixins.ListModelMixin, GenericViewSet):
         if category:
             kwargs['category__slug'] = category
 
+        collection = request.query_params.get('collection')
+        if collection:
+            kwargs['collection__slug'] = collection
+
         queryset = queryset.filter(**kwargs)
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class DirectorPriceCreateView(APIView):
+class DirectorPriceTypeCreateView(APIView):
     permission_classes = [IsAuthenticated, IsDirector]
 
     def post(self, request):
-        product_id = request.data.get('id')
-        c_price = request.data.get('cost_price')
-        prices = request.data.get('prices')
-        product = AsiaProduct.objects.filter(id=product_id).first()
-        cost_price = product.cost_prices.filter(is_active=True).first()
-        if cost_price.price != c_price:
-            cost_price.is_active = False
-            cost_price.save()
-            ProductCostPrice.objects.create(product=product, price=c_price)
-
+        data = request.data.get('data')
         d_statuses = DealerStatus.objects.all()
+
+        prod_ids = [i['id'] for i in data]
+        cost_update_data = []
+        cost_create_data = []
         price_data = []
-        for p in prices:
-            price_type = PriceType.objects.get(id=p['city'])
-            for s in d_statuses:
-                price_data.append(ProductPrice(
-                    product=product,
-                    price_type=price_type,
-                    d_status=s,
-                    price=p['price']
-                ))
-        product.prices.all().delete()
+
+        for d in data:
+            c_price = d.get('cost_price')
+            prices = d.get('prices')
+            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True).first()
+            if cost_price.price != c_price:
+                cost_price.is_active = False
+                cost_update_data.append(cost_price)
+                cost_create_data.append(ProductCostPrice(product_id=d.get('id'), price=c_price))
+
+            for p in prices:
+                for s in d_statuses:
+                    price_data.append(ProductPrice(
+                        product_id=d.get('id'),
+                        price_type_id=p['price_type'],
+                        d_status=s,
+                        price=p['price']
+                    ))
+
+        ProductCostPrice.objects.bulk_update(cost_update_data, ['is_active'])
+        ProductCostPrice.objects.bulk_create(cost_create_data)
+        ProductPrice.objects.filter(product_id__in=prod_ids, price_type__isnull=False).delete()
         ProductPrice.objects.bulk_create(price_data)
         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
-class DirectorTaskCRUDView(mixins.CreateModelMixin,
-                           mixins.RetrieveModelMixin,
-                           mixins.UpdateModelMixin,
-                           mixins.DestroyModelMixin,
-                           GenericViewSet):
+class DirectorPriceCityCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        data = request.data.get('data')
+        d_statuses = DealerStatus.objects.all()
+
+        prod_ids = [i['id'] for i in data]
+        cost_update_data = []
+        cost_create_data = []
+        price_data = []
+
+        for d in data:
+            c_price = d.get('cost_price')
+            prices = d.get('prices')
+            cost_price = ProductCostPrice.objects.filter(product_id=d.get('id'), is_active=True).first()
+            if cost_price.price != c_price:
+                cost_price.is_active = False
+                cost_update_data.append(cost_price)
+                cost_create_data.append(ProductCostPrice(product_id=d.get('id'), price=c_price))
+
+            for p in prices:
+                for s in d_statuses:
+                    price_data.append(ProductPrice(
+                        product_id=d.get('id'),
+                        city_id=p['city'],
+                        d_status=s,
+                        price=p['price']
+                    ))
+
+        ProductCostPrice.objects.bulk_update(cost_update_data, ['is_active'])
+        ProductCostPrice.objects.bulk_create(cost_create_data)
+        ProductPrice.objects.filter(product_id__in=prod_ids, city__isnull=False).delete()
+        ProductPrice.objects.bulk_create(price_data)
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class DirectorTaskCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = CRMTask.objects.all()
     serializer_class = DirectorTaskCRUDSerializer
@@ -625,6 +760,7 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = CRMTask.objects.all()
     serializer_class = DirectorTaskListSerializer
+    pagination_class = CRMPaginationClass
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
@@ -643,9 +779,9 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
         if category:
             kwargs['creator'] = request.user
 
-        overdue = request.query_params.get('overdue')
-        if overdue:
-            kwargs['end_date__lte'] = timezone.now()
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = bool(int(is_active))
 
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
@@ -656,26 +792,10 @@ class DirectorTaskListView(mixins.ListModelMixin, GenericViewSet):
             kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
-        response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-class DirectorGradeCRUDView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsDirector]
-    queryset = CRMTaskGrade.objects.all()
-    serializer_class = DirectorCRMTaskGradeSerializer
-
-
-class DirectorGradeView(APIView):
-    permission_classes = [IsAuthenticated, IsDirector]
-
-    def post(self, request):
-        response_id = request.data['response_id']
-        grade_id = request.data['grade_id']
-        response_task = CRMTaskResponse.objects.filter(id=response_id).first()
-        response_task.grade_id = grade_id
-        response_task.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DirectorTaskListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class DirectorStockCRUDView(viewsets.ModelViewSet):
@@ -715,7 +835,7 @@ class DStockProductListView(mixins.ListModelMixin, GenericViewSet):
 
     def get_queryset(self):
         from django.db.models import F, Sum, IntegerField
-        stock_id = self.request.query_params.get('stock')
+        stock_id = int(self.request.query_params.get('stock'))
 
         return super().get_queryset().annotate(
             total_count=Sum(
@@ -780,6 +900,13 @@ class DirectorStaffListView(mixins.RetrieveModelMixin,
         response_data = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(response_data, status=status.HTTP_200_OK)
 
+    @action(methods=['GET'], detail=False, url_path='rop-list')
+    def get_active_rop_list(self, request, *args, **kwargs):
+        rop_id = self.request.query_params.get('rop_id')
+        active_rops = MyUser.objects.filter(is_active=True, status='rop').exclude(id=rop_id)
+        serializer = UserListSerializer(active_rops, many=True).data
+        return Response(serializer, status=status.HTTP_200_OK)
+
 
 class DirectorKPICRUDView(mixins.CreateModelMixin,
                           mixins.RetrieveModelMixin,
@@ -815,15 +942,114 @@ class DirectorTaskTotalInfoView(APIView):
         tasks = CRMTask.objects.filter(is_active=True)
         total_count = tasks.count()
         done_count = tasks.filter(status='completed').count()
-        now = datetime.datetime.now()
-        overdue_count = tasks.exclude(status='completed', end_date__gte=now).count()
+        overdue_count = tasks.exclude(status='expired').count()
         return Response({'total_count': total_count, 'done_count': done_count, 'overdue_count': overdue_count},
                         status=status.HTTP_200_OK)
 
 
 class PriceTypeCRUDView(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [IsAuthenticated, IsDirector]
     queryset = PriceType.objects.all()
     serializer_class = PriceTypeCRUDSerializer
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        for d in instance.dealer_profiles.all():
+            d.price_type.delete()
+        instance.delete()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class DirFreeMainWarehouseListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def get(self, request):
+        wh_id = self.request.query_params.get('wh_id')
+        users = MyUser.objects.filter(status='warehouse', is_active=True,
+                                      warehouse_profile__stock__isnull=True).exclude(id=wh_id)
+        response_data = UserListSerializer(users, many=True, context=self.get_renderer_context()).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DirJoinWarehouseToStockListView(APIView):
+    permission_classes = [IsAuthenticated, IsDirector]
+
+    def post(self, request):
+        stock_id = request.data['stock']
+        user_ids = request.data['users']
+        stock = Stock.objects.get(id=stock_id)
+        users = MyUser.objects.filter(id__in=user_ids)
+
+        warehouses = WarehouseProfile.objects.filter(stock=stock)
+        with transaction.atomic():
+            for wh in warehouses:
+                wh.stock = None
+                wh.save()
+
+            if users and stock:
+                for user in users:
+                    profile = user.warehouse_profile
+                    profile.stock = stock
+                    profile.save()
+                return Response({"text": "Success!"}, status=status.HTTP_200_OK)
+            return Response({"text": "stock and user not found!"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StockListView(mixins.ListModelMixin, GenericViewSet):
+    queryset = Stock.objects.all().prefetch_related('counts')
+    permission_classes = [IsAuthenticated, IsDirector]
+    serializer_class = StockListSerializer
+
+
+class MaxatTestView(APIView):
+    def get(self, request):
+        month = request.query_params.get('month')
+        month = timezone.make_aware(datetime.datetime.strptime(month, "%m-%Y"))
+
+        queryset = MoneyDoc.objects.filter(is_active=True,
+                                           created_at__month=month.month).select_related('user__dealer_profile')
+
+        data = []
+        for i in queryset:
+            data.append(
+                {
+                    'money_id': i.id,
+                    'name': i.user.name if i.user else 'Нет имени',
+                    'created_at': i.created_at,
+                    'amount': i.amount
+                }
+            )
+        return Response({'result': data}, status=status.HTTP_200_OK)
+
+
+class DealerStatusModelViewSet(viewsets.ModelViewSet):
+    queryset = DealerStatus.objects.all()
+    permission_classes = [IsAuthenticated, IsStaff]
+    serializer_class = DirectorDealerStatusSerializer
+
+
+class DirectorCategoryModelViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    permission_classes = [IsAuthenticated, IsDirector]
+    serializer_class = DirectorCategorySerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        sync_category_crm_to_1c(instance)
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+
+class DirectorNotificationView(APIView):
+    def get(self, request):
+        kpi_count = DealerKPI.objects.filter(is_confirmed=False).count()
+        tasks_count = CRMTask.objects.filter(status='created', status__in=['waiting', 'repeat']).count()
+
+        data = {
+            'kpi_count': kpi_count,
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
 

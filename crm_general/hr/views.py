@@ -23,7 +23,6 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
     queryset = MyUser.objects.filter(
         status__in=['director', 'main_director', 'rop', 'manager', 'marketer', 'accountant', 'warehouse', 'hr'])
     serializer_class = HRStaffListSerializer
-    pagination_class = CRMPaginationClass
 
     def get_serializer_class(self):
         if self.detail:
@@ -39,22 +38,38 @@ class HRStaffListView(viewsets.ReadOnlyModelViewSet):
         if name:
             kwargs['name__icontains'] = name
 
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = bool(int(is_active))
+
         u_status = request.query_params.get('status')
         if u_status:
             kwargs['status'] = u_status
 
         employee = request.query_params.get('employee')
-        if status:
+        if employee:
             kwargs['magazines__status'] = employee
             kwargs['magazines__is_active'] = True
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(serializer)
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class StaffMagazineCreateView(mixins.CreateModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsHR]
     queryset = StaffMagazine.objects.all()
     serializer_class = HRStaffMagazineSerializer
+
+
+class HrNotificationView(APIView):
+    def get(self, request):
+        new_accounts = MyUser.objects.filter(
+            status__in=['director', 'main_director', 'rop', 'manager', 'marketer', 'accountant', 'warehouse', 'hr'],
+            magazines__isnull=True).count()
+
+        data = {
+            'new_accounts': new_accounts,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

@@ -1,12 +1,14 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
-from general_service.models import City, Stock, PriceType
+from general_service.compress import WEBPField, user_image_folder, notification_image_folder
+from general_service.models import City, Stock, PriceType, Village
 
 
 class DealerStatus(models.Model):
     title = models.CharField(max_length=50, blank=True, null=True)
     discount = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
@@ -41,9 +43,10 @@ class MyUser(AbstractUser):
     pwd = models.CharField(max_length=40, blank=True, null=True)
 
     name = models.CharField(max_length=50, blank=True, null=True)
-    image = models.ImageField(upload_to='users', blank=True, null=True)
+    image = WEBPField(upload_to=user_image_folder, blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
+    firebase_token = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f'{self.id}.{self.email or self.username}'
@@ -85,31 +88,40 @@ class StaffMagazine(models.Model):
 class RopProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='rop_profile')
     cities = models.ManyToManyField(City, related_name='rop_profiles')
+    managers = models.ManyToManyField('ManagerProfile', related_name='managers')
 
 
 class ManagerProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='manager_profile')
+    is_main = models.BooleanField(default=False)
     city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, related_name='manager_profiles')
 
 
 class WarehouseProfile(models.Model):
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='warehouse_profile')
     stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='warehouse_profiles')
+    is_main = models.BooleanField(default=False)
 
 
 class DealerProfile(models.Model):
+    STATUS = (
+        ('online', 'online'),
+        ('offline', 'offline'),
+    )
     user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='dealer_profile')
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True, related_name='dealer_profiles')
+    village = models.ForeignKey(Village, on_delete=models.SET_NULL, blank=True, null=True,
+                                related_name='dealer_profiles')
     address = models.CharField(max_length=300, blank=True, null=True)
     dealer_status = models.ForeignKey(DealerStatus, on_delete=models.SET_NULL, blank=True, null=True,
                                       related_name='dealer_profiles')
     liability = models.PositiveIntegerField(default=0)
-    price_city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)  # TODO: delete
+    price_city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)
     push_notification = models.BooleanField(default=True)
     birthday = models.DateField(blank=True, null=True)
     price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, blank=True, null=True,
                                    related_name='dealer_profiles')
-    discount = models.PositiveIntegerField(default=0)
+    managers = models.ManyToManyField(MyUser, related_name='dealer_profiles', blank=True)
+    client_type = models.CharField(max_length=20, choices=STATUS, default='offline')
 
     def __str__(self):
         return f'{self.id} - {self.user.name}'
@@ -120,7 +132,7 @@ class DealerProfile(models.Model):
 
 class DealerStore(models.Model):
     dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='dealer_stores')
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True)
+    city = models.CharField(max_length=200, blank=True, null=True)
     title = models.CharField(max_length=200, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
 
@@ -166,8 +178,6 @@ class Notification(models.Model):
     )
 
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='notifications')
-    notification = models.ForeignKey('CRMNotification', on_delete=models.SET_NULL, related_name='crm_notification',
-                                     blank=True, null=True)
     status = models.CharField(choices=STATUS, max_length=10, blank=True, null=True)
     image = models.FileField(upload_to='notification', blank=True, null=True)
     is_read = models.BooleanField(default=False)
@@ -183,7 +193,7 @@ class Notification(models.Model):
 
 class VerifyCode(models.Model):
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='verify_codes')
-    code = models.CharField(max_length=4)
+    code = models.CharField(max_length=10)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -215,16 +225,15 @@ class CRMNotification(models.Model):
         ('motivation', 'Мотивация'),
     )
 
-    users = models.ManyToManyField(MyUser, related_name='crm_notifications', blank=True)
-    cities = models.ManyToManyField(City, related_name='crm_notifications', blank=True)
-    groups = models.ManyToManyField(DealerStatus, related_name='crm_notifications', blank=True)
-    image = models.FileField(upload_to='notification', blank=True, null=True)
+    dealer_profiles = models.ManyToManyField(DealerProfile, related_name='crm_notifications', blank=True)
+    image = WEBPField(upload_to=notification_image_folder, blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     dispatch_date = models.DateTimeField()
     status = models.CharField(choices=STATUS, max_length=100, default='notif')
     link_id = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_pushed = models.BooleanField(default=False)
 
     @classmethod
     def get_status_choices(cls):

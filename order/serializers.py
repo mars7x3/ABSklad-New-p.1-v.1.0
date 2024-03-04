@@ -2,6 +2,7 @@ from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers
 from django.db import transaction
 
+from account.utils import send_push_notification
 from product.models import ProductCount, ProductPrice
 from .models import *
 from .tasks import create_order_notification
@@ -43,7 +44,7 @@ class OrderReceiptSerializer(serializers.ModelSerializer):
 class OrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderProduct
-        exclude = ('id', 'order', 'category', 'ab_product', 'discount', 'cost_price')
+        exclude = ('id', 'order', 'category', 'discount', 'cost_price')
 
 
 class StockSerializer(serializers.ModelSerializer):
@@ -105,15 +106,21 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        with transaction.atomic():
-            products = validated_data.pop('products')
+        products = validated_data.pop('products')
 
-            order = MyOrder.objects.create(**validated_data)
-            OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
+        order = MyOrder.objects.create(**validated_data)
+        OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
 
-            create_order_notification(order.id)  # TODO: delay() add here
-
-            return order
+        create_order_notification(order.id)  # TODO: delay() add here
+        kwargs = {
+            "users": [order.author.user],
+            "title": f"Заказ #{order.id}",
+            "text": "Ваш заказ успешно создан.",
+            "link_id": f"{order.id}",
+            "status": "order"
+        }
+        send_push_notification(**kwargs)  # TODO: delay() add here
+        return order
 
 
 class CartListSerializer(serializers.ModelSerializer):
@@ -148,6 +155,8 @@ class CartAsiaProductSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
         price = instance.prices.filter(d_status=dealer.dealer_status, price_type=dealer.price_type).first()
+        if not price:
+            price = instance.prices.filter(d_status=dealer.dealer_status, city=dealer.price_city).first()
         rep['image'] = self.context['request'].build_absolute_uri(instance.images.first().image.url)
         rep['price_info'] = CartAsiaProductPriceSerializer(price, context=self.context).data
         rep['counts'] = CartProductCountSerializer(instance.counts.all(), many=True, context=self.context).data

@@ -1,16 +1,43 @@
 from absklad_commerce.celery import app
-from account.models import Notification
+from account.models import Notification, CRMNotification
 from django.utils import timezone
 
+from crm_general.utils import create_notifications_for_users
+from promotion.models import Banner
 
-@app.task()
-def create_notifications(notifications: list, image_url, dispatch_date):
+
+@app.task
+def create_notifications():
     """
     Create every notification for user
     """
-    if dispatch_date <= timezone.now():
-        notification_to_create = [Notification(**n) for n in notifications]
-        nots = Notification.objects.bulk_create(notification_to_create)
-        for notification in nots:
-            notification.image = image_url
-            notification.save()
+    naive_time = timezone.localtime().now()
+    crn_time = timezone.make_aware(naive_time)
+    crm_notifs = CRMNotification.objects.filter(dispatch_date__lte=crn_time, is_pushed=False, status='notif')
+    if crm_notifs:
+        for notif in crm_notifs:
+            create_notifications_for_users(crm_status=notif.status)
+
+
+@app.task
+def set_banner_false():
+    naive_time = timezone.localtime().now()
+    current_date = timezone.make_aware(naive_time)
+    banners = Banner.objects.filter(is_active=True, end_time__month=current_date.month,
+                                    end_time__day=current_date.day, end_time__year=current_date.year)
+    for banner in banners:
+        if banner.end_time < current_date:
+            banner.is_active = False
+            banner.save()
+
+
+@app.task
+def set_banner_true():
+    naive_time = timezone.localtime().now()
+    current_date = timezone.make_aware(naive_time)
+    banners = Banner.objects.filter(is_active=False, start_time__month=current_date.month,
+                                    start_time__day=current_date.day, start_time__year=current_date.year)
+    for banner in banners:
+        if banner.start_time <= current_date:
+            banner.is_active = True
+            banner.save()

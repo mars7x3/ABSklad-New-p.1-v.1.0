@@ -1,5 +1,9 @@
+import datetime
 from collections import OrderedDict
 
+from django.db.models import Q
+from django.utils import timezone
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets, status, generics, mixins
 from rest_framework.pagination import PageNumberPagination
@@ -7,13 +11,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.models import MyUser, DealerStatus
+from account.models import MyUser, DealerStatus, DealerProfile
+from crm_general.accountant.serializers import AccountantStockProductSerializer
+from crm_general.models import CRMTask, CRMTaskFile
 from crm_general.permissions import IsStaff
 from crm_general.serializers import StaffListSerializer, CollectionCRUDSerializer, CityListSerializer, \
     StockListSerializer, DealerStatusListSerializer, CategoryListSerializer, CategoryCRUDSerializer, \
-    CRMTaskResponseSerializer, CityCRUDSerializer, PriceTypeListSerializer
-from general_service.models import City, Stock, PriceType
+    CityCRUDSerializer, PriceTypeListSerializer, DealerProfileSerializer, \
+    ShortProductSerializer, CRMTaskCRUDSerializer, VillageSerializer
+from general_service.models import City, Stock, PriceType, Village
+from order.db_request import query_debugger
 from product.models import Collection, AsiaProduct, ProductImage, Category
+from promotion.models import Discount
 
 
 class CRMPaginationClass(PageNumberPagination):
@@ -129,22 +138,6 @@ class UserImageCDView(APIView):
         return Response({"url": image_url}, status=status.HTTP_200_OK)
 
 
-class CRMTaskUpdateAPIView(generics.UpdateAPIView):
-    permission_classes = (IsAuthenticated, IsStaff)
-    serializer_class = CRMTaskResponseSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "response_task_id"
-
-    def get_queryset(self):
-        return (
-            self.request.user.task_responses
-            .select_related("task")
-            .prefetch_related("response_files")
-            .only("id", "task", "grade", "is_done")
-            .all()
-        )
-
-
 class CityCRUDView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStaff]
     queryset = City.objects.all()
@@ -178,3 +171,127 @@ class PriceTypeListView(generics.ListAPIView):
     queryset = PriceType.objects.filter(is_active=True)
     serializer_class = PriceTypeListSerializer
 
+
+class DealersFilterAPIView(APIView):
+    def post(self, request):
+        cities = self.request.data.get('cities', [])
+        categories = self.request.data.get('categories', [])
+        if not cities and not categories:
+            return Response({'detail': 'filter by cities or categories needed'}, status=status.HTTP_400_BAD_REQUEST)
+
+        base_query = Q(user__is_active=True)
+
+        if cities:
+            base_query &= Q(village__city__in=cities)
+
+        if categories:
+            base_query &= Q(dealer_status__in=categories)
+
+        dealers = DealerProfile.objects.filter(base_query)
+
+        serializer = DealerProfileSerializer(dealers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FilterProductByDiscountAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        category = self.request.query_params.get('category')
+        products = AsiaProduct.objects.filter(is_active=True, is_discount=False, category=category)
+        discounts = Discount.objects.all()
+        for discount in discounts:
+            products = products.exclude(id__in=discount.products.values_list('id', flat=True))
+        serializer = ShortProductSerializer(products, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CRMTaskListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated, IsStaff]
+    queryset = CRMTask.objects.filter(is_active=True)
+    serializer_class = CRMTaskCRUDSerializer
+    pagination_class = CRMPaginationClass
+
+    def get_queryset(self):
+        queryset = self.request.user.my_tasks.filter(is_active=True)
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def search(self, request, **kwargs):
+        queryset = self.get_queryset()
+        kwargs = {}
+
+        title = request.query_params.get('title')
+        if title:
+            kwargs['title__icontains'] = title
+
+        task_status = request.query_params.get('status')
+        if task_status:
+            kwargs['status'] = task_status
+
+        is_active = request.query_params.get('is_active')
+        if is_active:
+            kwargs['is_active'] = True
+
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        if start_date and end_date:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
+            end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+            end_date = end_date + datetime.timedelta(days=1)
+            kwargs['created_at__gte'] = start_date
+            kwargs['created_at__lte'] = end_date
+
+        queryset = queryset.filter(**kwargs)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = CRMTaskCRUDSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
+
+
+class TaskResponseView(APIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+
+    def post(self, request):
+        task_id = request.data['id']
+        files = request.FILES.getlist('files')
+        response_text = request.data['response_text']
+        delete_files = request.data.getlist('delete_files')
+        task = CRMTask.objects.get(id=task_id)
+        if request.user in task.executors.all():
+            task.response_text = response_text
+            task.status = 'waiting'
+            task.save()
+
+            if delete_files:
+                task.files.filter(id__in=delete_files).delete()
+
+            create_files = []
+            for f in files:
+                create_files.append(CRMTaskFile(task=task, file=f, is_response=True))
+            CRMTaskFile.objects.bulk_create(create_files)
+
+            return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+        return Response({'text': 'Permission denied!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VillageListView(APIView):
+    def get(self, request, *args, **kwargs):
+        villages = Village.objects.all()
+        serializer = VillageSerializer(villages, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductInStockAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        stock_id = self.request.query_params.get('stock_id')
+        products = AsiaProduct.objects.all()
+        products_in_stock = []
+        for product in products:
+            crm_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
+            ones_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+            price = product.prices.filter().first()
+            total_price = price.price * crm_count if price else 0
+            if crm_count != 0 or ones_count != 0 or total_price != 0:
+                products_in_stock.append(product)
+
+        serializer = AccountantStockProductSerializer(products_in_stock, context={'stock_id': stock_id}, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
