@@ -7,18 +7,19 @@ from account.models import MyUser, StaffMagazine
 class HRStaffListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('email', 'id', 'status', 'name')
+        fields = ('email', 'id', 'status', 'name', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['employee_status'] = instance.magazines.filter(is_active=True).first().status
+        employee = instance.magazines.filter(is_active=True).first()
+        rep['employee_status'] = employee.status if employee else None
         return rep
 
 
 class HRStaffDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('email', 'id', 'status', 'name')
+        fields = ('email', 'id', 'status', 'name', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -34,8 +35,9 @@ class HRStaffMagazineSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         magazine = StaffMagazine.objects.filter(user=validated_data['user'], is_active=True).first()
-        magazine.is_active = False
-        magazine.save()
+        if magazine:
+            magazine.is_active = False
+            magazine.save()
         magazine = StaffMagazine.objects.create(**validated_data)
 
         return magazine

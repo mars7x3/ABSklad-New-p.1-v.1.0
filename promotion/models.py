@@ -1,21 +1,26 @@
 from django.db import models
 
 from account.models import DealerProfile, DealerStatus, MyUser
-from general_service.models import City
+from general_service.compress import WEBPField, banner_image_folder
+from general_service.models import City, PriceType
 from product.models import AsiaProduct, Category
 
 
 class Story(models.Model):
     is_active = models.BooleanField(default=False)
-    title = models.CharField(max_length=300)
-    slogan = models.CharField(max_length=300)
-    text = models.TextField()
-    image = models.FileField(upload_to='stories_files', blank=True, null=True)
+    title = models.CharField(max_length=16, blank=True, null=True)
+    slogan = models.CharField(max_length=16, blank=True, null=True)
+    text = models.TextField(blank=True, null=True)
+    file = models.FileField(upload_to='stories_files', blank=True, null=True)
+    clicks = models.PositiveIntegerField(default=0)
+    created_at = models.DateField(auto_now_add=True)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    products = models.ManyToManyField(AsiaProduct, related_name='stories')
-    cities = models.ManyToManyField(City, related_name='stories')
-    dealer_groups = models.ManyToManyField(DealerStatus, related_name='stories')
+    products = models.ManyToManyField(AsiaProduct, related_name='stories', blank=True)
+    dealer_profiles = models.ManyToManyField(DealerProfile, related_name='stories')
+
+    class Meta:
+        ordering = ('-id',)
 
 
 class Motivation(models.Model):
@@ -76,26 +81,39 @@ class Discount(models.Model):
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     products = models.ManyToManyField(AsiaProduct, related_name='discount_products')
-    cities = models.ManyToManyField(City, related_name='discount_cities')
-    dealer_statuses = models.ManyToManyField(DealerStatus, related_name='discount_d_statuses')
+    dealer_profiles = models.ManyToManyField(DealerProfile, related_name='discount_d_profiles')
+
+    class Meta:
+        ordering = ('-created_at',)
 
 
 class Banner(models.Model):
-    STATUS = (
-        ('web', 'web'),
-        ('app', 'app'),
-    )
-
     title = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='banner-images', blank=True, null=True)
+    motivation = models.ForeignKey(Motivation, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
+    discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='banners', blank=True, null=True)
+    image = WEBPField(upload_to=banner_image_folder, null=True, blank=True)  # TODO: delete null=True after demo version
+    web_image = models.ImageField(upload_to='banner-images', blank=True, null=True)  # TODO: delete after demo version
     video_url = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    status = models.CharField(choices=STATUS, default='web', max_length=3)
     created_at = models.DateTimeField(auto_now_add=True)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    start_time = models.DateTimeField(blank=True, null=True)
+    end_time = models.DateTimeField(blank=True, null=True)
     clicks = models.PositiveIntegerField(default=0)
-    cities = models.ManyToManyField(City, related_name='banners')
-    products = models.ManyToManyField(AsiaProduct, related_name='banners')
-    groups = models.ManyToManyField(DealerStatus, related_name='banner_groups')
+    show_date = models.BooleanField(default=False)
+    products = models.ManyToManyField(AsiaProduct, related_name='banners', blank=True)
+    dealer_profiles = models.ManyToManyField(DealerProfile, related_name='banners', blank=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+
+class DiscountPrice(models.Model):
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='discount_prices')
+    discount = models.ForeignKey(Discount, on_delete=models.CASCADE, related_name='discount_prices')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='discount_prices')
+    city = models.ForeignKey(City, on_delete=models.SET_NULL, related_name='discount_prices', null=True)
+    price_type = models.ForeignKey(PriceType, on_delete=models.SET_NULL, related_name='discount_prices', null=True)
+    price = models.DecimalField(max_digits=100, decimal_places=2)
+    old_price = models.DecimalField(max_digits=100, decimal_places=2)
+    is_active = models.BooleanField(default=False)

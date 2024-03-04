@@ -1,5 +1,6 @@
 from django.utils.encoding import force_str
 from rest_framework.filters import BaseFilterBackend
+from rest_framework.validators import ValidationError
 
 
 class FilterByFields(BaseFilterBackend):
@@ -17,6 +18,16 @@ class FilterByFields(BaseFilterBackend):
         for source, params in filter_by_fields.items():
             assert isinstance(params, dict)
 
+            ignore_on_filters = params.get('ignore_on_filters')
+            found_ignore_filters = False
+            for filter_source in ignore_on_filters or []:
+                if request.query_params.get(filter_source):
+                    found_ignore_filters = True
+                    break
+
+            if found_ignore_filters:
+                continue
+
             value = request.query_params.get(source)
             if value:
                 pipline = params.get("pipline")
@@ -30,8 +41,20 @@ class FilterByFields(BaseFilterBackend):
 
                 filters[params["by"]] = value
 
+                addition_filters = params.get("addition_filters")
+                if isinstance(addition_filters, dict) and addition_filters:
+                    filters |= addition_filters
+            else:
+                default = params.get("default")
+
+                if default:
+                    filters[params["by"]] = default
+
         if filters:
-            return queryset.filter(**filters)
+            try:
+                return queryset.filter(**filters)
+            except (ValueError, TypeError) as e:
+                raise ValidationError({"detail": "wrong params!"})
         return queryset
 
     def get_schema_operation_parameters(self, view):

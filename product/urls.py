@@ -8,6 +8,8 @@ router.register('dealer/review/cd', ReviewCDView)  # create/delete review
 router.register('dealer/collection/list', CollectionListView)
 router.register('dealer/category/list', CategoryListView)
 router.register('dealer/product/list', ProductListView)
+router.register('dealer/product/hit/list', HitProductListView)
+
 router.register('product/info', ProductLinkView)
 
 

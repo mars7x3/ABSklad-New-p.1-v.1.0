@@ -1,29 +1,36 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, F
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin, \
+    DestroyModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
+from account.models import MyUser
+from crm_kpi.utils import update_dealer_kpi_by_order
+from crm_stat.tasks import main_stat_order_sync
+from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
-from order.models import MyOrder, OrderProduct
+from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
 from product.models import AsiaProduct, Collection, Category, ProductCount
 from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
-    WareHouseProductSerializer, WareHouseCRMTaskResponseSerializer
+    WareHouseProductSerializer, WareHouseInventorySerializer, \
+    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer, InventoryProductSerializer
 from .mixins import WareHouseManagerMixin
-from ..models import CRMTaskResponse
-from ..serializers import CRMTaskResponseSerializer
+from ..models import Inventory, CRMTask, InventoryProduct
+from ..tasks import minus_quantity
 
 
 class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
-    queryset = MyOrder.objects.all()
+    queryset = MyOrder.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     pagination_class = GeneralPurposePagination
     serializer_class = OrderListSerializer
@@ -33,20 +40,19 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
         queryset = self.get_queryset()
         order_status = self.request.query_params.get('status')
         type_status = self.request.query_params.get('type_status')
-        start_time = self.request.query_params.get('start_time')
-        end_time = self.request.query_params.get('end_time')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
         search = self.request.query_params.get('search')
 
         if order_status:
             queryset = queryset.filter(status=order_status)
         if type_status:
             queryset = queryset.filter(type_status=type_status)
-
-        if start_time and end_time:
-            queryset = queryset.filter(created_at__gte=start_time, created_at=end_time)
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__gte=start_date, created_at__lte=end_date)
 
         if search:
-            queryset = queryset.filter(Q(name__iconatins=search), Q(gmail__icontains=search))
+            queryset = queryset.filter(author__user__name__icontains=search)
 
         paginator = GeneralPurposePagination()
         page = paginator.paginate_queryset(queryset, request)
@@ -72,8 +78,12 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
 
         if order_status == 'paid':
             if order.type_status == 'cash':
+                paid_at = timezone.localtime().now()
+                order.paid_at = paid_at
                 order.status = 'paid'
                 order.save()
+                sync_money_doc_to_1C(order)
+
                 return Response({'detail': 'Order type status successfully changed to "paid"'},
                                 status=status.HTTP_200_OK)
             return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
@@ -81,38 +91,58 @@ class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
 
         if order_status == 'sent':
             if order.status == 'paid':
-                order.status = 'sent'
+                released_at = timezone.localtime().now()
+                order.status = order_status
+                order.released_at = released_at
                 order.save()
-                return Response({'detail': 'Order status successfully changed to "sent"'},
+
+                sync_order_to_1C.delay(order.id)
+                main_stat_order_sync(order)
+
+                update_data = []
+                for p in order.order_products.all():
+                    p.is_checked = True
+                    update_data.append(p)
+                OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+
+                minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
+                return Response({'detail': f'Order status successfully changed to {order_status}'},
+
                                 status=status.HTTP_200_OK)
-            return Response({'detail': 'Order status must be "paid" to change to "sent"'},
+            return Response({'detail': f'Order status must be "paid" to change to {order_status}'},
                             status=status.HTTP_400_BAD_REQUEST)
+
         return Response({'detail': 'Incorrect order status'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = AsiaProduct.objects.all()
     serializer_class = WareHouseProductListSerializer
     retrieve_serializer_class = WareHouseProductSerializer
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = ProductPagination
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         product_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
+        category_slug = self.request.query_params.get('category_slug')
+        collection_slug = self.request.query_params.get('collection_slug')
         if product_status == 'active':
             queryset = queryset.filter(is_active=True)
         elif product_status == 'inactive':
             queryset = queryset.filter(is_active=False)
 
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
+
+        if collection_slug:
+            queryset = queryset.filter(collection__slug=collection_slug)
+
         if search:
             queryset = queryset.filter(title__icontains=search)
 
-        paginator = ProductPagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def get_queryset(self):
         return self.queryset.filter(counts__stock=self.request.user.warehouse_profile.stock)
@@ -128,11 +158,10 @@ class WareHouseCollectionViewSet(ListModelMixin,
                                  GenericViewSet):
     queryset = Collection.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = ProductPagination
     serializer_class = WareHouseCollectionListSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         c_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
 
@@ -143,10 +172,9 @@ class WareHouseCollectionViewSet(ListModelMixin,
 
         if search:
             queryset = queryset.filter(title__icontains=search)
-        paginator = GeneralPurposePagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class WareHouseCategoryViewSet(ListModelMixin,
@@ -154,7 +182,6 @@ class WareHouseCategoryViewSet(ListModelMixin,
                                GenericViewSet):
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    pagination_class = ProductPagination
     serializer_class = WareHouseCategoryListSerializer
 
     def get_serializer_context(self):
@@ -201,12 +228,23 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
                                                order__created_at__range=(start_date, end_date)
                                                ).aggregate(Sum('count'))['count__sum'] or 0
 
+            count_crm = ProductCount.objects.filter(product=product,
+                                                    stock=self.warehouse_profile.stock).aggregate(
+                                                    count_crm=Sum('count_crm')
+                                                )
+            count_1c = ProductCount.objects.filter(product=product,
+                                                   stock=self.warehouse_profile.stock).aggregate(
+                                                   count_1c=Sum('count_1c')
+                                                )
+
+            reserved = count_1c['count_1c'] - count_crm['count_crm']
             statistics_entry = {
                 "id": product.id,
                 "vendor_code": product.vendor_code,
                 "title": product.title,
-                "category": product.category.title,
-                "before": remains + sold,
+                "reserved": reserved,
+                "category": product.category.title if product.category else None,
+                "before": remains + sold + movement_delta,
                 "sold": sold,
                 "movements": movement_delta,
                 "remains": remains
@@ -215,30 +253,124 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
         return Response(stat, status=status.HTTP_200_OK)
 
 
-class WareHouseTaskView(ListModelMixin,
-                        RetrieveModelMixin,
-                        GenericViewSet):
-    queryset = CRMTaskResponse.objects.all()
+class WareHouseSaleReportDetailView(WareHouseManagerMixin, APIView):
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    serializer_class = WareHouseCRMTaskResponseSerializer
+
+    def get(self, request, pk, *args, **kwargs):
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        product = AsiaProduct.objects.get(id=pk)
+        order_products = OrderProduct.objects.filter(ab_product=pk,
+                                                     order__stock=self.warehouse_profile.stock,
+                                                     order__created_at__gte=start_date, order__created_at__lte=end_date,
+                                                     order__status__in=['paid', 'sent', 'wait', 'success']
+                                                     )
+        data = {
+            'id': product.id,
+            'title': product.title,
+            'sales': []
+        }
+
+        sale = order_products.values('order__created_at__date', 'order__author__user', 'order__author__user__username',
+                                     'order__author__user__name').annotate(
+            total_count=Sum('count'), total_price=Sum('total_price')
+        )
+        for sale_item in sale:
+            data['sales'].append({
+                'date': sale_item['order__created_at__date'],
+                'user_id': sale_item['order__author__user'],
+                'username': sale_item['order__author__user__username'],
+                'name': sale_item['order__author__user__name'],
+                'total_count': sale_item['total_count'],
+                'total_price': sale_item['total_price']
+            })
+
+        return Response({'result': data})
+
+
+class WareHouseInventoryView(ListModelMixin,
+                             RetrieveModelMixin,
+                             CreateModelMixin,
+                             UpdateModelMixin,
+                             GenericViewSet):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = WareHouseInventorySerializer
     pagination_class = GeneralPurposePagination
 
     def get_queryset(self):
-        return self.queryset.filter(task__is_active=True, executor=self.request.user.id)
+        return (Inventory.objects.filter(products__product__counts__stock=self.request.user.warehouse_profile.stock,
+                                         is_active=True).distinct())
+
+    def get_serializer_context(self):
+        if self.detail:
+            return {'request': self.request, 'retrieve': True}
+        return {'request': self.request}
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        is_done = self.request.query_params.get('is_done')
-        search = self.request.query_params.get('search')
-        if is_done == 'true':
-            queryset = queryset.filter(is_done=True)
-        if is_done == 'false':
-            queryset = queryset.filter(is_done=False)
+        type_status = self.request.query_params.get('status')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
 
-        if search:
-            queryset = queryset.filter(task__title__icontains=search)
+        if type_status:
+            queryset = queryset.filter(status=type_status)
+
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__gte=start_date, created_at__lte=end_date)
+
         paginator = GeneralPurposePagination()
         page = paginator.paginate_queryset(queryset, request)
         serializer = self.get_serializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
+    @action(methods=['GET'], detail=False, url_path='products')
+    def get_products(self, request, *args, **kwargs):
+        user = self.request.user
+        if user.warehouse_profile is None:
+            return Response({'detail': 'User does not have warehouse profile'})
+        stock_id = user.warehouse_profile.stock.id
+        products = AsiaProduct.objects.all()
+        products_in_stock = []
+        for product in products:
+            crm_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_crm', flat=True))
+            ones_count = sum(product.counts.filter(stock_id=stock_id).values_list('count_1c', flat=True))
+            price = product.prices.filter().first()
+            total_price = price.price * crm_count if price else 0
+            if crm_count != 0 or ones_count != 0 or total_price != 0:
+                products_in_stock.append(product)
+
+        serializer = InventoryProductListSerializer(products_in_stock, context={'stock_id': stock_id}, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class InventoryProductDeleteView(DestroyModelMixin, GenericViewSet):
+    queryset = InventoryProduct.objects.all()
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = InventoryProductSerializer
+
+
+class ReturnOrderProductView(ListModelMixin,
+                             RetrieveModelMixin,
+                             CreateModelMixin,
+                             GenericViewSet):
+    queryset = ReturnOrder.objects.filter(is_active=True)
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = ReturnOrderSerializer
+
+
+class WareHouseNotificationView(APIView):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+
+    def get(self, request):
+        user = self.request.user
+        order_count = MyOrder.objects.filter(stock=user.warehouse_profile.stock, status='paid').count()
+        inventory_count = Inventory.objects.filter(status='new').count()
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'order_count': order_count,
+            'inventory_count': inventory_count,
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

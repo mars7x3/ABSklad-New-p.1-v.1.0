@@ -70,16 +70,69 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        dealer = self.context.get('request').user.dealer_profile
-        rep['price_info'] = ProductPriceListSerializer(
-            instance=instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first(),
-            many=False,
-            context=self.context
-        ).data
         rep['images'] = ProductImageSerializer([instance.images.first()], many=True, context=self.context).data
         rep['collection'] = instance.collection.title if instance.collection else '---'
 
-        return rep
+        request = self.context['request']
+        user = request.user
+        dealer = user.dealer_profile
+
+        if request.query_params.get('discount'):
+            discount_price = user.discount_prices.select_related('discount').filter(
+                is_active=True,
+                product=instance,
+                price_type=dealer.price_type).first()
+            if discount_price:
+                rep['price_info'] = {
+                    'price': discount_price.price,
+                    'old_price': discount_price.old_price,
+                    'discount': discount_price.discount.amount,
+                    'discount_status': discount_price.discount.status
+                }
+                return rep
+
+            discount_price = user.discount_prices.select_related('discount').filter(
+                is_active=True,
+                product=instance,
+                city=dealer.price_city).first()
+            if discount_price:
+                rep['price_info'] = {
+                    'price': discount_price.price,
+                    'old_price': discount_price.old_price,
+                    'discount': discount_price.discount.amount,
+                    'discount_status': discount_price.discount.status
+                }
+                return rep
+
+            rep['price_info'] = {
+                'price': 0.0,
+                'old_price': 0.0,
+                'discount': 0.0,
+                'discount_status': "Per"
+            }
+            return rep
+
+        else:
+            prices = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+            if not prices:
+                prices = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+
+            if prices:
+                rep['price_info'] = ProductPriceListSerializer(
+                    instance=prices,
+                    many=False,
+                    context=self.context
+                ).data
+
+            else:
+                rep['price_info'] = {
+                    'price': 0.0,
+                    'old_price': 0.0,
+                    'discount': 0.0,
+                    'discount_status': "Per"
+                }
+
+            return rep
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):
@@ -91,7 +144,7 @@ class ProductPriceListSerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ('image',)
+        fields = ('image', 'position')
 
 
 class ProductSizeSerializer(serializers.ModelSerializer):
@@ -114,19 +167,74 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         dealer = self.context.get('request').user.dealer_profile
-        rep['images'] = ProductImageSerializer([instance.images.first()], many=True, context=self.context).data
+        rep['images'] = ProductImageSerializer(instance.images, many=True, context=self.context).data
         rep['sizes'] = ProductSizeSerializer(instance.sizes, many=True, context=self.context).data
         rep['counts'] = ProductCountSerializer(instance.counts, many=True, context=self.context).data
-
-        rep['price_info'] = ProductPriceListSerializer(instance.prices.filter(price_type=dealer.price_type,
-                                                                              d_status=dealer.dealer_status).first(),
-                                                       context=self.context).data
         image_list = ReviewImage.objects.filter(review__product=instance, review__is_active=True)
         rep['reviews_images'] = ReviewsImagesSerializer(image_list, many=True, context=self.context).data
         rep['category'] = instance.category.title if instance.category else '---'
         rep['collection'] = instance.collection.title if instance.collection else '---'
 
-        return rep
+        request = self.context['request']
+        user = request.user
+        dealer = user.dealer_profile
+
+        if user.discount_prices.filter(is_active=True, product=instance):
+            discount_price = user.discount_prices.select_related('discount').filter(
+                is_active=True,
+                product=instance,
+                price_type=dealer.price_type).first()
+            if discount_price:
+                rep['price_info'] = {
+                    'price': discount_price.price,
+                    'old_price': discount_price.old_price,
+                    'discount': discount_price.discount.amount,
+                    'discount_status': discount_price.discount.status
+                }
+                return rep
+
+            discount_price = user.discount_prices.select_related('discount').filter(
+                is_active=True,
+                product=instance,
+                city=dealer.price_city).first()
+            if discount_price:
+                rep['price_info'] = {
+                    'price': discount_price.price,
+                    'old_price': discount_price.old_price,
+                    'discount': discount_price.discount.amount,
+                    'discount_status': discount_price.discount.status
+                }
+                return rep
+
+            rep['price_info'] = {
+                'price': 0.0,
+                'old_price': 0.0,
+                'discount': 0.0,
+                'discount_status': "Per"
+            }
+            return rep
+
+        else:
+            prices = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+            if not prices:
+                prices = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+
+            if prices:
+                rep['price_info'] = ProductPriceListSerializer(
+                    instance=prices,
+                    many=False,
+                    context=self.context
+                ).data
+
+            else:
+                rep['price_info'] = {
+                    'price': 0.0,
+                    'old_price': 0.0,
+                    'discount': 0.0,
+                    'discount_status': "Per"
+                }
+
+            return rep
 
 
 class ReviewsImagesSerializer(serializers.ModelSerializer):
@@ -139,7 +247,7 @@ class ProductLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsiaProduct
         fields = ('title', 'vendor_code', 'category', 'collection', 'made_in', 'guarantee', 'description',
-                  'video_link', 'weight', 'package_count', 'diagram')
+                  'video_link', 'weight', 'package_count', 'diagram', 'diagram_link')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

@@ -1,4 +1,9 @@
 import datetime
+
+from django.utils import timezone
+
+from django.utils.crypto import get_random_string
+
 from drf_yasg.utils import swagger_auto_schema
 
 from rest_framework import status, viewsets, generics
@@ -42,14 +47,23 @@ class MyOrderListView(viewsets.ReadOnlyModelViewSet):
     def search(self, request, **kwargs):
         queryset = self.get_queryset()
         kwargs = {}
-        city = request.query_params.get('city')
+        stock = request.query_params.get('stock')
         o_status = request.query_params.get('status')
 
-        if city:
-            kwargs['stock__city__slug'] = city
+        if stock:
+            kwargs['stock_id'] = stock
 
         if o_status:
             kwargs['status'] = o_status
+
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        if start_date and end_date:
+            start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
+            end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+            end_date = end_date + datetime.timedelta(days=1)
+            kwargs['created_at__gte'] = start_date
+            kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
 
@@ -84,11 +98,13 @@ class OrderReceiptAddView(APIView):
         order_id = request.data.get('order_id')
         if receipts and order_id:
             order = MyOrder.objects.filter(id=order_id).first()
-            if order:
-                OrderReceipt.objects.bulk_create([OrderReceipt(order=order, file=i) for i in receipts])
-                response_data = MyOrderDetailSerializer(order, context=self.get_renderer_context()).data
-                return Response(response_data, status=status.HTTP_200_OK)
-            return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+            if order.author.user == request.user or request.user.status == 'manager':
+                if order:
+                    OrderReceipt.objects.bulk_create([OrderReceipt(order=order, file=i) for i in receipts])
+                    response_data = MyOrderDetailSerializer(order, context=self.get_renderer_context()).data
+                    return Response(response_data, status=status.HTTP_200_OK)
+                return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'text': 'Доступ ограничен!'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'receipts': 'Обязательное поле!',
                          'order_id': 'Обязательное поле!'
                          }, status=status.HTTP_400_BAD_REQUEST)
@@ -116,16 +132,16 @@ class CartAddView(generics.GenericAPIView):
         if serializer.is_valid():
             dealer = request.user.dealer_profile
             carts = request.data.get('carts')
-
+            dont_delete_ids = []
             for c in carts:
                 cart, _ = Cart.objects.get_or_create(dealer=dealer, stock_id=c.get('stock'))
-                print(cart)
                 cart.cart_products.all().delete()
                 cart_product_list = [CartProduct(cart=cart, product_id=p.get('id'), count=p.get('count')) for p in
                                      c.get('products')]
                 CartProduct.objects.bulk_create(cart_product_list)
-                if not cart.cart_products.exists():
-                    cart.delete()
+                dont_delete_ids.append(cart.id)
+
+            request.user.dealer_profile.carts.exclude(id__in=dont_delete_ids).delete()
             return Response({"text": "Success!"}, status=status.HTTP_200_OK)
         else:
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -142,4 +158,5 @@ class MainOrderCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = MainOrder.objects.all()
     serializer_class = MainOrderCreateSerializer
+
 

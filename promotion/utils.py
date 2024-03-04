@@ -1,3 +1,4 @@
+import datetime
 
 
 def get_motivation_data(dealer):
@@ -87,3 +88,47 @@ def get_motivation_data(dealer):
     return motivations_data
 
 
+def get_kpi_info(user):
+    kpi = user.kpis.filter(month__month=datetime.datetime.now().month).first()
+    tmz = sum(kpi.kpi_products.all().values_list('count', flat=True))
+    fact_tmz = sum(kpi.kpi_products.all().values_list('fact_count', flat=True))
+    data = {
+        'pds': round(kpi.pds),
+        'tmz': round(tmz),
+        'fact_pds': round(kpi.fact_pds),
+        'fact_tmz': round(fact_tmz),
+    }
+    if kpi.fact_pds > 0:
+        data['pds_percent'] = round(kpi.fact_pds / kpi.pds * 100)
+    else:
+        data['pds_percent'] = 0
+    if fact_tmz > 0:
+        data['tmz_percent'] = round(fact_tmz / tmz * 100)
+    else:
+        data['tmz_percent'] = 0
+
+    return data
+
+
+def get_kpi_products(user):
+    kpi = user.kpis.filter(month__month=datetime.datetime.now().month).first()
+    prods = kpi.kpi_products.all().select_related('product')
+    prods_data = []
+    for p in prods:
+        prods_data.append(
+            {
+                'title': p.product.title,
+                'id': p.product.id,
+                'count': p.count,
+                'fact_count': p.fact_count,
+                'percent': round(p.fact_count / p.count * 100) if p.fact_count > 0 else 0
+            }
+        )
+    return prods_data
+
+
+def calculate_discount(price: int, discount: int):
+    decimal_percent = int(discount) / 100.0
+    discount_amount = price * decimal_percent
+    final_price = price - discount_amount
+    return final_price

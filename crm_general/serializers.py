@@ -8,9 +8,10 @@ from django.db.models import Sum, Q
 from rest_framework import serializers
 from transliterate import translit
 
-from account.models import MyUser, DealerStatus
-from crm_general.models import CRMTaskResponseFile, CRMTaskResponse, CRMTaskFile
-from general_service.models import Stock, City, PriceType
+from account.models import MyUser, DealerStatus, DealerProfile
+from crm_general.models import CRMTaskFile, CRMTask
+from general_service.models import Stock, City, PriceType, Village
+from one_c.from_crm import sync_dealer_back_to_1C
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
 
@@ -42,8 +43,13 @@ class StoryProductSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         rep = super().to_representation(instance)
         rep['images'] = StoryProductImageSerializer(instance.images.first(), context=self.context).data
-        rep['price'] = instance.prices.filter(city=user.dealer_profile.price_city,
-                                              d_status=user.dealer_profile.dealer_status).first().price
+        price = instance.prices.filter(price_type=user.dealer_profile.price_type,
+                                       d_status=user.dealer_profile.dealer_status).first()
+        if price:
+            rep['price'] = price.price
+        else:
+            rep['price'] = instance.prices.filter(city=user.dealer_profile.price_city,
+                                                  d_status=user.dealer_profile.dealer_status).first().price
         return rep
 
 
@@ -95,7 +101,7 @@ class CRMUserSerializer(serializers.ModelSerializer):
 
         email = validated_data.get('email')
         if email and MyUser.objects.exclude(id=instance.id).filter(email=email).exists():
-            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+            raise serializers.ValidationError({"email": "Пользователь с данным параметром уже существует!"})
 
         password = validated_data.pop("password", None)
         if password:
@@ -114,6 +120,18 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
+
+        # TODO: move validating user data to CRMUserSerializer
+        if MyUser.objects.filter(username=user_data["username"]).exists():
+            raise serializers.ValidationError(
+                {"user": {"username": "Пользователь с данным параметром уже существует!"}}
+            )
+
+        if MyUser.objects.filter(email=user_data["email"]).exists():
+            raise serializers.ValidationError(
+                {"user": {"email": "Пользователь с данным параметром уже существует!"}}
+            )
+
         validated_data['user'] = MyUser.objects.create_user(status=self._user_status, **user_data)
         # calling this method `create` should not return an error.
         # Therefore, the validation must be perfect,
@@ -132,6 +150,13 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             serializer.is_valid(raise_exception=True)
             serializer.save()
         return super().update(instance, validated_data)
+
+    def save(self, **kwargs):
+        profile = super().save(**kwargs)
+
+        if profile.user.is_dealer:
+            sync_dealer_back_to_1C(profile.user)
+        return profile
 
 
 class ActivitySerializer(serializers.Serializer):
@@ -274,60 +299,6 @@ class TaskFileSerializer(serializers.ModelSerializer):
         fields = ("file",)
 
 
-class TaskResponseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CRMTaskResponseFile
-        fields = ("file",)
-
-
-class CRMTaskResponseSerializer(serializers.ModelSerializer):
-    title = serializers.SerializerMethodField(read_only=True)
-    task_text = serializers.SerializerMethodField(read_only=True)
-    end_date = serializers.SerializerMethodField(read_only=True)
-    task_files = serializers.SerializerMethodField(read_only=True)
-    response_files = TaskResponseSerializer(many=True, read_only=True)
-    files = serializers.ListField(
-        child=serializers.FileField(allow_empty_file=False, use_url=True),
-        required=False,
-        write_only=True
-    )
-
-    class Meta:
-        model = CRMTaskResponse
-        fields = ("id", "title", "task_text", "text", "task_files", "response_files", "end_date", "grade", "is_done",
-                  "files")
-        read_only_fields = ("grade", "is_done")
-
-    def get_title(self, obj):
-        return obj.task.title
-
-    def get_task_text(self, obj):
-        return obj.task.text
-
-    def get_end_date(self, obj) -> datetime:
-        return obj.task.end_date
-
-    def get_task_files(self, obj) -> TaskFileSerializer:
-        return TaskFileSerializer(instance=obj.task.files.all(), many=True).data
-
-    def update(self, instance, validated_data):
-        files = [
-            CRMTaskResponseFile(task=instance, file=file)
-            for file in validated_data.pop("files", [])
-        ]
-        with transaction.atomic():
-            validated_data['is_done'] = True
-            instance = super().update(instance, validated_data)
-
-            if files:
-                CRMTaskResponseFile.objects.bulk_create(files)
-
-            task = instance.task
-            task.status = "wait"
-            task.save()
-        return instance
-
-
 class CityCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = City
@@ -345,3 +316,53 @@ class PriceTypeListSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DealerProfileSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = DealerProfile
+        fields = ('id', 'name')
+
+    @staticmethod
+    def get_name(obj):
+        return obj.user.name
+
+
+class ShortProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title')
+
+
+class CRMTaskCRUDSerializer(serializers.ModelSerializer):
+    creator = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = CRMTask
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['creator'] = CRMTaskUserSerializer(instance.creator, context=self.context).data
+        rep['executors'] = CRMTaskUserSerializer(instance.executors, many=True, context=self.context).data
+        rep['files'] = CRMTaskFileSerializer(instance.files, many=True, context=self.context).data
+
+        return rep
+
+
+class CRMTaskUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'status')
+
+
+class CRMTaskFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CRMTaskFile
+        fields = '__all__'
+
+
+class VillageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Village
+        fields = ('id', 'title')

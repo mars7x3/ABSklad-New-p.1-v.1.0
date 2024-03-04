@@ -13,6 +13,7 @@ from product.models import Category, AsiaProduct, Review, Collection, FilterMaxM
 from product.permissions import IsAuthor
 from product.serializers import CategoryListSerializer, ProductListSerializer, ReviewSerializer, \
     ProductDetailSerializer, CollectionListSerializer, ProductLinkSerializer
+from product.tasks import delete_avg_rating
 
 
 class AppProductPaginationClass(PageNumberPagination):
@@ -37,6 +38,13 @@ class ReviewCDView(mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericVie
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        delete_avg_rating(instance.id)
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
 
 class CategoryListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -50,9 +58,22 @@ class CollectionListView(viewsets.ReadOnlyModelViewSet):
     serializer_class = CollectionListSerializer
 
 
+class HitProductListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = AsiaProduct.objects.filter(is_active=True, is_hit=True).order_by('-updated_at')
+    serializer_class = ProductListSerializer
+    pagination_class = AppProductPaginationClass
+
+    def get_serializer_class(self):
+        if self.kwargs.get('pk'):
+            return ProductDetailSerializer
+        else:
+            return ProductListSerializer
+
+
 class ProductListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = AsiaProduct.objects.filter(is_active=True, is_show=True)
+    queryset = AsiaProduct.objects.filter(is_active=True)
     serializer_class = ProductListSerializer
     pagination_class = AppProductPaginationClass
 
@@ -70,7 +91,9 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
 
         discount = request.query_params.get('discount')
         if discount:
-            kwargs['is_discount'] = True
+            queryset = queryset.filter(discount_prices__user=request.user,
+                                       discount_prices__is_active=True,
+                                       is_active=True).distinct()
 
         category = request.query_params.get('category')
         if category:
@@ -84,10 +107,16 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
         if price:
             start_price = price.split('$')[0]
             end_price = price.split('$')[1]
-            kwargs['prices__price__gte'] = start_price
-            kwargs['prices__d_status'] = dealer.dealer_status
-            kwargs['prices__price_type'] = dealer.price_type
-            kwargs['prices__price__lte'] = end_price
+            if dealer.price_type:
+                kwargs['prices__price__gte'] = start_price
+                kwargs['prices__d_status'] = dealer.dealer_status
+                kwargs['prices__price_type'] = dealer.price_type
+                kwargs['prices__price__lte'] = end_price
+            else:
+                kwargs['prices__price__gte'] = start_price
+                kwargs['prices__d_status'] = dealer.dealer_status
+                kwargs['prices__price_city'] = dealer.price_city
+                kwargs['prices__price__lte'] = end_price
 
         text = request.query_params.get('text')
         if text:
@@ -126,5 +155,5 @@ class FilterMaxMinView(APIView):
 
 
 class ProductLinkView(mixins.RetrieveModelMixin, GenericViewSet):
-    queryset = AsiaProduct.objects.filter(is_active=True, is_show=True)
+    queryset = AsiaProduct.objects.filter(is_active=True)
     serializer_class = ProductLinkSerializer

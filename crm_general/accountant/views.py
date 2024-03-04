@@ -1,12 +1,12 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Case, When
+from django.db.models import Case, When, Sum, F, Q
 from django.utils import timezone
 from rest_framework.filters import SearchFilter
 from rest_framework import viewsets, status, mixins, generics, filters
 from rest_framework.decorators import action
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,16 +17,20 @@ from crm_general.accountant.permissions import IsAccountant
 from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDetailSerializer, \
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
     AccountantStockListSerializer, AccountantStockDetailSerializer, \
-    DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer
+    DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer, InventorySerializer, \
+    AccountantStockShortSerializer, InventoryDetailSerializer, ReturnOrderDetailSerializer, ReturnOrderSerializer, \
+    ReturnOrderProductSerializer
 from crm_general.filters import FilterByFields
-from crm_general.manager.serializers import ManagerTaskListSerializer
-from crm_general.models import CRMTaskResponse
-from crm_general.serializers import CRMTaskResponseSerializer
+from crm_general.models import Inventory, CRMTask
+from crm_general.paginations import GeneralPurposePagination
+
 from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
-from general_service.models import Stock    
+from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
+from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
-from one_c.models import MoneyDoc
-from order.models import MyOrder
+from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
+from one_c.models import MoneyDoc, MovementProduct1C, MovementProducts
+from order.models import MyOrder, ReturnOrder, ReturnOrderProduct
 from crm_general.tasks import minus_quantity
 from product.models import AsiaProduct, Collection, Category
 
@@ -73,9 +77,10 @@ class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
             kwargs['created_at__lte'] = end_date
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return self.get_paginated_response(serializer)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = MyOrderListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class AccountantOrderTotalInfoView(APIView):
@@ -127,7 +132,7 @@ class AccountantOrderTotalInfoView(APIView):
 
 class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = DealerProfile.objects.all()
+    queryset = DealerProfile.objects.filter(Q(wallet__amount_crm__gt=0) | Q(wallet__amount_1c__gt=0))
     serializer_class = DealerProfileListSerializer
     pagination_class = CRMPaginationClass
 
@@ -142,17 +147,29 @@ class AccountantBalanceListView(mixins.ListModelMixin, GenericViewSet):
 
         city = request.query_params.get('city')
         if city:
-            kwargs['city__slug'] = city
+            kwargs['village__city__slug'] = city
+
+        descending_crm = request.query_params.get('descending_crm')
+        if descending_crm == 'true':
+            queryset = queryset.order_by('-wallet__amount_crm')
+        elif descending_crm == 'false':
+            queryset = queryset.order_by('wallet__amount_crm')
+
+        descending_1c = request.query_params.get('descending_1c')
+        if descending_1c == 'true':
+            queryset = queryset.order_by('-wallet__amount_1c')
+        elif descending_1c == 'false':
+            queryset = queryset.order_by('wallet__amount_1c')
 
         dealer_status = request.query_params.get('status')
         if dealer_status:
             kwargs['dealer_status'] = dealer_status
 
         queryset = queryset.filter(**kwargs)
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-
-        return self.get_paginated_response(serializer)
+        paginator = CRMPaginationClass()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = DealerProfileListSerializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
 
 
 class AccountantBalanceHistoryListView(APIView):
@@ -186,7 +203,7 @@ class AccountantTotalEcoBalanceView(APIView):
     "end_date": "end_date"
     }
     """
-    permission_classes = [IsAuthenticated, IsAccountant]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user_id = request.query_params.get('user_id')
@@ -210,8 +227,9 @@ class AccountantTotalEcoBalanceView(APIView):
 
 class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = BalancePlus.objects.filter(is_moderation=False)
+    queryset = BalancePlus.objects.all()
     serializer_class = BalancePlusListSerializer
+    pagination_class = GeneralPurposePagination
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
@@ -222,9 +240,19 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
         if is_success:
             kwargs['is_success'] = bool(int(is_success))
 
+        is_moderation = request.query_params.get('is_moderation')
+        if is_moderation:
+            kwargs['is_moderation'] = bool(int(is_moderation))
+
+        name = request.query_params.get('name')
+        if name:
+            kwargs['author__user__name__icontains'] = name
+
         queryset = queryset.filter(**kwargs)
-        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(serializer, status=status.HTTP_200_OK)
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
+        return paginator.get_paginated_response(serializer)
       
 
 class BalancePlusModerationView(APIView):
@@ -239,17 +267,30 @@ class BalancePlusModerationView(APIView):
         type_status = request.data.get('type_status')
 
         if balance_id:
-            with transaction.atomic():
-                balance = BalancePlus.objects.get(is_moderation=False, id=balance_id)
+            balance = BalancePlus.objects.get(is_moderation=False, id=balance_id)
 
-                balance.is_success = is_success
-                balance.is_moderation = True
-                balance.save()
-                if balance.is_success:
-                    pass
-                    # sync_balance_pay_to_1C(balance)
+            balance.is_success = is_success
+            balance.is_moderation = True
+            balance.save()
+            if balance.is_success:
+                data = {
+                    "status": type_status,
+                    "user": balance.dealer.user,
+                    "amount": balance.amount,
+                    "cash_box": balance.dealer.village.city.stocks.first().cash_box
+                }
+                if type_status == 'cash':
+                    data['status'] = 'Нал'
+                elif type_status == 'visa':
+                    data['status'] = 'Без нал'
 
-                return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+                money_doc = MoneyDoc.objects.create(**data)
+                sync_1c_money_doc(money_doc)
+                main_stat_pds_sync(money_doc)
+                money_doc.is_checked = True
+                money_doc.save()
+            serializer = BalancePlusListSerializer(balance, context=self.get_renderer_context())
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AccountantOrderModerationView(APIView):
@@ -259,57 +300,58 @@ class AccountantOrderModerationView(APIView):
         order_id = request.data.get('order_id')
         order_status = request.data.get('status')
 
-        with transaction.atomic():
-            if order_id:
-                if order_status in ['paid', 'rejected']:
-                    order = MyOrder.objects.get(id=order_id)
-                    order.status = order_status
-                    order.save()
-                    if order.status == 'paid':
-                        minus_quantity(order.id, order.city_stock.slug)
-                        #sync_order_pay_to_1C(order)
+        if order_id:
+            if order_status in ['paid', 'rejected']:
+                order = MyOrder.objects.get(id=order_id)
+                order.status = order_status
+                order.save()
+                if order.status == 'paid':
+                    minus_quantity(order.id, order.stock.id)
+                    sync_money_doc_to_1C(order)
 
-                    kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
-                              'link_id': order.id, 'status': 'order'}
-                    Notification.objects.create(**kwargs)
+                kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
+                          'link_id': order.id, 'status': 'order'}
+                Notification.objects.create(**kwargs)
 
-                    return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
-                return Response({'status': 'Error', 'text': 'Permission denied!'}, status=status.HTTP_403_FORBIDDEN)
-            return Response({'status': 'Error', 'text': 'order_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+            return Response({'status': 'Error', 'text': 'Permission denied!'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'status': 'Error', 'text': 'order_id required!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AccountantProductListView(ListModelMixin, GenericViewSet):
     queryset = AsiaProduct.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = AccountantProductSerializer
-    pagination_class = CRMPaginationClass
-    
+
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         pr_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
-        if pr_status == 'true':
+        collection_slug = self.request.query_params.get('collection_slug')
+        category_slug = self.request.query_params.get('category_slug')
+        if pr_status == 'active':
             queryset = queryset.filter(is_active=True)
-        elif pr_status == 'false':
+        elif pr_status == 'inactive':
             queryset = queryset.filter(is_active=False)
+        if collection_slug:
+            queryset = queryset.filter(collection__slug=collection_slug)
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
 
         if search:
             queryset = queryset.filter(title__icontains=search)
 
-        paginator = CRMPaginationClass()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
       
 class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Collection.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
-    pagination_class = CRMPaginationClass
     serializer_class = AccountantCollectionSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         c_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
 
@@ -320,16 +362,14 @@ class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericVi
 
         if search:
             queryset = queryset.filter(title__icontains=search)
-        paginator = CRMPaginationClass()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
       
       
 class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
-    pagination_class = CRMPaginationClass
     serializer_class = AccountantCategorySerializer
 
     def get_serializer_context(self):
@@ -339,21 +379,21 @@ class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet)
 
     def get_queryset(self):
         collection_slug = self.request.query_params.get('collection_slug')
+        instances = Category.objects.all()
         if collection_slug:
-            return self.queryset.filter(products__collection__slug=collection_slug).distinct()
+            return instances.filter(products__collection__slug=collection_slug).distinct()
         else:
-            return self.queryset
+            return instances
           
           
 class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Stock.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
-    pagination_class = CRMPaginationClass
     serializer_class = AccountantStockListSerializer
     retrieve_serializer_class = AccountantStockDetailSerializer
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset
+        queryset = self.get_queryset()
         stock_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         if stock_status == 'true':
@@ -363,10 +403,9 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
 
         if search:
             queryset = queryset.filter(city__icontains=search)
-        paginator = CRMPaginationClass()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
-        return paginator.get_paginated_response(serializer)
+
+        serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
+        return Response(serializer, status=status.HTTP_200_OK)
 
     def get_serializer_class(self):
         if self.detail:
@@ -374,38 +413,136 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
         return self.serializer_class
 
 
-class AccountantTaskListAPIView(generics.ListAPIView):
+class InventoryListUpdateView(ListModelMixin,
+                              RetrieveModelMixin,
+                              UpdateModelMixin,
+                              GenericViewSet):
+
+    queryset = Inventory.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsAccountant]
-    serializer_class = ManagerTaskListSerializer
-    filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
-    search_fields = ("task__title",)
-    filter_by_fields = {
-        "start_date": {"by": "task__created_at__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "task__created_at__date__lte", "type": "date", "pipline": string_date_to_date},
-        "overdue": {"by": "task__end_date__lte", "type": "boolean", "pipline": today_on_true},
-        "is_done": {"by": "is_done", "type": "boolean", "pipline": convert_bool_string_to_bool}
-    }
-    ordering_fields = ("title", "updated_at", "created_at", "end_date")
+    serializer_class = InventorySerializer
+    retrieve_serializer_class = InventoryDetailSerializer
+    pagination_class = GeneralPurposePagination
+
+    def get_serializer_class(self):
+        if self.detail:
+            return self.retrieve_serializer_class
+        return self.serializer_class
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        request_query = self.request.query_params
+        stock_id = request_query.get('stock_id')
+        search = request_query.get('search')
+        inventory_status = request_query.get('status')
+
+        if stock_id:
+            queryset = queryset.filter(sender__warehouse_profile__stock_id=stock_id)
+        if inventory_status:
+            queryset = queryset.filter(status=inventory_status)
+        if search:
+            queryset = queryset.filter(user__name__icontains=search)
+
+        paginator = GeneralPurposePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = InventorySerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+    @action(methods=['GET'], detail=False, url_path='stock-list')
+    def get_stock_list(self, request):
+        stocks = Stock.objects.all()
+        serializer = AccountantStockShortSerializer(stocks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ReturnOrderView(ListModelMixin,
+                      RetrieveModelMixin,
+                      GenericViewSet):
+    queryset = ReturnOrder.objects.filter(is_active=True)
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = ReturnOrderSerializer
+    retrieve_serializer_class = ReturnOrderDetailSerializer
 
     def get_queryset(self):
-        return (
-            self.request.user.task_responses
-            .select_related("task")
-            .only("id", "task", "grade", "is_done")
-            .filter(task__is_active=True)
-        )
+        search = self.request.query_params.get('search')
+        order_status = self.request.query_params.get('status')
+        queryset = ReturnOrder.objects.filter(is_active=True)
+        if search:
+            queryset = queryset.filter(order__author__user__name__icontains=search)
+        if order_status:
+            queryset = queryset.filter(order__status=order_status)
+
+        return queryset
+
+    def get_serializer_class(self):
+        if self.detail:
+            return self.retrieve_serializer_class
+        return self.serializer_class
 
 
-class AccountantTaskRetrieveAPIView(generics.RetrieveAPIView):
+class ReturnOrderProductUpdateView(UpdateModelMixin, GenericViewSet):
+    queryset = ReturnOrderProduct.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
-    serializer_class = CRMTaskResponseSerializer
-    lookup_field = "id"
-    lookup_url_kwarg = "response_task_id"
+    serializer_class = ReturnOrderProductSerializer
 
-    def get_queryset(self):
-        return (
-            self.request.user.task_responses
-            .select_related("task")
-            .only("id", "task", "grade", "is_done")
-            .filter(task__is_active=True)
+
+class AccountantNotificationView(APIView):
+    def get(self, request):
+        user = self.request.user
+        inventories_count = Inventory.objects.filter(status='new').count()
+        orders_count = MyOrder.objects.filter(status='created').count()
+        return_orders_count = ReturnOrderProduct.objects.filter(status='created').count()
+        balances_plus_count = BalancePlus.objects.filter(is_moderation=False).count()
+        tasks_count = CRMTask.objects.filter(status='created', executors=user).count()
+
+        data = {
+            'inventories_count': inventories_count,
+            'orders_count': orders_count,
+            'return_orders_count': return_orders_count,
+            'balances_plus_count': balances_plus_count,
+            'tasks_count': tasks_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class ProductHistoryView(APIView):
+    def get(self, request, *args, **kwargs):
+        query_params = self.request.query_params
+        product_id = query_params.get('product_id')
+        start_date = query_params.get('start_date')
+        end_date = query_params.get('end_date')
+
+        sent = MyOrder.objects.filter(is_active=True,
+                                      order_products__ab_product_id=product_id,
+                                      created_at__range=[start_date, end_date],
+                                      status__in=['paid', 'sent', 'wait', 'success']).values(
+            'created_at',
+            'author'
+        ).annotate(
+            order_id=F('id'),
+            count=Sum('order_products__count'),
+            author_name=F('author__user__name'),
+            stock_title=F('stock__title'),
+            released_at=F('released_at'),
+            total_price=F('order_products__price') * F('order_products__count')
         )
+
+        movements = MovementProduct1C.objects.filter(is_active=True,
+                                                     mv_products__product_id=product_id,
+                                                     created_at__range=[start_date, end_date]).values(
+            'created_at',
+            'mv_products__product',
+            'warehouse_recipient',
+            'warehouse_sender'
+        ).annotate(
+            count=Sum('mv_products__count'),
+            recipient_title=F('warehouse_recipient__title'),
+            sender_title=F('warehouse_sender__title'),
+        )
+
+        data = {
+            "sent": sent,
+            "movement": movements
+        }
+        return Response(data)

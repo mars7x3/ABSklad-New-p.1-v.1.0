@@ -2,17 +2,16 @@ from decimal import Decimal
 from datetime import date, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
 from django.db.models import DecimalField, FloatField, Sum, Count, Q, Value
 from django.db.models.functions import Round
 from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
-from crm_general.models import CRMTask, CRMTaskResponse, CRMTaskFile, CRMTaskResponseFile
+
 from crm_general.serializers import BaseProfileSerializer
 from crm_general.utils import get_motivation_done
-from general_service.models import City
+from general_service.models import City, PriceType
 from general_service.serializers import CitySerializer
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, AsiaProduct, ProductPrice, ProductImage, ProductSize
@@ -28,7 +27,7 @@ class ManagerProfileSerializer(BaseProfileSerializer):
 
     class Meta:
         model = ManagerProfile
-        fields = ("user", "city", "city_id")
+        fields = ("user", "city", "city_id", 'is_main')
         user_status = "manager"
 
     def validate(self, attrs):
@@ -49,7 +48,6 @@ class DealerStatusSerializer(serializers.ModelSerializer):
 
 class DealerProfileListSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
-    city = CitySerializer(many=False, read_only=True)
     incoming_funds = serializers.SerializerMethodField(read_only=True)
     shipment_amount = serializers.SerializerMethodField(read_only=True)
     last_order_date = serializers.SerializerMethodField(read_only=True)
@@ -59,9 +57,15 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DealerProfile
-        fields = ("id", "name", "incoming_funds", "shipment_amount", "city", "dealer_status", "last_order_date",
-                  "balance_amount", "status")
+        fields = ("id", "name", "incoming_funds", "shipment_amount", "dealer_status", "last_order_date",
+                  "balance_amount", "status", 'village')
         extra_kwargs = {"id": {"source": "user_id", "read_only": True}}
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['village__title'] = instance.village.title if instance.village else None
+        rep['is_active'] = instance.user.is_active
+        return rep
 
     def get_name(self, instance):
         return instance.user.name
@@ -109,6 +113,12 @@ class DealerStoreSerializer(serializers.ModelSerializer):
         }
 
 
+class PriceTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PriceType
+        fields = "__all__"
+
+
 class DealerProfileDetailSerializer(BaseProfileSerializer):
     wallet = ShortWalletSerializer(many=False, read_only=True)
     dealer_status = DealerStatusSerializer(many=False, read_only=True)
@@ -124,9 +134,9 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         write_only=True,
         required=True
     )
-    price_city = CitySerializer(many=False, read_only=True)
-    price_city_id = serializers.PrimaryKeyRelatedField(
-        queryset=City.objects.all(),
+    price_type = PriceTypeSerializer(many=False, read_only=True)
+    price_type_id = serializers.PrimaryKeyRelatedField(
+        queryset=PriceType.objects.all(),
         write_only=True,
         required=True
     )
@@ -136,28 +146,16 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     class Meta:
         model = DealerProfile
         fields = ("user", "liability", "address", "birthday", "city", "dealer_status", "wallet", "stores",
-                  "price_city", "dealer_status_id", "city_id", "price_city_id", "motivations")
+                  "price_type", "dealer_status_id", "city_id", "price_type_id", "motivations", 'village')
         user_status = "dealer"
 
     def get_motivations(self, instance):
         return get_motivation_done(instance)
 
     def validate(self, attrs):
-        rop_profile = self.context['view'].rop_profile
-
-        city = attrs.pop("city_id", None)
-        if city and not rop_profile.cities.filter(id=city.id).exists():
-            raise serializers.ValidationError({"city_id": "Данный город не поддерживается или вам не доступен"})
-
-        if city:
-            attrs["city"] = city
-
-        price_city = attrs.pop("price_city_id", None)
-        if price_city and not rop_profile.cities.filter(id=price_city.id).exists():
-            raise serializers.ValidationError({"price_city_id": "Данный город не поддерживается или вам не доступен"})
-
-        if price_city:
-            attrs["price_city"] = price_city
+        price_type = attrs.pop("price_type_id", None)
+        if price_type:
+            attrs["price_type"] = price_type
 
         dealer_status = attrs.pop("dealer_status_id", None)
         if dealer_status:
@@ -187,10 +185,13 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
     discount = serializers.SerializerMethodField(read_only=True)
     stock_count = serializers.SerializerMethodField(read_only=True)
     stock_city = serializers.SerializerMethodField(read_only=True)
+    stock_name = serializers.SerializerMethodField(read_only=True)
+    stock_address = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = CartProduct
-        fields = ("id", "product_name", "count", "amount", "discount", "stock_city", "stock_count")
+        fields = ("id", "product_name", "count", "amount", "discount", "stock_city", "stock_count",
+                  "stock_name", "stock_address")
         extra_kwargs = {"id": {"read_only": True, "source": "cart_id"}}
 
     def get_product_name(self, instance) -> str:
@@ -226,16 +227,24 @@ class DealerBasketProductSerializer(serializers.ModelSerializer):
         stock_count = instance.cart.stock.counts.filter(product=instance.product).first()
         return stock_count.count_crm if stock_count else 0
 
+    def get_stock_name(self, instance) -> str:
+        return instance.cart.stock.title
+
+    def get_stock_address(self, instance) -> str:
+        return instance.cart.stock.address
+
 
 # --------------------------------------------------- ORDER
 class ShortOrderSerializer(serializers.ModelSerializer):
     dealer_city = serializers.SerializerMethodField(read_only=True)
     stock_city = serializers.SerializerMethodField(read_only=True)
+    stock_name = serializers.SerializerMethodField(read_only=True)
+    stock_address = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MyOrder
         fields = ("id", "name", "dealer_city", "stock_city", "price", "type_status",
-                  "created_at", "paid_at", "released_at", "is_active")
+                  "created_at", "paid_at", "released_at", "is_active", "stock_name", "stock_address")
 
     def get_dealer_city(self, instance):
         if instance.author:
@@ -244,6 +253,14 @@ class ShortOrderSerializer(serializers.ModelSerializer):
     def get_stock_city(self, instance):
         if instance.stock:
             return instance.stock.city.title
+
+    def get_stock_name(self, instance):
+        if instance.stock:
+            return instance.stock.title
+
+    def get_stock_address(self, instance):
+        if instance.stock:
+            return instance.stock.address
 
 
 # ----------------------------------------------- PRODUCT
@@ -293,7 +310,9 @@ class ShortProductSerializer(serializers.ModelSerializer):
         return instance.category.title
 
     def get_last_fifteen_days_ratio(self, instance):
-        fifteen_days_ago = timezone.now() - timezone.timedelta(days=15)
+        naive_time = timezone.localtime().now()
+        today = timezone.make_aware(naive_time)
+        fifteen_days_ago = today - timezone.timedelta(days=15)
         return instance.order_products.aggregate(
             last_fifteen_days_ratio=Round(
                 Sum(
@@ -378,7 +397,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         )["amount"]
 
     def get_city(self, instance):
-        return instance.dealer.city.title
+        return instance.dealer.village.city.title
 
     def get_status(self, instance):
         return instance.dealer.dealer_status.title
@@ -389,21 +408,12 @@ class WalletListSerializer(serializers.ModelSerializer):
             return last_replenishment.created_at
 
 
-# --------------------------------------- TASKS
-class ShortTaskSerializer(serializers.ModelSerializer):
-    provider = serializers.SerializerMethodField(read_only=True)
+class ManagerListSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = CRMTask
-        fields = ("id", "created_at", "title", "end_date", "provider", "status")
+        model = ManagerProfile
+        fields = ('user', 'city', 'name')
 
-    def get_provider(self, obj):
-        return obj.creator.name
-
-
-class RopTaskListSerializer(serializers.ModelSerializer):
-    task = ShortTaskSerializer(many=False, read_only=True)
-
-    class Meta:
-        model = CRMTaskResponse
-        fields = ("id", "task", "grade", "is_done")
+    def get_name(self, instance):
+        return instance.user.name

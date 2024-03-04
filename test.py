@@ -90,17 +90,3 @@ from account.models import DealerStatus
 # u = MyUser.objects.filter(name__icontains='Асан', status__in=['rop', 'manager', 'marketer',
 #                                                               'accountant', 'warehouse', 'director'])
 
-# from order.models import MyOrder
-# import random
-# for o in MyOrder.objects.all():
-#     o.status = random.choice([
-#         'created',
-#         'paid',
-#         'sent',
-#         'wait',
-#         'rejected',
-#         'success'])
-#     o.save()
-
-
-

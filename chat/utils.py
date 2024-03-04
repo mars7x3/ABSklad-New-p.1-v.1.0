@@ -1,8 +1,9 @@
 from typing import Any
+from urllib.parse import urljoin
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
@@ -23,8 +24,8 @@ def get_limit_and_offset(req_data: dict[str, Any], max_page_size: int, default_p
     if limit > max_page_size:
         limit = max_page_size
 
-    offset = limit * page if page > 1 else 0
-    return limit, offset
+    offset = limit * (page - 1) if page > 1 else 0
+    return limit, offset + 1 if offset > 1 else 0
 
 
 def get_chat_receivers(chat):
@@ -32,16 +33,9 @@ def get_chat_receivers(chat):
     receivers = [slugify(dealer.username)]
 
     profile = get_dealer_profile(dealer)
-    if not profile or not profile.city:
+    if not profile:
         return receivers
-
-    manager_usernames = list(
-        get_user_model().objects.filter(
-            status='manager',
-            manager_profile__city=profile.city
-        ).values_list("username", flat=True)
-    )
-    receivers += list(map(lambda username: slugify(username), manager_usernames))
+    receivers += list(map(lambda username: slugify(username), profile.managers.values_list("username", flat=True)))
     return receivers
 
 
@@ -88,3 +82,7 @@ def build_chats_data(chats_data) -> list[dict[str, Any]]:
         if data:
             collected_data.append(data)
     return collected_data
+
+
+def build_file_url(file_path):
+    return urljoin(settings.SERVER_URL, file_path)

@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from chat.async_queries import (
     get_chat_messages, create_db_message, set_read_message, get_chats_by_city,
-    get_chats_for_dealer, is_dealer_message, get_chat_receivers_by_chat, get_manager_city_id
+    get_chats_for_dealer, is_dealer_message, get_chat_receivers_by_chat, get_manager_city_id, get_chats_for_manager
 )
 from chat.validators import validate_user_active, validate_is_manager, validate_is_dealer
 from chat.utils import get_limit_and_offset
@@ -28,12 +28,16 @@ class AsyncBaseChatConsumer(AsyncWebsocketConsumer):
         pass
 
     async def connect(self):
-        if self.room:
-            await self.validate_user()
+        if not self.room:
+            await self.close(code=4004)
+            return
+
+        is_valid_user = await self.validate_user()
+        if not is_valid_user:
+            await self.close(code=4004)
+        else:
             await self.channel_layer.group_add(self.room, self.channel_name)
             await self.accept()
-        else:
-            await self.close(code=4004)
 
     async def disconnect(self, code):
         if self.room:
@@ -61,11 +65,13 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
     def commands(self):
         return self.BASE_COMMANDS
 
-    async def validate_user(self):
+    async def validate_user(self) -> bool:
+        valid = False
         for validator in self.user_validators or []:
-            if validator(self._user) is False:
-                await self.close(code=4002)
+            valid = await validator(self._user)
+            if valid is False:
                 break
+        return valid
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
@@ -145,12 +151,17 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
             await self.send_success_message(message_type, data=data)
             return
 
+        processed_receivers = set()
         for receiver in receivers or []:
+            if not receiver or receiver in processed_receivers:
+                continue
+
             await self.send_success_message(
                 receiver=receiver,
                 message_type="new_message",
                 data=data
             )
+            processed_receivers.add(receiver)
 
     async def read_message_command(self, message_type, req_data):
         msg_id = req_data.get('msg_id')
@@ -180,15 +191,9 @@ class ManagerConsumer(AsyncCommandConsumer):
     user_validators = (validate_user_active, validate_is_manager)
 
     async def get_chats_command(self, message_type, req_data):
-        city_id = await get_manager_city_id(self._user)
-        if not city_id:
-            await self.send_error_message(reason=_("Not found city id"))
-            return
-
         limit, offset = get_limit_and_offset(req_data, max_page_size=20)
-        chats = await get_chats_by_city(
+        chats = await get_chats_for_manager(
             self._user,
-            city_id=city_id,
             limit=limit,
             offset=offset,
             search=req_data.get('search')
@@ -207,6 +212,8 @@ class ManagerConsumer(AsyncCommandConsumer):
             return
 
         return await super().read_message_command(message_type, req_data)
+
+    # TODO: add checking manager on send message because any users can send message to any chats
 
 
 class DealerConsumer(AsyncCommandConsumer):

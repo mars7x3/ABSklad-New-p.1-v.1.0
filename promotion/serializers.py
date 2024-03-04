@@ -8,13 +8,19 @@ from product.models import AsiaProduct, ProductImage, ProductPrice
 class StoryListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = ('id', 'image')
+        fields = ('id', 'file', 'slogan')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        is_detail = bool(instance.products.all())
+        rep['is_detail'] = is_detail
+        return rep
 
 
 class StoryDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = '__all__'
+        exclude = ('clicks', 'dealer_profiles', 'end_date', 'is_active')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -32,9 +38,12 @@ class StoryProductSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         rep = super().to_representation(instance)
         rep['images'] = StoryProductImageSerializer([instance.images.first()], many=True, context=self.context).data
-        rep['price_info'] = StoryProductPriceSerializer(instance.prices.filter(price_type=user.dealer_profile.price_type,
-                                                   d_status=user.dealer_profile.dealer_status).first(),
-                                                   context=self.context).data
+        prices = instance.prices.filter(price_type=user.dealer_profile.price_type,
+                                        d_status=user.dealer_profile.dealer_status)
+        if not prices:
+            prices = instance.prices.filter(city=user.dealer_profile.price_city,
+                                            d_status=user.dealer_profile.dealer_status)
+        rep['price_info'] = StoryProductPriceSerializer(prices.first(), context=self.context).data
         return rep
 
 
@@ -104,16 +113,18 @@ class MotivationPresentSerializer(serializers.ModelSerializer):
 class BannerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active', 'products')
+        exclude = ('dealer_profiles', 'clicks', 'is_active', 'products', 'web_image', 'discount', 'motivation',
+                   'created_at', 'description', 'video_url')
 
 
 class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        exclude = ('groups', 'cities', 'clicks', 'status', 'is_active')
+        exclude = ('dealer_profiles', 'clicks', 'is_active', 'web_image', 'discount', 'motivation', 'created_at')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['products'] = StoryProductSerializer(instance.products.all(),
                                                  many=True, context=self.context).data
         return rep
+

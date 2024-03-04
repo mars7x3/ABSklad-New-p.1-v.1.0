@@ -3,14 +3,22 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from crm_general.serializers import StockListSerializer
 from .models import Stock, City, Requisite, RequisiteCategory, PriceType
-from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer
+from .serializers import StockSerializer, CitySerializer, RequisiteListSerializer, RequisiteCategorySerializer, \
+    CountStockListSerializer
 
 
 class CategoryListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Stock.objects.filter(is_active=True, is_show=True)
     serializer_class = StockSerializer
+
+
+class StockListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Stock.objects.filter(is_active=True, is_show=True)
+    serializer_class = CountStockListSerializer
 
 
 class CityListView(viewsets.ReadOnlyModelViewSet):
@@ -24,7 +32,7 @@ class RequisiteListView(APIView):
 
     def get(self, request):
         category = request.query_params.get('category')
-        city = request.user.dealer_profile.city
+        city = request.user.dealer_profile.village.city
 
         requisite = Requisite.objects.filter(requisite_cities__city=city, category_id=category, is_active=True).first()
         response = RequisiteListSerializer(requisite, context=self.get_renderer_context()).data

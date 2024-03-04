@@ -3,7 +3,8 @@ from rest_framework.routers import SimpleRouter
 
 from .accountant.views import AccountantOrderListView, AccountantProductListView, AccountantCollectionListView, \
     AccountantCategoryView, AccountantStockViewSet
-from .hr.views import HRStaffListView, StaffMagazineCreateView
+from .hr.views import HRStaffListView, StaffMagazineCreateView, HrNotificationView
+from .main_director.views import MainDirStaffCRUDView, MainDirectorStockListView
 
 from .manager.views import (
     OrderListAPIView as ManagerOrderListView,
@@ -24,11 +25,8 @@ from .manager.views import (
     CategoryListAPIView as ManagerCategoryListAPIView,
     ProductRetrieveAPIView as ManagerProductRetrieveAPIView,
     BalanceViewSet as ManagerBalanceViewSet,
-    ReturnListAPIView as ManagerReturnListAPIView,
-    ReturnRetrieveAPIView as ManagerReturnRetrieveAPIView,
-    ReturnUpdateAPIView as ManagerReturnUpdateAPIView,
-    BalancePlusManagerView as ManagerBalancePlusManagerView,
-    ManagerTaskListAPIView, ManagerTaskRetrieveAPIView
+    BalancePlusManagerView as ManagerBalancePlusManagerView, ProdListForOrderView, ManagerDeleteOrderView,
+    ManagerNotificationView,
 )
 
 from .rop.views import (
@@ -54,11 +52,10 @@ from .rop.views import (
     ProductPriceListAPIView as RopProductPriceListAPIView,
     ProductRetrieveAPIView as RopProductRetrieveAPIView,
     BalanceViewSet as BalanceViewSet,
-    RopTaskListAPIView, RopTaskRetrieveAPIView
+    ManagerShortListView as ManagerShortListView, RopNotificationView
 )
 
 from .director.views import *
-from .main_director.views import *
 from .accountant.views import *
 
 from .views import *
@@ -66,19 +63,22 @@ from .views import *
 from .marketer.views import (
     MarketerProductRUViewSet, MarketerCollectionModelViewSet, MarketerCategoryModelViewSet, ProductSizeView,
     MarketerBannerModelViewSet, MarketerStoryViewSet, CRMNotificationView, MarketerDealerStatusListView,
-    MarketerTaskView,
+    MarketerProductHitsListView, MarketerNotificationView, AutoNotificationViewSet,
 )
 from .warehouse_manager.views import (
     WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
-    WareHouseSaleReportView, WareHouseTaskView
+    WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView, ReturnOrderProductView,
+    InventoryProductDeleteView, WareHouseNotificationView
 )
 
 main_director_router = SimpleRouter()
-main_director_router.register("main_director/staff/crud", MainDirStaffCRUDView)
+
+main_director_router.register('staff/crud', MainDirStaffCRUDView)
+main_director_router.register('stock/list', MainDirectorStockListView)
 
 main_director_urlpatterns = [
 
-    path('', include(main_director_router.urls)),
+    path('main_director/', include(main_director_router.urls)),
 ]
 
 
@@ -87,7 +87,7 @@ hr_router.register("hr/staff/list", HRStaffListView)
 hr_router.register("hr/magazine/create", StaffMagazineCreateView)
 
 hr_urlpatterns = [
-
+    path('hr/notifications/', HrNotificationView.as_view()),
     path('', include(hr_router.urls)),
 ]
 
@@ -107,14 +107,15 @@ director_router.register("director/discount/product/list", DirectorDiscountAsiaP
 director_router.register("director/price/list", DirectorPriceListView)
 director_router.register("director/task/crud", DirectorTaskCRUDView)
 director_router.register("director/task/list", DirectorTaskListView)
-director_router.register("director/grade/crud", DirectorGradeCRUDView)
 director_router.register("director/staff/list", DirectorStaffListView)
 director_router.register("director/stock/crud", DirectorStockCRUDView)
 director_router.register("director/stock/list", DirectorStockListView)
 director_router.register("director/stock/product/list", DStockProductListView)
-director_router.register("director/kpi/crud", DirectorKPICRUDView)
-director_router.register("director/kpi/list", DirectorKPIListView)
+# director_router.register("director/kpi/crud", DirectorKPICRUDView)
+# director_router.register("director/kpi/list", DirectorKPIListView)
 director_router.register("director/price-type/crud", PriceTypeCRUDView)
+director_router.register("director/dealer-status/crud", DealerStatusModelViewSet)
+director_router.register("director/category/crud", DirectorCategoryModelViewSet)
 
 
 director_urlpatterns = [
@@ -130,9 +131,17 @@ director_urlpatterns = [
     path('director/dealer/cart/list/', DirectorDealerCartListView.as_view()),
     path('director/dealer/balance-history/list/', DirectorBalanceHistoryListView.as_view()),
     path('director/dealer/total-amounts/', DirectorTotalAmountView.as_view()),
-    path('director/price/create/', DirectorPriceCreateView.as_view()),
-    path('director/task/grade/', DirectorGradeView.as_view()),
+    path('director/price-type/create/', DirectorPriceTypeCreateView.as_view()),
+    path('director/price-city/create/', DirectorPriceCityCreateView.as_view()),
     path('director/task/total-info/', DirectorTaskTotalInfoView.as_view()),
+    path('director/free/warehouses/list/', DirFreeMainWarehouseListView.as_view()),
+    path('director/warehouses/add-to-stock/', DirJoinWarehouseToStockListView.as_view()),
+    path('director/rop/deactivate/', ROPChangeView.as_view()),
+    path('director/warehouse/deactivate/', WareHouseChangeView.as_view()),
+    path('director/notifications/', DirectorNotificationView.as_view()),
+
+    path('max-test/', MaxatTestView.as_view()),
+
 
     path('', include(director_router.urls)),
 ]
@@ -146,6 +155,9 @@ accountant_router.register("accountant/category/list", AccountantCategoryView)
 accountant_router.register("accountant/stock/list", AccountantStockViewSet)
 accountant_router.register("accountant/balance/list", AccountantBalanceListView)
 accountant_router.register("accountant/balance/plus/list", BalancePlusListView)
+accountant_router.register("accountant/inventory", InventoryListUpdateView)
+accountant_router.register("accountant/return-order", ReturnOrderView)
+accountant_router.register("accountant/return-order/update", ReturnOrderProductUpdateView)
 
 
 accountant_urlpatterns = [
@@ -154,12 +166,8 @@ accountant_urlpatterns = [
     path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
     path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
     path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
-    path("accountant/task-responses/", AccountantTaskListAPIView.as_view(),
-         name="crm_general-accountant-task-responses-list"),
-    re_path(r"^accountant/task-responses/(?P<response_task_id>.+)/detail/$", AccountantTaskRetrieveAPIView.as_view(),
-            name="crm_general-accountant-task-responses-detail"),
-
-
+    path('accountant/notifications/', AccountantNotificationView.as_view()),
+    path('accountant/product/history/list/', ProductHistoryView.as_view()),
 
     path('', include(accountant_router.urls)),
 ]
@@ -169,6 +177,7 @@ accountant_urlpatterns = [
 manager_router = SimpleRouter()
 manager_router.register("dealers", ManagerDealerListViewSet, basename="crm_general-manager-dealers")
 manager_router.register("balances", ManagerBalanceViewSet, basename="crm_general-manager-balances")
+
 
 manager_urlpatterns = [
     # Dealers
@@ -200,20 +209,14 @@ manager_urlpatterns = [
     path("manager/products/", ManagerProductPriceListAPIView.as_view(), name="crm_general-manager-products-list"),
     re_path("^manager/products/(?P<product_id>.+)/detail/$", ManagerProductRetrieveAPIView.as_view(),
             name="crm_general-manager-product-detail"),
-    # Returns
-    path("manager/returns/", ManagerReturnListAPIView.as_view(), name="crm_general-manager-returns-list"),
-    re_path("^manager/returns/(?P<return_id>.+)/detail/$", ManagerReturnRetrieveAPIView.as_view(),
-            name="crm_general-manager-returns-detail"),
-    re_path("^manager/returns/(?P<return_id>.+)/update/$", ManagerReturnUpdateAPIView.as_view(),
-            name="crm_general-manager-returns-update"),
-    # Tasks
-    path("manager/task-responses/", ManagerTaskListAPIView.as_view(), name="crm_general-manager-task-responses-list"),
-    re_path(r"^manager/task-responses/(?P<response_task_id>.+)/detail/$", ManagerTaskRetrieveAPIView.as_view(),
-            name="crm_general-manager-task-responses-detail"),
 
     # Balances and Other
     path("manager/balance/plus/", ManagerBalancePlusManagerView.as_view(),
          name="crm_general-manager-balance-plus-create"),
+    path("manager/product/list/for-order/", ProdListForOrderView.as_view()),
+    path("manager/order/delete/", ManagerDeleteOrderView.as_view()),
+    path("manager/notifications/", ManagerNotificationView.as_view()),
+
     path("manager/", include(manager_router.urls)),
 ]
 
@@ -265,16 +268,15 @@ rop_urlpatterns = [
     path("rop/collections/", RopCollectionListAPIView.as_view(), name="crm_general-rop-collections-list"),
     path("rop/categories/", RopCategoryListAPIView.as_view(), name="crm_general-rop-categories-list"),
     path("rop/products/", RopProductPriceListAPIView.as_view(), name="crm_general-rop-products-list"),
+    path('rop/notifications/', RopNotificationView.as_view()),
+
     re_path("^rop/products/(?P<product_id>.+)/detail/$", RopProductRetrieveAPIView.as_view(),
             name="crm_general-rop-product-detail"),
 
     # Tasks
-    path("rop/task-responses/", RopTaskListAPIView.as_view(), name="crm_general-rop-task-responses-list"),
-    re_path(r"^rop/task-responses/(?P<response_task_id>.+)/detail/$", RopTaskRetrieveAPIView.as_view(),
-            name="crm_general-rop-task-responses-detail"),
     path("rop/", include(rop_router.urls)),
 ]
-# ---------------------------
+# --------------------------- MARKETER
 
 marketer_router = SimpleRouter()
 marketer_router.register('product', MarketerProductRUViewSet)
@@ -284,48 +286,62 @@ marketer_router.register('banner', MarketerBannerModelViewSet)
 marketer_router.register('story', MarketerStoryViewSet)
 marketer_router.register('crm-notification', CRMNotificationView)
 marketer_router.register('product-size', ProductSizeView)
-marketer_router.register('task', MarketerTaskView)
+marketer_router.register('product-hits', MarketerProductHitsListView)
+marketer_router.register('auto-notifications', AutoNotificationViewSet)
 
 marketer_urlpatterns = [
     path('marketer/dealer-status/list/', MarketerDealerStatusListView.as_view({'get': 'list'})),
+    path('marketer/notifications/', MarketerNotificationView.as_view()),
     path('marketer/', include(marketer_router.urls)),
 ]
 
+# --------------------------- WARE HOUSE MANAGER
 
 warehouse_manager_router = SimpleRouter()
 warehouse_manager_router.register('order', WareHouseOrderView, basename='warehouse-order')
 warehouse_manager_router.register('product', WareHouseProductViewSet, basename='warehouse-product')
 warehouse_manager_router.register('category', WareHouseCategoryViewSet, basename='warehouse-category')
 warehouse_manager_router.register('collection', WareHouseCollectionViewSet, basename='warehouse-collection')
-warehouse_manager_router.register('task', WareHouseTaskView, basename='warehouse-task')
+warehouse_manager_router.register('inventory', WareHouseInventoryView, basename='warehouse-inventory')
+warehouse_manager_router.register('inventory/product/delete', InventoryProductDeleteView,
+                                  basename='warehouse-inventory-product-delete')
+warehouse_manager_router.register('order-return', ReturnOrderProductView, basename='warehouse-order-return')
+
 
 warehouse_manager_urlpatterns = [
     path('warehouse-manager/', include(warehouse_manager_router.urls)),
     path('warehouse-manager/report/', WareHouseSaleReportView.as_view()),
+    path('warehouse-manager/report/<int:pk>/', WareHouseSaleReportDetailView.as_view()),
+    path('warehouse/notifications/', WareHouseNotificationView.as_view()),
+
 ]
 
 crm_router = SimpleRouter()
 crm_router.register("crm/collection/crud", CollectionCRUDView)
 crm_router.register("crm/category/crud", CategoryCRUDView)
 crm_router.register("crm/city/crud", CityCRUDView)
+crm_router.register("crm/staff/task/list", CRMTaskListView)
+
 
 crm_router.register("crm/dealer-status/list", DealerStatusListView)
 
 crm_urlpatterns = [
+
     path("crm/product/images/create/", ProductImagesCreate.as_view()),
+    path("crm/product/in-stock/list/", ProductInStockAPIView.as_view()),
     path("crm/city/list/", CityListView.as_view()),
     path("crm/stock/list/", StockListView.as_view()),
     path("crm/category/list/", CategoryListView.as_view()),
     path("crm/price-type/list/", PriceTypeListView.as_view()),
-
+    path("crm/staff/task/response/", TaskResponseView.as_view()),
+    path("crm/villages/list/", VillageListView.as_view()),
+    path("crm/managers/list/", ManagerShortListView.as_view()),
 
     path("crm/user/image/cd", UserImageCDView.as_view()),
 
-    re_path(r"^crm/task-response/(?P<response_task_id>.+)/complete/$", CRMTaskUpdateAPIView.as_view(),
-            name="crm_general-task-responses-complete"),
     path("crm/staff/me-info/", StaffMeInfoView.as_view()),
-
-
+    path('crm/dealers/filter/', DealersFilterAPIView.as_view()),
+    path('crm/products/filter/discount/', FilterProductByDiscountAPIView.as_view()),
     path("", include(crm_router.urls)),
 ]
 

@@ -6,6 +6,7 @@ admin.site.register(Story)
 admin.site.register(Discount)
 admin.site.register(Motivation)
 admin.site.register(Banner)
+admin.site.register(DiscountPrice)
 
 
 class ConditionCategoryInline(admin.TabularInline):
@@ -32,3 +33,4 @@ class MotivationConditionAdmin(admin.ModelAdmin):
     search_fields = ('id', 'title')
     list_display = ('id', 'status', 'motivation')
     list_display_links = ('id', 'status', 'motivation')
+

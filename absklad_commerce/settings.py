@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django_filters',
     'django_celery_beat',
 
+    'mongo_logger',
     'account',
     'one_c',
     'general_service',
@@ -53,7 +54,9 @@ INSTALLED_APPS = [
     'order',
     'promotion',
     'chat',
-    'crm_general'
+    'crm_general',
+    'crm_stat',
+    'crm_kpi',
 ]
 
 MIDDLEWARE = [
@@ -161,7 +164,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'ru-ru'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Bishkek'
 
 USE_I18N = True
 USE_L10N = True
@@ -223,29 +226,88 @@ SIMPLE_JWT = {
     "TOKEN_OBTAIN_SERIALIZER": "account.serializers.UserLoginSerializer",
 }
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "WARNING",
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
-            "propagate": False,
-        },
-        "daphne": {
-            "handlers": [
-                "console",
-            ],
-            "level": "DEBUG"
-        },
-    },
-}
+# Logging
+# MONGO_DB_CONNECTION_URL = config('MONGO_DB_CONNECTION_URL')
+# LOG_MONGO_DATABASE_NAME = config('LOG_MONGO_DATABASE_NAME')
+# LOG_MONGO_COLLECTION_NAME = config('LOG_MONGO_COLLECTION_NAME')
+#
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#
+#     'filters': {
+#         'require_debug_false': {
+#             '()': 'django.utils.log.RequireDebugFalse',
+#         },
+#         'require_debug_true': {
+#             '()': 'django.utils.log.RequireDebugTrue',
+#         },
+#     },
+#     'formatters': {
+#         'console': {'format': '%(levelname)s | %(asctime)s | %(module)s | %(message)s'}
+#     },
+#     'handlers': {
+#         'mongolog': {
+#             'level': 'INFO',
+#             'class': 'mongo_logger.handlers.CustomMongoLogHandler',
+#             'connection': MONGO_DB_CONNECTION_URL,
+#             'collection': LOG_MONGO_COLLECTION_NAME,
+#             'database': LOG_MONGO_DATABASE_NAME
+#         },
+#         'console': {
+#             'level': 'INFO',
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'console'
+#         },
+#         'mail_admins': {
+#             'level': 'ERROR',
+#             'filters': ['require_debug_false'],
+#             'class': 'django.utils.log.AdminEmailHandler',
+#             'include_html': True,
+#         }
+#     },
+#     'loggers': {
+#         '': {
+#             'handlers': ['mongolog', 'console'],
+#             'level': 'INFO',
+#             'propagate': True
+#         },
+#         'statistics': {
+#             'handlers': ['mongolog', 'console'],
+#             'level': 'INFO',
+#             'propagate': True
+#         },
+#         'tasks_management': {
+#             'handlers': ['mongolog', 'console'],
+#             'level': 'INFO',
+#             'propagate': False
+#         },
+#         'django': {
+#             'handlers': ['console', 'mongolog'],
+#             'level': 'INFO',
+#             'propagate': False,
+#         },
+#         'django.server': {
+#             'handlers': ['console', 'mongolog'],
+#             'level': 'INFO',
+#             'propagate': False,
+#         },
+#         'django.request': {
+#             'handlers': ['console', 'mongolog'],
+#             'level': 'ERROR',
+#             'propagate': False,
+#         },
+#         'django.security': {
+#             'handlers': ['mail_admins', 'console', 'mongolog'],
+#             'level': 'ERROR',
+#             'propagate': False,
+#         }
+#     },
+# }
+
+KPI_CHECK_MONTHS = 3
+KPI_INCREASE_THRESHOLD = 0.2
+
+SERVER_URL = "http://81.31.197.124/"
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 3000000
