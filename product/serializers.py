@@ -1,6 +1,7 @@
 
 from rest_framework import serializers
 
+from crm_general.utils import create_product_recommendation
 from .models import *
 from .tasks import create_avg_rating
 
@@ -178,6 +179,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
         dealer = user.dealer_profile
+
+        create_product_recommendation(user=user, product=instance)
 
         if user.discount_prices.filter(is_active=True, product=instance):
             discount_price = user.discount_prices.select_related('discount').filter(

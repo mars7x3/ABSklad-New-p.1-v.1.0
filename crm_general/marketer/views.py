@@ -287,3 +287,12 @@ class AutoNotificationViewSet(ListModelMixin,
             object_statuses = []
 
         return Response(object_statuses, status.HTTP_200_OK)
+
+    def list(self, request, *args, **kwargs):
+        query_param = self.request.query_params.get('status')
+        queryset = self.get_queryset()
+        if query_param:
+            queryset = queryset.filter(status=query_param)
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data)

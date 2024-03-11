@@ -50,6 +50,11 @@ app.conf.beat_schedule = {
         'schedule': 600.0,
     },
 
+    'create_birthday_recommend_notifications': {
+        'task': 'crm_general.marketer.tasks.create_birthday_recommend_notifications',
+        'schedule': crontab(hour=8, minute=0),
+    },
+
     'set_story': {
         'task': 'promotion.tasks.story_setter',
         'schedule': 1200.0,
