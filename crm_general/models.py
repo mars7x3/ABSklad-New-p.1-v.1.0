@@ -137,7 +137,12 @@ class InventoryProduct(models.Model):
 class AutoNotification(models.Model):
     STATUS = (
         ('order', 'Заказ'),
-        ('balance', 'Пополнение баланса')
+        ('balance', 'Пополнение баланса'),
+        ('feedback', 'Отзыв'),
+        ('motivation', 'Мотивация'),
+        ('kpi', 'KPI'),
+        ('birthday', 'День рождения'),
+        ('recommendation', 'Рекомендация'),
     )
     OBJ_STATUS = (
         ('created', 'created'),
@@ -147,7 +152,16 @@ class AutoNotification(models.Model):
         ('rejected', 'rejected'),
         ('success', 'success')
     )
+
     title = models.CharField(max_length=200)
+    per_cent = models.PositiveIntegerField(default=0)
     text = models.CharField(max_length=1000)
     status = models.CharField(choices=STATUS, max_length=20)
-    obj_status = models.CharField(max_length=20, choices=OBJ_STATUS)
+    obj_status = models.CharField(max_length=20, choices=OBJ_STATUS, blank=True, null=True)
+
+
+class ProductRecommendation(models.Model):
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='product_recommendations')
+    product = models.ForeignKey(AsiaProduct, on_delete=models.CASCADE, related_name='recommendations')
+    count = models.PositiveIntegerField(default=0)
+    notification_created = models.BooleanField(default=False)

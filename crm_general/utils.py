@@ -8,8 +8,9 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from account.models import DealerStatus, DealerProfile, CRMNotification, MyUser, Notification
+from crm_general.models import AutoNotification, ProductRecommendation
 from order.models import MyOrder
-from product.models import AsiaProduct
+from product.models import AsiaProduct, ProductCount
 from promotion.models import Banner, Story
 
 
@@ -253,3 +254,38 @@ def remove_product_from_banner_story(product: AsiaProduct):
         story_products = story.products.all()
         if product in story_products:
             story.products.remove(product)
+
+
+def create_notification_by_auto_not(user: MyUser, status, obj_status=None, per_cent=None):
+    if per_cent is not None:
+        auto_notification = AutoNotification.objects.filter(per_cent=per_cent, status=status).first()
+    elif obj_status is not None:
+        auto_notification = AutoNotification.objects.filter(status=status, obj_status=obj_status).first()
+    else:
+        return {'detail': 'One of obj_status or per_cent arguments needed'}
+
+    if auto_notification:
+        notification = Notification.objects.create(
+            user=user,
+            status=status,
+            title=auto_notification.title,
+            description=auto_notification.text
+        )
+        return notification
+
+
+def create_product_recommendation(user: MyUser, product: AsiaProduct):
+    product_count = ProductCount.objects.filter(product=product).aggregate(total_count_crm=Sum('count_crm'))
+    if product_count['total_count_crm'] <= 0:
+        recommendation = ProductRecommendation.objects.filter(user=user, product=product,
+                                                              notification_created=False).first()
+        if recommendation:
+            recommendation.count += 1
+            recommendation.save()
+        else:
+            ProductRecommendation.objects.create(
+                user=user,
+                product=product,
+                count=1
+            )
+        return True

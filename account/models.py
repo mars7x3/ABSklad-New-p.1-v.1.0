@@ -175,10 +175,13 @@ class Notification(models.Model):
         ('chat', 'Чат'),
         ('balance', 'Пополнение баланса'),
         ('motivation', 'Мотивация'),
+        ('birthday', 'День рождения'),
+        ('recommendation', 'Рекомендация'),
+        ('kpi', 'KPI'),
     )
 
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='notifications')
-    status = models.CharField(choices=STATUS, max_length=10, blank=True, null=True)
+    status = models.CharField(choices=STATUS, max_length=14, blank=True, null=True)
     image = models.FileField(upload_to='notification', blank=True, null=True)
     is_read = models.BooleanField(default=False)
     title = models.CharField(max_length=300, blank=True, null=True)
