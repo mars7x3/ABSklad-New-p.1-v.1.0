@@ -2,7 +2,6 @@ from order.db_request import query_debugger
 from product.models import AsiaProduct, ProductPrice
 
 
-@query_debugger
 def check_product_count(products, stock):
     for k, v in products.items():
         prod_count = stock.counts.filter(product_id=k).first()
@@ -11,14 +10,12 @@ def check_product_count(products, stock):
     return True
 
 
-@query_debugger
 def get_product_list(products):
     products_id = [k for k in products.keys()]
     product_list = AsiaProduct.objects.filter(id__in=products_id)
     return product_list
 
 
-@query_debugger
 def order_total_price(product_list, products, dealer):
     price_type = dealer.price_type
     if price_type:
@@ -37,7 +34,6 @@ def order_total_price(product_list, products, dealer):
     return amount
 
 
-@query_debugger
 def order_cost_price(product_list, products):
     amount = 0
     for p in product_list:
@@ -50,27 +46,15 @@ def order_cost_price(product_list, products):
 def generate_order_products(product_list, products, dealer):
     result_data = []
     for p in product_list:
-
         prod_price = p.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
 
         if not prod_price:
             prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
 
-        total_price = prod_price.price * products[str(p.id)]
-        if prod_price.discount > 0:
-            discount = products[str(p.id)] * (prod_price.old_price - prod_price.price)
-        else:
-            discount = 0
-
         result_data.append({
             "ab_product": p,
-            "category": p.category,
-            "title": p.title,
             "count": products[str(p.id)],
             "price": prod_price.price,
-            "total_price": total_price,
-            "discount": discount,
-            "image": p.images.first().image
         })
 
     return result_data

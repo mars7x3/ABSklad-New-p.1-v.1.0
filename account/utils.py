@@ -12,7 +12,6 @@ from order.models import MyOrder
 
 def random_code():
     code = get_random_string(length=4, allowed_chars='0123456789')
-    print(code)
     return code
 
 
