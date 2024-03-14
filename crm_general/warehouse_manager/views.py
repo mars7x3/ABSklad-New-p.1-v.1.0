@@ -16,7 +16,9 @@ from crm_stat.tasks import main_stat_order_sync
 from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
 from one_c.models import MovementProducts
 from order.db_request import query_debugger
-from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
+from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile, MainOrder, \
+    MainOrderProduct
+from order.utils import get_product_list, order_total_price, order_cost_price, generate_order_products
 from product.models import AsiaProduct, Collection, Category, ProductCount
 from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
@@ -25,6 +27,7 @@ from .serializers import OrderListSerializer, OrderDetailSerializer, WareHousePr
     WareHouseProductSerializer, WareHouseInventorySerializer, \
     InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer, InventoryProductSerializer
 from .mixins import WareHouseManagerMixin
+from .utils import create_validated_data, minus_count
 from ..models import Inventory, CRMTask, InventoryProduct
 from ..tasks import minus_quantity
 
@@ -374,3 +377,36 @@ class WareHouseNotificationView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class VerifyOrderAuthorView(APIView):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    
+    def post(self, request):
+        code = request.data['code']
+        order_id = request.data['order_id']
+        order = MainOrder.objects.filter(id=order_id).first()
+        code = order.codes.filter(code=code).first()
+        if code:
+            code.delete()
+            return Response('Success!', status=status.HTTP_200_OK)
+        return Response('Неверный код!', status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderPartialSentView(APIView):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+
+    def post(self, request):
+        order_id = request.data['order_id']
+        products = request.data['products']
+        main_order = MainOrder.objects.filter(id=order_id).first()
+        validated_data = create_validated_data(main_order)
+        product_list = get_product_list(products)
+        price = order_total_price(product_list, products, main_order.author)
+        cost_price = order_cost_price(product_list, products)
+        order = MyOrder.objects.create(**validated_data, price=price, cost_price=cost_price)
+        products = generate_order_products(product_list, products, main_order.author)
+        OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
+        minus_count(main_order, products)
+
+        return Response('Success!', status=status.HTTP_200_OK)

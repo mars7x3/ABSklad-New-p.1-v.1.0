@@ -20,6 +20,8 @@ class MyOrder(models.Model):
         ('wallet', 'Кошелек'),
         ('kaspi', 'Каспи')
     )
+    main_order = models.ForeignKey('MainOrder', on_delete=models.SET_NULL, blank=True, null=True,
+                                   related_name='orders')
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     creator = models.ForeignKey(MyUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     name = models.CharField(max_length=100, blank=True, null=True)  # TODO: delete this
@@ -143,9 +145,20 @@ class MainOrder(models.Model):
 
 
 class MainOrderProduct(models.Model):
-    order = models.ForeignKey(MyOrder, on_delete=models.CASCADE, related_name='products')
+    order = models.ForeignKey(MainOrder, on_delete=models.CASCADE, related_name='products')
     ab_product = models.ForeignKey(AsiaProduct, on_delete=models.SET_NULL, related_name='main_order_products',
                                    blank=True, null=True)
     count = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
 
+
+class MainOrderReceipt(models.Model):
+    order = models.ForeignKey(MainOrder, on_delete=models.CASCADE, related_name='receipts')
+    file = models.FileField(upload_to='main-order-check')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class MainOrderCode(models.Model):
+    user = models.ForeignKey(MainOrder, on_delete=models.CASCADE, related_name='codes')
+    code = models.CharField(max_length=4)
+    created_at = models.DateTimeField(auto_now_add=True)

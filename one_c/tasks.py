@@ -31,8 +31,8 @@ def sync_balance_1c_to_crm():
         amount_1c_new=Case(*cases, default=F('amount_1c'), output_field=IntegerField()),
         amount_paid=Sum(
             Case(
-                When(dealer__orders__status='paid', dealer__orders__is_active=True,
-                     then=F('dealer__orders__price')),
+                When(dealer__main_orders__status='paid', dealer__main_orders__is_active=True,
+                     then=F('dealer__main_orders__price')),
                 default=0,
                 output_field=IntegerField()
             )

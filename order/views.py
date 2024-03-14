@@ -6,16 +6,20 @@ from django.utils.crypto import get_random_string
 
 from drf_yasg.utils import swagger_auto_schema
 
-from rest_framework import status, viewsets, generics
+from rest_framework import status, viewsets, generics, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.viewsets import GenericViewSet
 
+from account.utils import random_code
+from order.permissions import IsAuthor
 from order.main_functions import purchase_analysis
-from order.models import MyOrder, Cart, CartProduct, OrderReceipt, MainOrder
+from order.models import MyOrder, Cart, CartProduct, OrderReceipt, MainOrder, MainOrderReceipt
 from order.serializers import MyOrderListSerializer, MyOrderDetailSerializer, MyOrderCreateSerializer, \
-    CartListSerializer, CartCreateSerializer, MainOrderCreateSerializer
+    CartListSerializer, CartCreateSerializer, MainOrderCreateSerializer, MainOrderDetailSerializer, \
+    MainOrderListSerializer, MainOrderUpdateSerializer
 from product.views import AppProductPaginationClass
 
 
@@ -27,21 +31,21 @@ class PurchaseAnalysisView(APIView):
         return Response(result_data, status=status.HTTP_200_OK)
 
 
-class MyOrderListView(viewsets.ReadOnlyModelViewSet):
+class MainOrderListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = MyOrder.objects.all()
-    serializer_class = MyOrderDetailSerializer
+    queryset = MainOrder.objects.all()
+    serializer_class = MainOrderDetailSerializer
     pagination_class = AppProductPaginationClass
 
     def get_queryset(self):
-        queryset = self.request.user.dealer_profile.orders.filter(is_active=True)
+        queryset = self.request.user.dealer_profile.main_orders.filter(is_active=True)
         return queryset
 
     def get_serializer_class(self):
         if self.kwargs.get('pk'):
-            return MyOrderDetailSerializer
+            return MainOrderDetailSerializer
         else:
-            return MyOrderListSerializer
+            return MainOrderListSerializer
 
     @action(detail=False, methods=['get'])
     def search(self, request, **kwargs):
@@ -147,16 +151,82 @@ class CartAddView(generics.GenericAPIView):
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MainOrderCreateView(generics.CreateAPIView):
+class MainOrderCreateView(mixins.CreateModelMixin,
+                          mixins.UpdateModelMixin,
+                          mixins.DestroyModelMixin,
+                          GenericViewSet):
     """
     "products": {
     "product_id": product count
   },
     "type_status": "cash" ('cash', 'visa', 'wallet', 'kaspi'),
-  "stock": stock id
+    "stock": stock id
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAuthor]
     queryset = MainOrder.objects.all()
     serializer_class = MainOrderCreateSerializer
 
 
+class MainOrderReceiptAddView(APIView):
+    """
+    {"receipts": [file, file],
+    "order_id: order_id},
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        receipts = request.FILES.getlist('receipts')
+        order_id = request.data.get('order_id')
+
+        if receipts and order_id:
+            order = MainOrder.objects.filter(id=order_id).first()
+            if order:
+                if order.author.user == request.user or request.user.status == 'manager':
+                    MainOrderReceipt.objects.bulk_create([MainOrderReceipt(order=order, file=i) for i in receipts])
+                    response_data = MainOrderDetailSerializer(order, context=self.get_renderer_context()).data
+                    return Response(response_data, status=status.HTTP_200_OK)
+                return Response({'text': 'Доступ ограничен!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'receipts': 'Обязательное поле!',
+                         'order_id': 'Обязательное поле!'
+                         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MainOrderReceiptRemoveView(APIView):
+    """
+    {"remove_ids": [id, id],
+    "order_id: order_id},
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        order_id = request.data.get('order_id')
+        remove_list = request.data.getlist('remove_ids')
+
+        if remove_list and order_id:
+            order = MainOrder.objects.filter(id=order_id).first()
+            if order.author.user == request.user or request.user.status == 'manager':
+                if order:
+                    order.receipts.filter(id__in=remove_list).delete()
+                    response_data = MainOrderDetailSerializer(order, context=self.get_renderer_context()).data
+                    return Response(response_data, status=status.HTTP_200_OK)
+                return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'text': 'Доступ ограничен!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'receipts': 'Обязательное поле!',
+                         'order_id': 'Обязательное поле!'
+                         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GenerateCodeView(APIView):
+    permission_classes = [IsAuthenticated]
+    """"order_id: order_id}"""
+
+    def post(self, request):
+        order_id = request.data.get('order_id')
+        order = MainOrder.objects.filter(id=order_id).first()
+        if order.author.user == request.user:
+            if order:
+                response_data = {"code": random_code()}
+                return Response(response_data, status=status.HTTP_200_OK)
+            return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'text': 'Доступ ограничен!'}, status=status.HTTP_400_BAD_REQUEST)
