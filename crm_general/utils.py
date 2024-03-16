@@ -256,22 +256,53 @@ def remove_product_from_banner_story(product: AsiaProduct):
             story.products.remove(product)
 
 
-def create_notification_by_auto_not(user: MyUser, status, obj_status=None, per_cent=None):
-    if per_cent is not None:
-        auto_notification = AutoNotification.objects.filter(per_cent=per_cent, status=status).first()
-    elif obj_status is not None:
-        auto_notification = AutoNotification.objects.filter(status=status, obj_status=obj_status).first()
-    else:
-        return {'detail': 'One of obj_status or per_cent arguments needed'}
+def create_notification_by_auto_not(user: MyUser, status, link_id, obj_status=None, per_cent=None):
+    if per_cent is not None and status in {'kpi', 'motivation'}:
+        auto_notifications = (AutoNotification.objects.filter(status=status).order_by('per_cent')
+                              .values_list('per_cent', flat=True))
+        max_auto_notification = AutoNotification.objects.order_by('-per_cent').first()
+        auto_notification = ''
+        for auto_not_per_cent in auto_notifications:
+            if per_cent <= auto_not_per_cent:
+                existing_notification = Notification.objects.filter(user=user, status=status, link_id=link_id,
+                                                                    per_cent=auto_not_per_cent)
+                if existing_notification:
+                    break
 
-    if auto_notification:
-        notification = Notification.objects.create(
-            user=user,
-            status=status,
-            title=auto_notification.title,
-            description=auto_notification.text
-        )
-        return notification
+                auto_notification = AutoNotification.objects.filter(per_cent=auto_not_per_cent).first()
+                break
+
+        if auto_notification == '':
+            existing_notification_max = Notification.objects.filter(user=user, status=status, link_id=link_id,
+                                                                    per_cent=max_auto_notification.per_cent).first()
+            if existing_notification_max is None and per_cent >= max_auto_notification.per_cent:
+                auto_notification = max_auto_notification
+
+        if auto_notification != '':
+            new_notification = Notification.objects.create(
+                user=user,
+                status=status,
+                title=auto_notification.title,
+                description=auto_notification.text,
+                link_id=link_id,
+                is_push=True,
+                per_cent=auto_notification.per_cent
+            )
+            return new_notification.per_cent
+
+    if obj_status:
+        auto_notification = AutoNotification.objects.filter(status=status, obj_status=obj_status).first()
+        if auto_notification:
+            new_notification = Notification.objects.create(
+                user=user,
+                status=status,
+                title=auto_notification.title,
+                description=auto_notification.text,
+                link_id=link_id,
+                is_push=True
+            )
+
+            return new_notification
 
 
 def create_product_recommendation(user: MyUser, product: AsiaProduct):
