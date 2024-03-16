@@ -189,6 +189,7 @@ class Notification(models.Model):
     link_id = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_push = models.BooleanField(default=False)
+    per_cent = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ('-id',)

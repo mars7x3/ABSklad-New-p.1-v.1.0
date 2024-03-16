@@ -118,6 +118,7 @@ def create_notification_by_order(order: MyOrder):
             title=auto_not.title,
             description=auto_not.text,
             link_id=order.id,
+            is_pushed=True
         )
 
 
@@ -136,4 +137,5 @@ def create_notification_by_wallet(balance: BalancePlus):
             title=auto_not.title,
             description=auto_not.text,
             link_id=balance.id,
+            is_pushed=True
         )
