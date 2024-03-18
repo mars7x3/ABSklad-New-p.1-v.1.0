@@ -14,7 +14,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from account.models import DealerProfile, MyUser, Wallet, BalancePlus, Notification
 from crm_general.accountant.permissions import IsAccountant
-from crm_general.accountant.serializers import MyOrderListSerializer, MyOrderDetailSerializer, \
+from crm_general.accountant.serializers import MainOrderListSerializer, MainOrderDetailSerializer, \
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
     AccountantStockListSerializer, AccountantStockDetailSerializer, \
     DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer, InventorySerializer, \
@@ -30,20 +30,20 @@ from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
 from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
 from one_c.models import MoneyDoc, MovementProduct1C, MovementProducts
-from order.models import MyOrder, ReturnOrder, ReturnOrderProduct
+from order.models import MyOrder, ReturnOrder, ReturnOrderProduct, MainOrder
 from crm_general.tasks import minus_quantity
 from product.models import AsiaProduct, Collection, Category
 
 
 class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
     # permission_classes = [IsAuthenticated, IsAccountant]
-    queryset = MyOrder.objects.filter(is_active=True)
-    serializer_class = MyOrderListSerializer
+    queryset = MainOrder.objects.filter(is_active=True)
+    serializer_class = MainOrderListSerializer
     pagination_class = CRMPaginationClass
 
     def get_serializer_class(self):
         if self.detail:
-            return MyOrderDetailSerializer
+            return MainOrderDetailSerializer
         return self.serializer_class
 
     @action(detail=False, methods=['get'])
@@ -79,7 +79,7 @@ class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
         queryset = queryset.filter(**kwargs)
         paginator = CRMPaginationClass()
         page = paginator.paginate_queryset(queryset, request)
-        serializer = MyOrderListSerializer(page, many=True, context=self.get_renderer_context()).data
+        serializer = MainOrderListSerializer(page, many=True, context=self.get_renderer_context()).data
         return paginator.get_paginated_response(serializer)
 
 

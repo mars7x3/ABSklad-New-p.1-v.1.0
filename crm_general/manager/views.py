@@ -9,13 +9,13 @@ from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
 from crm_general.paginations import AppPaginationClass, ProductPagination, GeneralPurposePagination
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
-from order.models import MyOrder, CartProduct
+from order.models import MyOrder, CartProduct, MainOrder
 from product.models import ProductPrice, Collection, Category, AsiaProduct
 
 from .mixins import BaseOrderMixin, BaseDealerViewMixin, BaseDealerRelationViewMixin, BaseManagerMixin
 from .permissions import IsManager, ManagerOrderPermission
 from .serializers import (
-    ShortOrderSerializer, OrderSerializer,
+    MainShortOrderSerializer, MainOrderSerializer,
     DealerProfileListSerializer, DealerBirthdaySerializer, DealerProfileDetailSerializer,
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
@@ -28,12 +28,12 @@ from ..models import CRMTask
 # ---------------------------------------------------- ORDERS
 class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
     queryset = (
-        MyOrder.objects.select_related("author__village__city", "stock__city")
-                       .only("author__village__city", "stock__city", "id", "price", "type_status",
-                             "created_at", "paid_at", "released_at", "is_active")
-                       .filter(is_active=True)
+        MainOrder.objects.select_related("author__village__city", "stock__city")
+        .only("author__village__city", "stock__city", "id", "price", "type_status",
+              "created_at", "paid_at", "is_active")
+        .filter(is_active=True)
     )
-    serializer_class = ShortOrderSerializer
+    serializer_class = MainShortOrderSerializer
     pagination_class = GeneralPurposePagination
     filter_backends = (filters.SearchFilter, filters.OrderingFilter, FilterByFields)
     search_fields = ("author__user__name", "id")
@@ -52,20 +52,20 @@ class OrderListAPIView(BaseOrderMixin, generics.ListAPIView):
 
 class OrderRetrieveAPIView(BaseOrderMixin, generics.RetrieveAPIView):
     queryset = (
-        MyOrder.objects.select_related("stock")
-                       .prefetch_related("order_receipts", "order_products")
-                       .only("id", "stock", "price", "status", "type_status",
-                             "comment", "created_at", "released_at", "paid_at")
-                       .all()
+        MainOrder.objects.select_related("stock")
+        .prefetch_related("receipts", "products")
+        .only("id", "stock", "price", "status", "type_status",
+              "created_at", "paid_at")
+        .all()
     )
-    serializer_class = OrderSerializer
+    serializer_class = MainOrderSerializer
     lookup_field = "id"
     lookup_url_kwarg = "order_id"
 
 
 class OrderChangeActivityView(BaseOrderMixin, generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated, IsManager)
-    queryset = MyOrder.objects.only("id", "is_active").all()
+    queryset = MainOrder.objects.only("id", "is_active").all()
     serializer_class = ActivitySerializer
     lookup_field = "id"
     lookup_url_kwarg = "order_id"
@@ -86,16 +86,16 @@ class OrderCreateAPIView(BaseOrderMixin, generics.CreateAPIView):
     Where the keys are the product identifier and the value is the quantity
     """
     permission_classes = (permissions.IsAuthenticated, IsManager, ManagerOrderPermission)
-    serializer_class = OrderSerializer
+    serializer_class = MainOrderSerializer
 
 
 # -------------------------------------------------------- DEALERS
 class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
         DealerProfile.objects.select_related("user", "village__city", "dealer_status")
-                             .prefetch_related("balance_histories", "orders")
-                             .only("user_id", "birthday", "village__city", "dealer_status")
-                             .all()
+        .prefetch_related("balance_histories", "orders")
+        .only("user_id", "birthday", "village__city", "dealer_status")
+        .all()
     )
     serializer_class = DealerProfileListSerializer
     pagination_class = AppPaginationClass
@@ -146,8 +146,8 @@ class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.Gen
 class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
     queryset = (
         DealerProfile.objects.select_related("user", "village__city", "dealer_status")
-                             .only("user_id", "user", "birthday", "village__city", "dealer_status")
-                             .all()
+        .only("user_id", "user", "birthday", "village__city", "dealer_status")
+        .all()
     )
     serializer_class = DealerBirthdaySerializer
     pagination_class = AppPaginationClass
@@ -162,9 +162,9 @@ class DealerBirthdayListAPIView(BaseDealerViewMixin, generics.ListAPIView):
 class DealerRetrieveAPIView(BaseDealerViewMixin, generics.RetrieveAPIView):
     queryset = (
         DealerProfile.objects.select_related("user", "village__city", "dealer_status")
-                             .prefetch_related("dealer_stores")
-                             .only("user", "birthday", "village__city", "dealer_status")
-                             .all()
+        .prefetch_related("dealer_stores")
+        .only("user", "birthday", "village__city", "dealer_status")
+        .all()
     )
     serializer_class = DealerProfileDetailSerializer
     lookup_field = "user_id"
@@ -207,7 +207,7 @@ class DealerImageUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
 class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
     queryset = (
         BalanceHistory.objects.only("id", "created_at", "status", "amount", "balance")
-                              .all()
+        .all()
     )
     serializer_class = DealerBalanceHistorySerializer
     filter_backends = (FilterByFields,)
@@ -226,7 +226,7 @@ class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.List
 class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
     queryset = (
         CartProduct.objects.select_related("product", "cart")
-                           .all()
+        .all()
     )
     serializer_class = DealerBasketProductSerializer
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -254,7 +254,7 @@ class CollectionListAPIView(BaseManagerMixin, generics.ListAPIView):
 class CategoryListAPIView(BaseManagerMixin, generics.ListAPIView):
     queryset = (
         Category.objects.only("slug", "title", "is_active")
-                        .all().distinct()
+        .all().distinct()
     )
     serializer_class = ShortCategorySerializer
     filter_backends = (filters.SearchFilter, FilterByFields)
@@ -282,10 +282,10 @@ class ProductPriceListAPIView(BaseManagerMixin, generics.ListAPIView):
 class ProductRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
     queryset = (
         AsiaProduct.objects.select_related("collection")
-                           .prefetch_related("images", "sizes")
-                           .only("id", "diagram", "title", "vendor_code", "description", "collection__title",
-                                 "weight", "package_count", "made_in", "created_at", "updated_at")
-                           .all()
+        .prefetch_related("images", "sizes")
+        .only("id", "diagram", "title", "vendor_code", "description", "collection__title",
+              "weight", "package_count", "made_in", "created_at", "updated_at")
+        .all()
     )
     serializer_class = ProductDetailSerializer
     lookup_field = "id"
@@ -296,8 +296,8 @@ class ProductRetrieveAPIView(BaseManagerMixin, generics.RetrieveAPIView):
 class BalanceViewSet(BaseManagerMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
         Wallet.objects.select_related("dealer")
-                      .only("id", "dealer", "amount_1c", "amount_crm")
-                      .filter(Q(amount_crm__gt=0) | Q(amount_1c__gt=0))
+        .only("id", "dealer", "amount_1c", "amount_crm")
+        .filter(Q(amount_crm__gt=0) | Q(amount_1c__gt=0))
     )
     dealers_queryset = DealerProfile.objects.all()
     serializer_class = WalletListSerializer

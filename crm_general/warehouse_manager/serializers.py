@@ -8,7 +8,8 @@ from crm_general.serializers import VerboseChoiceField
 from crm_general.warehouse_manager.utils import create_order_return_product
 from general_service.models import Stock
 from one_c.from_crm import sync_return_order_to_1C
-from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile
+from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile, MainOrder, \
+    MainOrderProduct
 from product.models import AsiaProduct, Collection, Category, ProductImage, ProductSize
 
 
@@ -52,21 +53,21 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
         return 0
 
 
-class OrderListSerializer(serializers.ModelSerializer):
-    type_status = VerboseChoiceField(choices=MyOrder.TYPE_STATUS)
+class MainOrderListSerializer(serializers.ModelSerializer):
+    type_status = VerboseChoiceField(choices=MainOrder.TYPE_STATUS)
     name = serializers.SerializerMethodField(read_only=True)
-    creator_name = serializers.SerializerMethodField(read_only=True)
+    # creator_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = MyOrder
+        model = MainOrder
         fields = '__all__'
 
     def get_name(self, instance):
         return instance.author.user.name
 
-    def get_creator_name(self, instance):
-        if instance.creator:
-            return instance.creator.name
+    # def get_creator_name(self, instance):
+    #     if instance.creator:
+    #         return instance.creator.name
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
@@ -76,7 +77,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MyOrder
-        fields = '__all__'
+        fields = ('id', 'order_products', 'type_status', 'return_orders', 'created_at', 'updated_at', 'paid_at',
+                  'released_at', 'price', 'type_status', 'status')
 
     def get_return_orders(self, instance):
         return_order_instances = instance.return_orders.all()
@@ -85,8 +87,30 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['name'] = instance.author.user.name
-        rep['creator_name'] = instance.creator.name if instance.creator else None
         return rep
+
+
+class WareHouseMainOrderProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainOrderProduct
+        fields = '__all__'
+
+
+class MainOrderDetailSerializer(serializers.ModelSerializer):
+    products = WareHouseMainOrderProductSerializer(read_only=True, many=True)
+    name = serializers.SerializerMethodField()
+    type_status = VerboseChoiceField(choices=MainOrder.TYPE_STATUS)
+    orders = OrderDetailSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = MainOrder
+        fields = '__all__'
+
+    def get_name(self, instance):
+        return instance.author.user.name
+
+    def get_order(self, instance):
+        return instance.orders.first().id
 
 
 class WareHouseCollectionListSerializer(serializers.ModelSerializer):

@@ -22,22 +22,23 @@ from order.utils import get_product_list, order_total_price, order_cost_price, g
 from product.models import AsiaProduct, Collection, Category, ProductCount
 from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
-from .serializers import OrderListSerializer, OrderDetailSerializer, WareHouseProductListSerializer, \
+from .serializers import MainOrderListSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
     WareHouseProductSerializer, WareHouseInventorySerializer, \
-    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer, InventoryProductSerializer
+    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer, InventoryProductSerializer, \
+    MainOrderDetailSerializer
 from .mixins import WareHouseManagerMixin
 from .utils import create_validated_data, minus_count
 from ..models import Inventory, CRMTask, InventoryProduct
 from ..tasks import minus_quantity
 
 
-class WareHouseOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
-    queryset = MyOrder.objects.filter(is_active=True)
+class WareHouseMainOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
+    queryset = MainOrder.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     pagination_class = GeneralPurposePagination
-    serializer_class = OrderListSerializer
-    retrieve_serializer_class = OrderDetailSerializer
+    serializer_class = MainOrderListSerializer
+    retrieve_serializer_class = MainOrderDetailSerializer
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

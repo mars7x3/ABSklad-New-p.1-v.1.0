@@ -12,14 +12,15 @@ from crm_general.serializers import CRMStockSerializer
 from general_service.models import Stock
 from one_c.from_crm import sync_inventory_crm_2_1c, sync_return_order_to_1C
 
-from order.models import MyOrder, OrderReceipt, OrderProduct, ReturnOrder, ReturnOrderProduct, ReturnOrderProductFile
+from order.models import MyOrder, OrderReceipt, OrderProduct, ReturnOrder, ReturnOrderProduct, ReturnOrderProductFile, \
+    MainOrder, MainOrderProduct, MainOrderReceipt
 from product.models import AsiaProduct, Collection, Category
 
 
-class MyOrderListSerializer(serializers.ModelSerializer):
+class MainOrderListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MyOrder
-        fields = ('author', 'id', 'status', 'type_status', 'price', 'created_at', 'released_at', 'paid_at')
+        model = MainOrder
+        fields = ('author', 'id', 'status', 'type_status', 'price', 'created_at', 'paid_at')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -45,13 +46,27 @@ class MyOrderDealerSerializer(serializers.ModelSerializer):
 class MyOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        exclude = ('cost_price', 'uid')
+        fields = ('id', 'created_at', 'updated_at', 'paid_at', 'released_at', 'price', 'type_status', 'status')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['order_receipts'] = OrderReceiptSerializer(instance.order_receipts, many=True, context=self.context).data
+        rep['receipts'] = OrderReceiptSerializer(instance.order_receipts, many=True, context=self.context).data
+        rep['products'] = OrderProductSerializer(instance.order_products, many=True, context=self.context).data
+        rep['stock'] = CRMStockSerializer(instance.stock, context=self.context).data
+        return rep
+
+
+class MainOrderDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainOrder
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['receipts'] = MainOrderReceiptSerializer(instance.receipts, many=True, context=self.context).data
         rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
-        rep['order_products'] = OrderProductSerializer(instance.order_products, many=True, context=self.context).data
+        rep['products'] = MainOrderProductSerializer(instance.products, many=True, context=self.context).data
+        rep['orders'] = MyOrderDetailSerializer(instance.orders.all(), many=True, context=self.context).data
         rep['stock'] = CRMStockSerializer(instance.stock, context=self.context).data
         rep['creator_name'] = instance.creator.name if instance.creator else None
         return rep
@@ -63,10 +78,27 @@ class OrderReceiptSerializer(serializers.ModelSerializer):
         exclude = ('order',)
 
 
+class MainOrderReceiptSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainOrderReceipt
+        exclude = ('order',)
+
+
 class OrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderProduct
         exclude = ('order', 'cost_price', 'discount', 'category')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['prod_info'] = OrderAsiaProductSerializer(instance.ab_product, context=self.context).data
+        return rep
+
+
+class MainOrderProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainOrderProduct
+        fields = '__all__'
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
