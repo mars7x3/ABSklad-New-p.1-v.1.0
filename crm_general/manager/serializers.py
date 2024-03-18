@@ -17,7 +17,7 @@ from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer, V
 from general_service.models import Stock, PriceType
 from general_service.serializers import CitySerializer
 from one_c.from_crm import sync_dealer_back_to_1C
-from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct
+from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, MainOrder, MainOrderProduct, MainOrderReceipt
 from order.tasks import create_order_notification
 from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage, ProductCount
 
@@ -27,7 +27,7 @@ from .utils import (
 
 
 # --------------------------------------------------- ORDER
-class ShortOrderSerializer(serializers.ModelSerializer):
+class MainShortOrderSerializer(serializers.ModelSerializer):
     dealer_city = serializers.SerializerMethodField(read_only=True)
     stock_city = serializers.SerializerMethodField(read_only=True)
     stock_name = serializers.SerializerMethodField(read_only=True)
@@ -72,16 +72,44 @@ class OrderReceiptSerializer(serializers.ModelSerializer):
         exclude = ("id", "order")
 
 
+class MainOrderReceiptSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainOrderReceipt
+        exclude = ('order',)
+
+
 class OrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderProduct
         exclude = ("id", "order", "category", "ab_product", "discount")
 
 
-class OrderSerializer(serializers.ModelSerializer):
+class MainOrderProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainOrderProduct
+        fields = '__all__'
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    order_products = OrderProductSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = MyOrder
+        fields = ('id', 'order_products', 'type_status', 'created_at', 'updated_at', 'paid_at', 'released_at', 'price',
+                  'type_status', 'status')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.author.user.name
+        rep['receipts'] = OrderReceiptSerializer(instance.order_receipts, many=True, context=self.context).data
+        return rep
+
+
+class MainOrderSerializer(serializers.ModelSerializer):
     stock = CRMStockSerializer(many=False, read_only=True)
-    receipts = OrderReceiptSerializer(many=True, read_only=True, source="order_receipts")
-    products = OrderProductSerializer(many=True, read_only=True, source="order_products")
+    receipts = OrderReceiptSerializer(many=True, read_only=True)
+    products = MainOrderProductSerializer(many=True, read_only=True)
+    orders = OrderDetailSerializer(many=True, read_only=True)
     name = serializers.SerializerMethodField(read_only=True)
     creator_name = serializers.SerializerMethodField(read_only=True)
 
@@ -104,12 +132,13 @@ class OrderSerializer(serializers.ModelSerializer):
     type_status = serializers.ChoiceField(choices=MyOrder.TYPE_STATUS)
 
     class Meta:
-        model = MyOrder
-        fields = ("id", "stock", "price", "status", "type_status", "comment",
-                  "created_at", "released_at", "paid_at", "receipts", "products",
-                  "stock_id", "user_id", "product_counts", 'name', 'creator_name')
+        model = MainOrder
+        fields = ("id", "stock", "price", "status", "type_status",
+                  "created_at", "paid_at", "receipts", "products",
+                  "stock_id", "user_id", "product_counts", 'name', 'creator_name',
+                  'orders')
         read_only_fields = ("id", "stock", "status", "created_at",
-                            "released_at", "paid_at", 'name')
+                            "paid_at", 'name')
 
     def get_name(self, instance):
         if instance.author:

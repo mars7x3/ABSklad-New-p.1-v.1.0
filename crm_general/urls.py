@@ -66,7 +66,7 @@ from .marketer.views import (
     MarketerProductHitsListView, MarketerNotificationView, AutoNotificationViewSet,
 )
 from .warehouse_manager.views import (
-    WareHouseOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
+    WareHouseMainOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
     WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView, ReturnOrderProductView,
     InventoryProductDeleteView, WareHouseNotificationView, VerifyOrderAuthorView
 )
@@ -298,7 +298,7 @@ marketer_urlpatterns = [
 # --------------------------- WARE HOUSE MANAGER
 
 warehouse_manager_router = SimpleRouter()
-warehouse_manager_router.register('order', WareHouseOrderView, basename='warehouse-order')
+warehouse_manager_router.register('order', WareHouseMainOrderView, basename='warehouse-order')
 warehouse_manager_router.register('product', WareHouseProductViewSet, basename='warehouse-product')
 warehouse_manager_router.register('category', WareHouseCategoryViewSet, basename='warehouse-category')
 warehouse_manager_router.register('collection', WareHouseCollectionViewSet, basename='warehouse-collection')

@@ -23,7 +23,6 @@ class MyOrder(models.Model):
     main_order = models.ForeignKey('MainOrder', on_delete=models.SET_NULL, blank=True, null=True,
                                    related_name='orders')
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
-    creator = models.ForeignKey(MyUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     name = models.CharField(max_length=100, blank=True, null=True)  # TODO: delete this
     gmail = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this
     phone = models.CharField(max_length=100, blank=True, null=True)   # TODO: delete this
@@ -128,6 +127,7 @@ class MainOrder(models.Model):
     )
     author = models.ForeignKey(DealerProfile, on_delete=models.SET_NULL, blank=True, null=True,
                                related_name='main_orders')
+    creator = models.ForeignKey(MyUser, on_delete=models.SET_NULL, blank=True, null=True, related_name='orders')
     stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, null=True, related_name='main_orders')
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     status = models.CharField(choices=STATUS, max_length=15, default='created')
