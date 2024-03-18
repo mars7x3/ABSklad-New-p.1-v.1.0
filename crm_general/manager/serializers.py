@@ -78,6 +78,17 @@ class MainOrderReceiptSerializer(serializers.ModelSerializer):
         exclude = ('order',)
 
 
+class OrderAsiaProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title', 'category')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['category_title'] = instance.category.title if instance.category else None
+        return rep
+
+
 class OrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderProduct
@@ -88,6 +99,11 @@ class MainOrderProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = MainOrderProduct
         fields = '__all__'
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['prod_info'] = OrderAsiaProductSerializer(instance.ab_product, context=self.context).data
+        return rep
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
