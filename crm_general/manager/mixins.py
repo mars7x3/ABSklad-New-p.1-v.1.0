@@ -2,14 +2,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import get_object_or_404
 
 from account.models import DealerProfile
-from order.models import MyOrder
+from order.models import MyOrder, MainOrder
 
 from .permissions import IsManager
 
 
 class BaseOrderMixin:
     permission_classes = (IsAuthenticated, IsManager)
-    queryset = MyOrder.objects.all()
+    queryset = MainOrder.objects.all()
 
     @property
     def manager_profile(self):

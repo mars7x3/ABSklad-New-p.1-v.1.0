@@ -75,10 +75,10 @@ class WareHouseMainOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
     def update_order_status(self, request):
         order_status = self.request.data.get('status')
         order_id = self.request.data.get('order_id')
-        try:
-            order = MyOrder.objects.get(id=order_id)
-        except ObjectDoesNotExist:
-            return Response({'detail': 'order_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        order = MainOrder.objects.get_object_or_404(id=order_id)
+        # except ObjectDoesNotExist:
+        #     return Response({'detail': 'order_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         if order_status == 'paid':
             if order.type_status == 'cash':

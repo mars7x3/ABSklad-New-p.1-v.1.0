@@ -20,7 +20,7 @@ from .serializers import (
     DealerBalanceHistorySerializer, DealerBasketProductSerializer,
     CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer, BalancePlusSerializer, ProductListForOrderSerializer,
-    ShortProductSerializer
+    ShortProductSerializer, MainOrderUpdateSerializer
 )
 from ..models import CRMTask
 
@@ -87,6 +87,11 @@ class OrderCreateAPIView(BaseOrderMixin, generics.CreateAPIView):
     """
     permission_classes = (permissions.IsAuthenticated, IsManager, ManagerOrderPermission)
     serializer_class = MainOrderSerializer
+
+
+class OrderUpdateAPIView(BaseOrderMixin, generics.UpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated, IsManager)
+    serializer_class = MainOrderUpdateSerializer
 
 
 # -------------------------------------------------------- DEALERS

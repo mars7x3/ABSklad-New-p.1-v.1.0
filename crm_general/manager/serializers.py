@@ -22,7 +22,8 @@ from order.tasks import create_order_notification
 from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage, ProductCount
 
 from .utils import (
-    check_to_unavailable_products, order_total_price, calculate_order_cost_price, build_order_products_data
+    check_to_unavailable_products, order_total_price, calculate_order_cost_price, build_order_products_data,
+    update_main_order_product_count
 )
 
 
@@ -210,7 +211,7 @@ class MainOrderSerializer(serializers.ModelSerializer):
                 city=dealer.village.city,
                 price_type=price_type,
             )
-            attrs["cost_price"] = calculate_order_cost_price(product_counts)
+            # attrs["cost_price"] = calculate_order_cost_price(product_counts)
             try:
                 attrs["products"] = build_order_products_data(
                     product_counts=product_counts,
@@ -233,10 +234,60 @@ class MainOrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         products = validated_data.pop("products")
-        order = MyOrder.objects.create(**validated_data)
-        OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
-        create_order_notification(order.id)  # TODO: delay() add here
-        return order
+        main_order = MainOrder.objects.create(**validated_data)
+        MainOrderProduct.objects.bulk_create([MainOrderProduct(order=main_order, **i) for i in products])
+        create_order_notification(main_order.id)  # TODO: delay() add here
+        return main_order
+
+
+class MainOrderUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainOrder
+        fields = '__all__'
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        main_order_id = self.context['view'].kwargs.get('pk')
+        product_counts = request.data.pop('product_counts')
+        main_order = MainOrder.objects.get(id=main_order_id)
+        dealer = self.instance.author
+
+        if main_order.status != 'created':
+            raise serializers.ValidationError(detail={'Заказ можно менять только если он новый'}, code=404)
+
+        attrs['product_counts'] = product_counts
+        stock = attrs.get('stock', None)
+        if stock is None:
+            raise serializers.ValidationError({'detail': 'stock '})
+
+        try:
+            wallet = dealer.wallet
+        except ObjectDoesNotExist:
+            raise serializers.ValidationError({"user_id": "У пользователя нет кошелька"})
+
+        if product_counts:
+            unavailable_products = check_to_unavailable_products(product_counts, stock)
+            if unavailable_products:
+                raise serializers.ValidationError(
+                    {"product_counts": [
+                        {
+                            un_product["product_id"]: f"В наличии всего {un_product['count_crm']}!"
+                        } for un_product in unavailable_products
+                    ]}
+                )
+
+        if attrs.get("type_status", "") == "wallet":
+            price = attrs.get("price") or self.instance.price
+
+            if price > wallet.amount_crm:
+                raise serializers.ValidationError({"detail": "Недостаточно средств на балансе!"})
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        product_counts = validated_data.pop('product_counts')
+        update_main_order_product_count(main_order=instance, product_counts=product_counts)
+        return instance
 
 
 # ---------------------------------------------- DEALER
@@ -258,6 +309,7 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
     is_active = serializers.SerializerMethodField(read_only=True)
     village = serializers.SerializerMethodField(read_only=True)
     city = serializers.SerializerMethodField(read_only=True)
+
     # motivations = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -279,6 +331,7 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
             return instance.wallet.amount_crm
         except ObjectDoesNotExist:
             return 0.0
+
     #
     # def get_incoming_funds(self, instance) -> Decimal:
     #     return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
@@ -720,5 +773,3 @@ class ProductCountForOrderSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         rep['stock_title'] = instance.stock.title
         return rep
-
-
