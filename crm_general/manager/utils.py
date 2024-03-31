@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Subquery, OuterRef, F
 
+from order.models import MainOrder, MainOrderProduct
 from product.models import AsiaProduct, ProductPrice, ProductImage, ProductCostPrice
 
 
@@ -76,11 +77,28 @@ def build_order_products_data(product_counts: dict[str: int], dealer_status, cit
         count = product_counts[str(product_id)]
         collected_products.append(
             {
-                **product_data,
+                # **product_data,
+                'ab_product': AsiaProduct.objects.get(id=product_data['ab_product_id']),
                 "price": price,
-                "total_price": price * count,
-                "discount": abs(old_price - price) if old_price > 0 else 0,
+                # "total_price": price * count,
+                # "discount": abs(old_price - price) if old_price > 0 else 0,
                 "count": count
             }
         )
     return collected_products
+
+
+def update_main_order_product_count(main_order: MainOrder, product_counts: dict[str:int]):
+    main_order_products = MainOrderProduct.objects.filter(order=main_order, ab_product_id__in=list(product_counts))
+    data_to_update = []
+    total_price = 0
+    for main_order_product in main_order_products:
+        count = product_counts[str(main_order_product.ab_product.id)]
+        main_order_product.count = count
+        total_price += main_order_product.price * count
+        data_to_update.append(main_order_product)
+    MainOrderProduct.objects.bulk_update(data_to_update, ['count'])
+    main_order.price = total_price
+    main_order.save()
+    return main_order
+

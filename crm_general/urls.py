@@ -26,7 +26,7 @@ from .manager.views import (
     ProductRetrieveAPIView as ManagerProductRetrieveAPIView,
     BalanceViewSet as ManagerBalanceViewSet,
     BalancePlusManagerView as ManagerBalancePlusManagerView, ProdListForOrderView, ManagerDeleteOrderView,
-    ManagerNotificationView,
+    ManagerNotificationView, OrderUpdateAPIView,
 )
 
 from .rop.views import (
@@ -199,6 +199,8 @@ manager_urlpatterns = [
     # Orders
     path("manager/orders/", ManagerOrderListView.as_view(), name="crm_general-manager-orders-list"),
     path("manager/orders/create/", ManagerOrderCreateAPIView.as_view(), name="crm_general-manager-orders-create"),
+    path("manager/orders/update/<int:pk>/", OrderUpdateAPIView.as_view(),
+            name="crm_general-manager-orders-update"),
     re_path("^manager/orders/(?P<order_id>.+)/change-activity/$", ManagerOrderChangeActivityView.as_view(),
             name="crm_general-manager-orders-update-activity"),
     re_path("^manager/orders/(?P<order_id>.+)/detail/$", ManagerOrderRetrieveView.as_view(),
