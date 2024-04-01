@@ -128,6 +128,7 @@ class MainOrderSerializer(serializers.ModelSerializer):
     products = MainOrderProductSerializer(many=True, read_only=True)
     orders = OrderDetailSerializer(many=True, read_only=True)
     name = serializers.SerializerMethodField(read_only=True)
+    customer_id = serializers.SerializerMethodField(read_only=True)
     creator_name = serializers.SerializerMethodField(read_only=True)
 
     stock_id = serializers.PrimaryKeyRelatedField(
@@ -153,13 +154,17 @@ class MainOrderSerializer(serializers.ModelSerializer):
         fields = ("id", "stock", "price", "status", "type_status",
                   "created_at", "paid_at", "receipts", "products",
                   "stock_id", "user_id", "product_counts", 'name', 'creator_name',
-                  'orders')
+                  'orders', 'customer_id')
         read_only_fields = ("id", "stock", "status", "created_at",
                             "paid_at", 'name')
 
     def get_name(self, instance):
         if instance.author:
             return instance.author.user.name
+
+    def get_customer_id(self, instance):
+        if instance.author:
+            return instance.author.user.id
 
     def get_creator_name(self, instance):
         if instance.creator:
