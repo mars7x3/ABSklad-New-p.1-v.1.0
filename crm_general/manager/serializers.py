@@ -292,7 +292,7 @@ class MainOrderUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         product_counts = validated_data.pop('product_counts')
         update_main_order_product_count(main_order=instance, product_counts=product_counts)
-        return instance
+        return super().update(instance, validated_data)
 
 
 # ---------------------------------------------- DEALER
