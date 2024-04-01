@@ -9,6 +9,7 @@ from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
 from crm_general.paginations import AppPaginationClass, ProductPagination, GeneralPurposePagination
 from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
+from general_service.models import Stock
 from order.models import MyOrder, CartProduct, MainOrder
 from product.models import ProductPrice, Collection, Category, AsiaProduct
 
@@ -92,6 +93,21 @@ class OrderCreateAPIView(BaseOrderMixin, generics.CreateAPIView):
 class OrderUpdateAPIView(BaseOrderMixin, generics.UpdateAPIView):
     permission_classes = (permissions.IsAuthenticated, IsManager)
     serializer_class = MainOrderUpdateSerializer
+
+
+class OrderProductCountAPIView(BaseOrderMixin, APIView):
+    permission_classes = (permissions.IsAuthenticated, IsManager)
+    serializer_class = MainOrderUpdateSerializer
+
+    def get(self, request, *args, **kwargs):
+        main_order_id = request.query_params.get('order_id')
+        main_order = MainOrder.objects.filter(id=main_order_id).first()
+        if main_order is None:
+            return Response({'detail': 'No order found'}, status=status.HTTP_404_NOT_FOUND)
+        product_ids = main_order.products.filter().values_list('ab_product', flat=True)
+        products = AsiaProduct.objects.filter(id__in=product_ids)
+        serializer = ProductListForOrderSerializer(products, many=True, context=self.get_renderer_context())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # -------------------------------------------------------- DEALERS
