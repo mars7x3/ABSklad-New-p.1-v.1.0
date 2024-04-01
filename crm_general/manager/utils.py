@@ -94,11 +94,15 @@ def update_main_order_product_count(main_order: MainOrder, product_counts: dict[
     total_price = 0
     for main_order_product in main_order_products:
         count = product_counts[str(main_order_product.ab_product.id)]
-        main_order_product.count = count
-        total_price += main_order_product.price * count
-        data_to_update.append(main_order_product)
+        if count > 0:
+            main_order_product.count = count
+            total_price += main_order_product.price * count
+            data_to_update.append(main_order_product)
+        else:
+            main_order_product.delete()
     MainOrderProduct.objects.bulk_update(data_to_update, ['count'])
     main_order.price = total_price
     main_order.save()
     return main_order
+
 
