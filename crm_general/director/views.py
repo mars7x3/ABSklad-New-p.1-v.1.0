@@ -638,7 +638,7 @@ class DirectorMotivationDealerListView(mixins.ListModelMixin, GenericViewSet):
 
         city_slug = request.query_params.get('city_slug')
         if city_slug:
-            kwargs['city__slug'] = city_slug
+            kwargs['village__city__slug'] = city_slug
 
         dealer_status = request.query_params.get('dealer_status')
         if dealer_status:
