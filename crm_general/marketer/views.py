@@ -181,10 +181,15 @@ class MarketerStoryViewSet(ListModelMixin,
         queryset = self.get_queryset()
         active_status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
+        start_time = self.request.query_params.get('start_time')
+        end_time = self.request.query_params.get('end_time')
         if active_status == 'active':
             queryset = queryset.filter(is_active=True)
         elif active_status == 'inactive':
             queryset = queryset.filter(is_active=False)
+
+        if start_time and end_time:
+            queryset = queryset.filter(start_date__gte=start_time, end_date__lte=end_time)
 
         if search:
             try:

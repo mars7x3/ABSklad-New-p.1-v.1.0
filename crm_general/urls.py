@@ -68,7 +68,7 @@ from .marketer.views import (
 from .warehouse_manager.views import (
     WareHouseMainOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
     WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView, ReturnOrderProductView,
-    InventoryProductDeleteView, WareHouseNotificationView, VerifyOrderAuthorView
+    InventoryProductDeleteView, WareHouseNotificationView, VerifyOrderAuthorView, OrderPartialSentView
 )
 
 main_director_router = SimpleRouter()
@@ -318,6 +318,7 @@ warehouse_manager_urlpatterns = [
     path('warehouse-manager/report/<int:pk>/', WareHouseSaleReportDetailView.as_view()),
     path('warehouse/notifications/', WareHouseNotificationView.as_view()),
     path('warehouse/order/verify/', VerifyOrderAuthorView.as_view()),
+    path('warehouse/order/partial/sent/', OrderPartialSentView.as_view())
 
 ]
 

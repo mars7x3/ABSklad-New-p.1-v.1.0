@@ -406,7 +406,7 @@ class OrderPartialSentView(APIView):
         product_list = get_product_list(products)
         price = order_total_price(product_list, products, main_order.author)
         cost_price = order_cost_price(product_list, products)
-        order = MyOrder.objects.create(**validated_data, price=price, cost_price=cost_price)
+        order = MyOrder.objects.create(price=price, cost_price=cost_price, **validated_data)
         products = generate_order_products(product_list, products, main_order.author)
         OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
         minus_count(main_order, products)

@@ -26,15 +26,15 @@ def create_validated_data(main_order):
     validated_data = {
         'main_order': main_order,
         'author': main_order.author,
-        'creator': main_order.creator,
+        # 'creator': main_order.creator,
         'stock': main_order.stock,
         'status': 'sent',
         'type_status': main_order.type_status,
         'created_at': main_order.created_at,
         'released_at': timezone.localtime().now(),
         'paid_at': main_order.paid_at,
-        'price': main_order.price,
-        'cost_price': main_order.author,
+        # 'price': main_order.price,
+        # 'cost_price': main_order.author,
     }
     return validated_data
 

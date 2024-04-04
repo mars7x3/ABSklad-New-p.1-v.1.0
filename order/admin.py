@@ -41,3 +41,4 @@ class ReturnOrderAdmin(admin.ModelAdmin):
 
 
 admin.site.register(OrderReceipt)
+admin.site.register(MainOrderCode)
