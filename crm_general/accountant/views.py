@@ -302,7 +302,7 @@ class AccountantOrderModerationView(APIView):
 
         if order_id:
             if order_status in ['paid', 'rejected']:
-                order = MyOrder.objects.get(id=order_id)
+                order = MainOrder.objects.get(id=order_id)
                 order.status = order_status
                 order.save()
                 if order.status == 'paid':

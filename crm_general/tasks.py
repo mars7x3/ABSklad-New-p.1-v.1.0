@@ -12,7 +12,7 @@ from crm_general.models import DealerKPIPlan, CityProductToBuy, ProductToBuy, De
 from crm_general.utils import collect_orders_data_for_kpi_plan, round_up
 from general_service.models import Stock
 from one_c.models import MoneyDoc
-from order.models import MyOrder, OrderProduct
+from order.models import MyOrder, OrderProduct, MainOrder
 from product.models import ProductCount, ProductPrice
 from promotion.models import Discount
 
@@ -21,9 +21,9 @@ logger = logging.getLogger('tasks_management')
 
 @app.task
 def minus_quantity(order_id, stock_id):
-    order = MyOrder.objects.get(id=order_id)
+    order = MainOrder.objects.get(id=order_id)
     stock = Stock.objects.get(id=stock_id)
-    products_id = order.order_products.all().values_list('ab_product_id', 'count')
+    products_id = order.products.all().values_list('ab_product_id', 'count')
     counts = ProductCount.objects.filter(stock=stock)
     for p_id, count in products_id:
         quantity = counts.get(product_id=p_id)
