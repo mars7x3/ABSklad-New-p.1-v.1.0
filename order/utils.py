@@ -1,4 +1,7 @@
+from django.db.models import Sum
+
 from order.db_request import query_debugger
+from order.models import MainOrder
 from product.models import AsiaProduct, ProductPrice
 
 
@@ -25,7 +28,6 @@ def order_total_price(product_list, products, dealer):
         prices = ProductPrice.objects.filter(product_id__in=product_list, city=dealer.price_city,
                                              d_status=dealer.dealer_status).only("product_id", "price")
     amount = 0
-
     for price_data in prices:
         product_id = price_data.product_id
         price = price_data.price
@@ -58,3 +60,33 @@ def generate_order_products(product_list, products, dealer):
         })
 
     return result_data
+
+
+def validate_order_before_sending(main_order: MainOrder, products: dict[str:int]) -> bool:
+    main_order_products = main_order.products.all()
+
+    for product in main_order_products:
+        product_id = str(product.ab_product.id)
+
+        if product_id not in products:
+            return False
+
+        if products[product_id] > product.count:
+            return False
+
+    return True
+
+
+def update_main_order_status(main_order: MainOrder):
+    """
+    Update main order status after shipment (sent)
+    """
+    main_order_products_data = main_order.products.aggregate(Sum('count'))
+    if main_order_products_data['count__sum'] > 0:
+        main_order.status = 'partial'
+    else:
+        main_order.status = 'sent'
+
+    main_order.save()
+    return main_order
+
