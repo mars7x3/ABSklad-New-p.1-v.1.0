@@ -31,6 +31,9 @@ class Motivation(models.Model):
     dealers = models.ManyToManyField(DealerProfile, blank=True, related_name='motivations')
     description = models.TextField(blank=True, null=True)
 
+    class Meta:
+        ordering = ('-id',)
+
 
 class MotivationCondition(models.Model):
     STATUS = (

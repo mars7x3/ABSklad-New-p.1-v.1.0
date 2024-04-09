@@ -18,7 +18,8 @@ from one_c.models import MovementProducts
 from order.db_request import query_debugger
 from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile, MainOrder, \
     MainOrderProduct
-from order.utils import get_product_list, order_total_price, order_cost_price, generate_order_products
+from order.utils import get_product_list, order_total_price, order_cost_price, generate_order_products, \
+    validate_order_before_sending, update_main_order_status
 from product.models import AsiaProduct, Collection, Category, ProductCount
 from .permissions import IsWareHouseManager
 from crm_general.paginations import GeneralPurposePagination, ProductPagination
@@ -402,13 +403,17 @@ class OrderPartialSentView(APIView):
         order_id = request.data['order_id']
         products = request.data['products']
         main_order = MainOrder.objects.filter(id=order_id).first()
-        validated_data = create_validated_data(main_order)
-        product_list = get_product_list(products)
-        price = order_total_price(product_list, products, main_order.author)
-        cost_price = order_cost_price(product_list, products)
-        order = MyOrder.objects.create(price=price, cost_price=cost_price, **validated_data)
-        products = generate_order_products(product_list, products, main_order.author)
-        OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
-        minus_count(main_order, products)
+        validated = validate_order_before_sending(main_order, products)
+        if validated:
+            validated_data = create_validated_data(main_order)
+            product_list = get_product_list(products)
+            price = order_total_price(product_list, products, main_order.author)
+            cost_price = order_cost_price(product_list, products)
+            order = MyOrder.objects.create(price=price, cost_price=cost_price, **validated_data)
+            products = generate_order_products(product_list, products, main_order.author)
+            OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
+            minus_count(main_order, products)
+            update_main_order_status(main_order)
 
-        return Response('Success!', status=status.HTTP_200_OK)
+            return Response('Success!', status=status.HTTP_200_OK)
+        return Response('Wrong product count data for an order shipment', status=400)

@@ -14,7 +14,7 @@ from account.models import (
 from account.serializers import BalancePlusFileSerializer
 from crm_general.models import CRMTask
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer, VillageSerializer
-from general_service.models import Stock, PriceType
+from general_service.models import Stock, PriceType, City
 from general_service.serializers import CitySerializer
 from one_c.from_crm import sync_dealer_back_to_1C
 from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, MainOrder, MainOrderProduct, MainOrderReceipt
@@ -416,19 +416,28 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         queryset=PriceType.objects.all(),
         required=False
     )
+    price_city = CitySerializer(many=False, read_only=True)
+    price_city_id = serializers.PrimaryKeyRelatedField(
+        queryset=City.objects.all(),
+        required=False
+    )
 
     class Meta:
         model = DealerProfile
         fields = ("user", "address", "birthday", "village", "dealer_status", "wallet", "stores",
-                  "liability", "dealer_status_id", "price_type", "price_type_id", "motivations")
+                  "liability", "dealer_status_id", "price_type", "price_type_id", "motivations", 'price_city',
+                  'price_city_id')
         user_status = "dealer"
         read_only_fields = ("motivations",)
 
     def validate(self, attrs):
         price_type = attrs.pop("price_type_id", None)
+        price_city = attrs.pop("price_city_id", None)
         attrs['managers'] = [self.context['request'].user]
         if price_type:
             attrs["price_type"] = price_type
+        if price_city:
+            attrs["price_city"] = price_city
         if price_type is None:
             attrs['price_type'] = None
         dealer_status = attrs.pop("dealer_status_id", None)
