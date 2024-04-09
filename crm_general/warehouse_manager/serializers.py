@@ -38,6 +38,7 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
 
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
     return_product_count = serializers.SerializerMethodField(read_only=True)
+    ab_product_title = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = OrderProduct
@@ -51,6 +52,9 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
         if count:
             return count
         return 0
+
+    def get_ab_product_title(self, instance):
+        return instance.ab_product.title
 
 
 class MainOrderListSerializer(serializers.ModelSerializer):
