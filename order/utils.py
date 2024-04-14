@@ -64,15 +64,10 @@ def generate_order_products(product_list, products, dealer):
 
 def validate_order_before_sending(main_order: MainOrder, products: dict[str:int]) -> bool:
     main_order_products = main_order.products.all()
-
     for product in main_order_products:
-        product_id = str(product.ab_product.id)
-
-        if product_id not in products:
-            return False
-
-        if products[product_id] > product.count:
-            return False
+        if str(product.ab_product.id) in products:
+            if products[str(product.ab_product.id)] > product.count:
+                return False
 
     return True
 
@@ -90,3 +85,9 @@ def update_main_order_status(main_order: MainOrder):
     main_order.save()
     return main_order
 
+
+from order.models import MainOrder
+from order.utils import validate_order_before_sending
+main_order = MainOrder.objects.first()
+products = {'328': 2}
+# validate_order_before_sending(main_order, products)

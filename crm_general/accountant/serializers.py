@@ -374,12 +374,14 @@ class InventoryDetailSerializer(serializers.ModelSerializer):
 class ReturnOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReturnOrder
-        fields = '__all__'
+        exclude = ('order',)
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['name'] = instance.order.author.user.name
-        rep['status'] = instance.order.status
+        main_order = instance.order.main_order
+        rep['name'] = main_order.author.user.name
+        rep['status'] = main_order.status
+        rep['main_order'] = main_order.id
         return rep
 
 
@@ -420,7 +422,8 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
 
 class ReturnOrderDetailSerializer(serializers.ModelSerializer):
     products = ReturnOrderProductSerializer(many=True, read_only=True)
-    order = MyOrderDetailSerializer(read_only=True)
+    # order = MyOrderDetailSerializer(read_only=True)
+    main_order = MainOrderDetailSerializer(read_only=True, source='order.main_order')
 
     class Meta:
         model = ReturnOrder
