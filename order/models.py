@@ -141,7 +141,7 @@ class MainOrder(models.Model):
         ordering = ('-created_at',)
 
     def __str__(self):
-        return self.author.user.name
+        return f'{self.id}.{self.author.user.name}'
 
 
 class MainOrderProduct(models.Model):
