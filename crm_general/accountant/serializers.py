@@ -92,6 +92,7 @@ class OrderProductSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['prod_info'] = OrderAsiaProductSerializer(instance.ab_product, context=self.context).data
+        rep['released_at'] = instance.order.released_at if instance.order.released_at else '---'
         return rep
 
 
