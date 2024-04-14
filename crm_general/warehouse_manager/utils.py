@@ -45,6 +45,8 @@ def minus_count(main_order, products):
         d_prod = main_order.products.filter(ab_product=p['ab_product']).first()
         if d_prod:
             d_prod.count -= p['count']
+            if d_prod.count == 0:
+                d_prod.delete()
             update_data.append(d_prod)
 
     MainOrderProduct.objects.bulk_update(update_data, ['count'])
