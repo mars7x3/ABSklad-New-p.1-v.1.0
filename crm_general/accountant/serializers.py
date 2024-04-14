@@ -422,7 +422,6 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
 
 class ReturnOrderDetailSerializer(serializers.ModelSerializer):
     products = ReturnOrderProductSerializer(many=True, read_only=True)
-    # order = MyOrderDetailSerializer(read_only=True)
     main_order = MainOrderDetailSerializer(read_only=True, source='order.main_order')
 
     class Meta:

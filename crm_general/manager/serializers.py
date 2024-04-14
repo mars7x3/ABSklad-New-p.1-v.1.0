@@ -282,6 +282,7 @@ class MainOrderUpdateSerializer(serializers.ModelSerializer):
                 )
 
         if attrs.get("type_status", "") == "wallet":
+            attrs["status"] = "paid"
             price = attrs.get("price") or self.instance.price
 
             if price > wallet.amount_crm:
