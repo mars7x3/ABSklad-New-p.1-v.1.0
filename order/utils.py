@@ -77,17 +77,10 @@ def update_main_order_status(main_order: MainOrder):
     Update main order status after shipment (sent)
     """
     main_order_products_data = main_order.products.aggregate(Sum('count'))
-    if main_order_products_data['count__sum'] > 0:
-        main_order.status = 'partial'
-    else:
+    if main_order_products_data['count__sum'] is None:
         main_order.status = 'sent'
+    elif main_order_products_data['count__sum'] > 0:
+        main_order.status = 'partial'
 
     main_order.save()
     return main_order
-
-
-from order.models import MainOrder
-from order.utils import validate_order_before_sending
-main_order = MainOrder.objects.first()
-products = {'328': 2}
-# validate_order_before_sending(main_order, products)

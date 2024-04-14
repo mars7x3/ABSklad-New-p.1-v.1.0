@@ -309,7 +309,7 @@ class AccountantOrderModerationView(APIView):
                     minus_quantity(order.id, order.stock.id)
                     sync_money_doc_to_1C(order)
 
-                kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}', 'description': order.comment,
+                kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}',
                           'link_id': order.id, 'status': 'order'}
                 Notification.objects.create(**kwargs)
 

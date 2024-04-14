@@ -7,15 +7,16 @@ from product.models import AsiaProduct, ProductPrice, ProductImage, ProductCostP
 
 def order_total_price(product_counts, dealer_status, city=None, price_type=None):
     assert city or price_type
-    filters = dict(product_id__in=list(product_counts), d_status_id=dealer_status)
+    filters = dict(product_id__in=list(product_counts), d_status=dealer_status)
     if price_type:
-        filters['price_type_id'] = price_type
+        filters['price_type'] = price_type
     else:
-        filters['city_id'] = city
+        filters['city'] = city
     prices = (
         ProductPrice.objects.only("product_id", "price")
         .filter(**filters)
     )
+    print(prices)
     return sum([price_obj.price * product_counts[str(price_obj.product_id)] for price_obj in prices])
 
 

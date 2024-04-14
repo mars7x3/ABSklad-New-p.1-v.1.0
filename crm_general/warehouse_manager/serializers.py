@@ -39,6 +39,7 @@ class ReturnOrderProductSerializer(serializers.ModelSerializer):
 class WareHouseOrderProductSerializer(serializers.ModelSerializer):
     return_product_count = serializers.SerializerMethodField(read_only=True)
     ab_product_title = serializers.SerializerMethodField(read_only=True)
+    released_at = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = OrderProduct
@@ -55,6 +56,9 @@ class WareHouseOrderProductSerializer(serializers.ModelSerializer):
 
     def get_ab_product_title(self, instance):
         return instance.ab_product.title
+
+    def get_released_at(self, instance):
+        return instance.order.released_at if instance.order.released_at else '---'
 
 
 class MainOrderListSerializer(serializers.ModelSerializer):
