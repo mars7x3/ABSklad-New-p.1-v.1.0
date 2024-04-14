@@ -775,9 +775,10 @@ class ProductListForOrderSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         user_id = self.context.get('request').query_params.get('user_id')
         dealer = MyUser.objects.get(id=user_id).dealer_profile
-        price = instance.prices.only('price').filter(price_type=dealer.price_type,
-                                                     d_status=dealer.dealer_status).first()
-        if not price:
+        if dealer.price_type:
+            price = instance.prices.only('price').filter(price_type=dealer.price_type,
+                                                         d_status=dealer.dealer_status).first()
+        else:
             price = instance.prices.only('price').filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
         rep['price'] = price.price
         rep['count'] = ProductCountForOrderSerializer(instance.counts, many=True, context=self.context).data
