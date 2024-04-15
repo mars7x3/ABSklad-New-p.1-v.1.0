@@ -95,30 +95,30 @@ class WareHouseMainOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
             return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if order_status == 'sent':
-            if order.status == 'paid':
-                released_at = timezone.localtime().now()
-                order.status = order_status
-                order.released_at = released_at
-                order.save()
-
-                sync_order_to_1C.delay(order.id)
-                main_stat_order_sync(order)
-
-                update_data = []
-                for p in order.order_products.all():
-                    p.is_checked = True
-                    update_data.append(p)
-                OrderProduct.objects.bulk_update(update_data, ['is_checked'])
-
-                minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
-                return Response({'detail': f'Order status successfully changed to {order_status}'},
-
-                                status=status.HTTP_200_OK)
-            return Response({'detail': f'Order status must be "paid" to change to {order_status}'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'detail': 'Incorrect order status'}, status=status.HTTP_400_BAD_REQUEST)
+        # if order_status == 'sent':
+        #     if order.status == 'paid':
+        #         released_at = timezone.localtime().now()
+        #         order.status = order_status
+        #         order.released_at = released_at
+        #         order.save()
+        #
+        #         sync_order_to_1C.delay(order.id)
+        #         main_stat_order_sync(order)
+        #
+        #         update_data = []
+        #         for p in order.order_products.all():
+        #             p.is_checked = True
+        #             update_data.append(p)
+        #         OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+        #
+        #         minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
+        #         return Response({'detail': f'Order status successfully changed to {order_status}'},
+        #
+        #                         status=status.HTTP_200_OK)
+        #     return Response({'detail': f'Order status must be "paid" to change to {order_status}'},
+        #                     status=status.HTTP_400_BAD_REQUEST)
+        #
+        # return Response({'detail': 'Incorrect order status'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class WareHouseProductViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
@@ -414,6 +414,17 @@ class OrderPartialSentView(APIView):
             OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
             minus_count(main_order, products)
             update_main_order_status(main_order)
+
+            sync_order_to_1C.delay(order.id)
+            main_stat_order_sync(order)
+
+            update_data = []
+            for p in order.order_products.all():
+                p.is_checked = True
+                update_data.append(p)
+            OrderProduct.objects.bulk_update(update_data, ['is_checked'])
+
+            minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
 
             return Response('Success!', status=status.HTTP_200_OK)
         return Response('Wrong product count data for an order shipment', status=400)

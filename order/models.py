@@ -136,6 +136,7 @@ class MainOrder(models.Model):
     paid_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    payment_doc_uid = models.CharField(max_length=50, default='00000000-0000-0000-0000-000000000000')
 
     class Meta:
         ordering = ('-created_at',)

@@ -286,9 +286,7 @@ class BalancePlusModerationView(APIView):
 
                 money_doc = MoneyDoc.objects.create(**data)
                 sync_1c_money_doc(money_doc)
-                main_stat_pds_sync(money_doc)
-                money_doc.is_checked = True
-                money_doc.save()
+
             serializer = BalancePlusListSerializer(balance, context=self.get_renderer_context())
             return Response(serializer.data, status=status.HTTP_200_OK)
 
