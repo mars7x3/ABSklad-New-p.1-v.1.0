@@ -108,7 +108,7 @@ class DealerKPIDetailSerializer(serializers.ModelSerializer):
             else:
                 product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
                                                             product_id=p['product'],
-                                                            city=user.dealer_profile.city).first()
+                                                            city=user.dealer_profile.village.city).first()
                 price = product_price.price
 
             if dealer_product:
