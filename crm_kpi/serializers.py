@@ -133,14 +133,15 @@ class DealerKPIProductSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['title'] = instance.product.title
-        price_type = instance.kpi.user.dealer_profile.price_type
-        city = instance.kpi.user.dealer_profile.village.city
-        dealer_status = instance.kpi.user.dealer_profile.dealer_status
+        dealer_profile = instance.kpi.user.dealer_profile
+        price_type = dealer_profile.price_type
+        city = dealer_profile.village.city
+        dealer_status = dealer_profile.dealer_status
         if price_type:
             rep['price_title'] = price_type.title
             rep['price'] = instance.product.prices.filter(price_type=price_type, d_status=dealer_status).first().price
         else:
-            rep['price_title'] = instance.kpi.user.dealer_profile.city.title
+            rep['price_title'] = city.title
             rep['price'] = instance.product.prices.filter(city=city, d_status=dealer_status).first().price
         return rep
 
