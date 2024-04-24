@@ -352,6 +352,17 @@ class MainOrderProductSerializer(serializers.ModelSerializer):
         model = MainOrderProduct
         exclude = ('id', 'order')
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['title'] = instance.ab_product.title
+        rep['total_price'] = instance.count * instance.price
+        image = instance.ab_product.images.first()
+        if image:
+            rep['image'] = self.context['request'].build_absolute_uri(image.image.url)
+        else:
+            rep['image'] = None
+        return rep
+
 
 class MainOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
