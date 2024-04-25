@@ -115,7 +115,7 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
             else:
                 kwargs['prices__price__gte'] = start_price
                 kwargs['prices__d_status'] = dealer.dealer_status
-                kwargs['prices__price_city'] = dealer.price_city
+                kwargs['prices__city'] = dealer.price_city
                 kwargs['prices__price__lte'] = end_price
 
         text = request.query_params.get('text')
@@ -123,7 +123,6 @@ class ProductListView(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(
                 Q(title__icontains=text) | Q(description__icontains=text)
             )
-
         products = queryset.filter(**kwargs)
         page = self.paginate_queryset(products)
         serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
