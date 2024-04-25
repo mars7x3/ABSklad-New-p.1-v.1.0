@@ -483,7 +483,7 @@ class DirectorDealerCRUDView(mixins.CreateModelMixin,
                              mixins.UpdateModelMixin,
                              mixins.DestroyModelMixin,
                              GenericViewSet):
-    permission_classes = [IsAuthenticated, IsDirector]
+    # permission_classes = [IsAuthenticated, IsDirector]
     queryset = MyUser.objects.all()
     serializer_class = DirectorDealerCRUDSerializer
 

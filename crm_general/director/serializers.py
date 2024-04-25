@@ -460,7 +460,7 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['profile'] = DirectorDealerProfileSerializer(instance.dealer_profile, context=self.context).data
-        rep['managers'] = DirectorStaffListSerializer(instance.dealer_profile.managers,
+        rep['managers'] = DirectorStaffListSerializer(instance.dealer_profile.managers.all(),
                                                       many=True, context=self.context).data
 
         return rep
@@ -519,7 +519,7 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
         rep['dealer_status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
         rep['balance_crm'] = instance.wallet.amount_crm
         rep['balance_1c'] = instance.wallet.amount_1c
-        rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores, many=True, context=self.context).data
+        rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores.all(), many=True, context=self.context).data
         return rep
 
 
@@ -530,7 +530,7 @@ class DirectorDealerStoreSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['city_title'] = instance.city
         return rep
 
 
