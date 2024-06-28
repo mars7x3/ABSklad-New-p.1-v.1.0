@@ -2,7 +2,6 @@ import random
 
 import requests
 
-
 # api_key = 'kz8117159b2a1da2d17a9b1dda664a5f4f54f6ada074b7c5dbdd19a85d0fcc5e0211b0'
 # api_url = 'http://api.mobizon.kz/service/message/'
 #
@@ -90,3 +89,37 @@ from account.models import DealerStatus
 # u = MyUser.objects.filter(name__icontains='Асан', status__in=['rop', 'manager', 'marketer',
 #                                                               'accountant', 'warehouse', 'director'])
 
+
+from promotion.models import Motivation, ConditionProduct
+from product.models import AsiaProduct
+
+prods = AsiaProduct.objects.filter(id__in=[305, 308])
+a = Motivation.objects.get(id=32)
+for i in a.conditions.all():
+    for b in i.condition_prods.all():
+        print(b)
+        # for p in prods:
+        #     ConditionProduct.objects.create(condition=b, product=p, count=5)
+
+
+def rounding(n, m):
+    pass
+
+
+from order.models import MainOrder, MyOrder
+
+o = MainOrder.objects.get(id=64)
+
+my_o = MyOrder.objects.create(main_order=o,
+                              author=o.author,
+                              stock=o.stock,
+                              price=o.price,
+                              status='sent',
+                              type_status=o.type_status,
+                              created_at=o.created_at,
+                              paid_at=o.paid_at)
+
+from account.models import MyUser
+
+a = MyUser.objects.filter(username='azat').first()
+a.pwd
