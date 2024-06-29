@@ -42,8 +42,8 @@ http://91.211.251.134/testcrm/hs/asoi/ClientCities метод гетуха Дл�
 
 
 def main_initial_sync():
-    Collection.objects.create(title='ASIABRAND', slug='asiabrand')
-    DealerStatus.objects.create(title='C', is_active=True)
+    # Collection.objects.create(title='ASIABRAND', slug='asiabrand')
+    # DealerStatus.objects.create(title='C', is_active=True)
     cities = [
         City(title='Шымкент', user_uid='a7732ddf-2e71-11ed-8a2f-2c59e53ae4c3',
              slug='shymkent', price_uid='37c308db-1f17-11ee-8a38-2c59e53ae4c2'),
@@ -60,29 +60,37 @@ def main_initial_sync():
         City(title='Атырау', user_uid='8362254b-cb31-11ee-8a3c-2c59e53ae4c1',
              slug='atyrau', price_uid='9cb83a4a-edb7-11ee-8a3d-2c59e53ae4c1'),
     ]
-    villages = [
-        Village(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', slug='234c9704-2446-11ed-8a2f-2c59e53ae4c3'),
-        Village(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', slug='234c9704-2446-11ed-8a2f-2c59e53ae4c3'),
-        Village(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', slug='234c9704-2446-11ed-8a2f-2c59e53ae4c3'),
-        Village(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', slug='234c9704-2446-11ed-8a2f-2c59e53ae4c3'),
-        Village(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', slug='234c9704-2446-11ed-8a2f-2c59e53ae4c3'),
-        Village(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', slug='234c9704-2446-11ed-8a2f-2c59e53ae4c3'),
-        Village(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', slug='234c9704-2446-11ed-8a2f-2c59e53ae4c3'),
-    ]
+    # City.objects.bulk_create(cities)
+    # cities = City.objects.all().values_list('id', 'user_uid', 'title')
+
+    # villages = [Village(city_id=i[0], title=i[-1], user_uid=i[1], slug=i[1]) for i in cities]
+    # Village.objects.bulk_create(villages)
+
     stocks = [
-        Stock(title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', address='ул.ГП'),
-        Stock(title='Шымкент', uid='ef4a379c-2e67-11ed-8a2f-2c59e53ae4c3', address='ул.Шымкент'),
-        Stock(title='Алматы', uid='c10ad4ab-35f9-11ed-8a2f-2c59e53ae4c3', address='ул.Алматы'),
-        Stock(title='Кызылорда', uid='9bf30a33-35fe-11ed-8a2f-2c59e53ae4c3', address='ул.Кызылорда'),
-        Stock(title='Астана', uid='822cb2e2-37fd-11ed-8a2f-2c59e53ae4c3', address='ул.Астана'),
-        Stock(title='Атырау', uid='ab39d4e4-c49e-11ee-8a3c-2c59e53ae4c1', address='ул.Атырау'),
-        Stock(title='Тараз', uid='5310feb3-64c7-11ee-8a3b-2c59e53ae4c3', address='ул.Тараз'),
+        Stock(id=1, title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', address='ул.ГП'),
+        Stock(id=2, title='Шымкент', uid='ef4a379c-2e67-11ed-8a2f-2c59e53ae4c3', address='ул.Шымкент'),
+        Stock(id=3, title='Алматы', uid='c10ad4ab-35f9-11ed-8a2f-2c59e53ae4c3', address='ул.Алматы'),
+        Stock(id=4, title='Кызылорда', uid='9bf30a33-35fe-11ed-8a2f-2c59e53ae4c3', address='ул.Кызылорда'),
+        Stock(id=5, title='Астана', uid='822cb2e2-37fd-11ed-8a2f-2c59e53ae4c3', address='ул.Астана'),
+        Stock(id=6, title='Атырау', uid='ab39d4e4-c49e-11ee-8a3c-2c59e53ae4c1', address='ул.Атырау'),
+        Stock(id=7, title='Тараз', uid='5310feb3-64c7-11ee-8a3b-2c59e53ae4c3', address='ул.Тараз')
     ]
-    # city
-    # stock
-    # cash box
+    # Stock.objects.bulk_create(stocks)
+
+    cash_boxs = [
+        CashBox(title='ГП', uid="695614de-17a7-11ed-8a2f-2c59e53ae4c3", stock_id=1),
+        CashBox(title='Шымкент', uid="1c32c770-2e6f-11ed-8a2f-2c59e53ae4c3", stock_id=2),
+        CashBox(title='Алматы', uid="d20bf82f-35f9-11ed-8a2f-2c59e53ae4c3", stock_id=3),
+        CashBox(title='Кызылорда', uid="b03691ed-35fe-11ed-8a2f-2c59e53ae4c3", stock_id=4),
+        CashBox(title='Астана', uid="a10b939d-37fd-11ed-8a2f-2c59e53ae4c3", stock_id=5),
+        CashBox(title='Атырау', uid="f148f0ec-cb31-11ee-8a3c-2c59e53ae4c1", stock_id=6),
+        CashBox(title='Тараз', uid="2d37a413-3660-11ed-8a2f-2c59e53ae4c3", stock_id=7)
+
+    ]
+    # CashBox.objects.bulk_create(cash_boxs)
+
     # sync_categories()
-    # sync_prods_list()
+    sync_prods_list()
     # sync_dealer()
     # sync_order_histories_1c_to_crm()
     # sync_pay_doc_histories()
@@ -102,19 +110,22 @@ def sync_categories():
                             auth=(config('SYNC_1C_USERNAME').encode('utf-8'), config('SYNC_1C_PWD').encode('utf-8')))
     categories = json.loads(response.content).get('products')
 
-    categories_data = set()
+    categories_data = []
+    unique_check = set()
+
     for c in categories:
-        categories_data.add(
-            {
-                'uid': c['CategoryUID'],
-                'title': c['CategoryName'],
-                'slug': c['CategoryUID']
-            }
-        )
+        data = {
+            'uid': c['CategoryUID'],
+            'title': c['CategoryName'],
+            'slug': c['CategoryUID']
+        }
+        data_tuple = (data['uid'], data['title'], data['slug'])
+        if data_tuple not in unique_check:
+            unique_check.add(data_tuple)
+            categories_data.append(data)
     Category.objects.bulk_create([Category(**data) for data in categories_data])
 
 
-@app.task
 def sync_prods_list():
     response = requests.get(config('SYNC_1C_BASE_URL') + 'leftovers',
                             auth=(config('SYNC_1C_USERNAME').encode('utf-8'), config('SYNC_1C_PWD').encode('utf-8')))
@@ -131,7 +142,7 @@ def sync_prods_list():
     product_create_list = []
     product_cost_price_list = []
     product_count_list = []
-    prod_price_list = []
+    product_price_list = []
 
     product_id = get_next_id(AsiaProduct)
     for p in products:
@@ -142,47 +153,50 @@ def sync_prods_list():
                         id=product_id,
                         uid=p.get('NomenclatureUID'),
                         title=p.get('NomenclatureName'),
-                        category=category_id,
-                        collection=collection_id)
+                        category_id=category_id,
+                        collection_id=collection_id)
                 )
-                product_cost_price_list.append(ProductCostPrice(product=product_id))
+                product_cost_price_list.append(ProductCostPrice(product_id=product_id))
 
-                product_count_list += [ProductCount(stock=s, product=product_id) for s in stocks]
+                product_count_list += [ProductCount(stock_id=s, product_id=product_id) for s in stocks]
 
-                product_prices = []
                 for dealer_status in dealer_statuses:
                     for price_type in price_types:
-                        product_prices.append(
+                        product_price_list.append(
                             ProductPrice(
-                                price_type=price_type, product=product_id,
-                                d_status=dealer_status
+                                price_type_id=price_type, product_id=product_id,
+                                d_status_id=dealer_status
                             )
                         )
                     for city in cities:
-                        product_prices.append(
+                        product_price_list.append(
                             ProductPrice(
-                                city=city, product=product_id,
-                                d_status=dealer_status
+                                city_id=city, product_id=product_id,
+                                d_status_id=dealer_status
                             )
                         )
-                ProductPrice.objects.bulk_create(product_prices)
-
-                for c in p.get('Prices'):
-                    for price_city_uid, price_city_id in price_cities.items():
-                        if price_city_uid == c['PricetypesUID']:
-                            prod_price = ProductPrice.objects.filter(
-                                city_id=price_city_id,
-                                product_id=product_id
-                            ).first()
-                            amount = int(c.get('PriceAmount'))
-                            prod_price.price = amount
-                            prod_price_list.append(prod_price)
-                            break
+                product_id += 1
                 break
 
-    AsiaProduct.objects.bulk_create(product_create_list)
-    ProductCostPrice.objects.bulk_create(product_cost_price_list)
-    ProductCount.objects.bulk_create(product_count_list)
+    # AsiaProduct.objects.bulk_create(product_create_list)
+    # ProductCostPrice.objects.bulk_create(product_cost_price_list)
+    # ProductPrice.objects.bulk_create(product_price_list)
+    # ProductCount.objects.bulk_create(product_count_list)
+
+    prod_price_list = []  # TODO: тут переделать осталось
+    for p in products:
+        for c in p.get('Prices'):
+            for price_city_uid, price_city_id in price_cities.items():
+                if price_city_uid == c['PricetypesUID']:
+                    prod_price = ProductPrice.objects.filter(
+                        city_id=price_city_id,
+                        product_id=product_id
+                    ).first()
+                    amount = int(c.get('PriceAmount'))
+                    prod_price.price = amount
+                    prod_price_list.append(prod_price)
+                    break
+
     ProductPrice.objects.bulk_update(prod_price_list, ['price'])
 
 
@@ -216,7 +230,7 @@ def sync_dealer():
                 )
                 profile_list.append(
                     DealerProfile(
-                        user=user_id,
+                        user_id=user_id,
                         dealer_status=dealer_status,
                         price_city=city_id,
                     )
