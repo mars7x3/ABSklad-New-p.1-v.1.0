@@ -21,7 +21,7 @@ class City(models.Model):
 class Village(models.Model):
     city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='villages')
     title = models.CharField(max_length=20)
-    slug = models.SlugField(max_length=30, unique=True)
+    slug = models.SlugField(max_length=40, unique=True)
     user_uid = models.CharField(max_length=40, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_show = models.BooleanField(default=True)
