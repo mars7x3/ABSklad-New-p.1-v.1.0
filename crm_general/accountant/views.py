@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from account.models import DealerProfile, MyUser, Wallet, BalancePlus, Notification
+from account.utils import send_push_notification
 from crm_general.accountant.permissions import IsAccountant
 from crm_general.accountant.serializers import MainOrderListSerializer, MainOrderDetailSerializer, \
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
@@ -272,6 +273,12 @@ class BalancePlusModerationView(APIView):
             balance.is_success = is_success
             balance.is_moderation = True
             balance.save()
+            kwargs = {
+                "tokens": [balance.dealer.user.firebase_token],
+                "title": f"Заявка на пополнение #{balance_id}",
+                'link_id': balance_id,
+                "status": "balance"
+            }
             if balance.is_success:
                 data = {
                     "status": type_status,
@@ -286,6 +293,12 @@ class BalancePlusModerationView(APIView):
 
                 money_doc = MoneyDoc.objects.create(**data)
                 sync_1c_money_doc(money_doc)
+
+                kwargs['text'] = "Заявка на пополнение одобрено!",
+
+            else:
+                kwargs['text'] = "Заявка на пополнение отклонено.",
+            send_push_notification(**kwargs)  # TODO: delay() add here
 
             serializer = BalancePlusListSerializer(balance, context=self.get_renderer_context())
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -303,15 +316,27 @@ class AccountantOrderModerationView(APIView):
                 order = MainOrder.objects.get(id=order_id)
                 order.status = order_status
                 order.save()
-                if order.status == 'paid':
+                kwargs = {
+                    "tokens": [order.author.user.firebase_token],
+                    "title": f"Заказ #{order_id}",
+                    'link_id': order_id,
+                    "status": "order"
+                }
+                if order_status == 'paid':
                     minus_quantity(order.id, order.stock.id)
                     sync_money_doc_to_1C(order)
+                    kwargs["text"] = "Ваш заказ оплачен!",
+                else:
+                    kwargs["text"] = "Ваша оплата заказа не успешна.",
+
+                send_push_notification(**kwargs)  # TODO: delay() add here
 
                 kwargs = {'user': order.author.user, 'title': f'Заказ #{order.id}',
                           'link_id': order.id, 'status': 'order'}
                 Notification.objects.create(**kwargs)
 
                 return Response({'status': 'OK', 'text': 'Success!'}, status=status.HTTP_200_OK)
+
             return Response({'status': 'Error', 'text': 'Permission denied!'}, status=status.HTTP_403_FORBIDDEN)
         return Response({'status': 'Error', 'text': 'order_id required!'}, status=status.HTTP_400_BAD_REQUEST)
 

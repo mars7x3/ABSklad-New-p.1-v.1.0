@@ -239,7 +239,6 @@ def create_notifications_for_users(crm_status, link_id=None):
         Notification.objects.bulk_create(notification_to_create)
         crm_notif.is_pushed = True
         crm_notif.save()
-        print('Discount notifications were created')
 
 
 def remove_product_from_banner_story(product: AsiaProduct):

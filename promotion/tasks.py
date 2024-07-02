@@ -1,6 +1,7 @@
 from django.utils import timezone
 
 from absklad_commerce.celery import app
+from account.utils import send_push_notification
 from crm_general.utils import create_notifications_for_users
 from promotion.utils import calculate_discount
 from general_service.models import PriceType, City
@@ -85,6 +86,14 @@ def activate_discount():
                         )
                     )
         create_notifications_for_users(crm_status='action', link_id=discount.id)
+        kwargs = {
+            "tokens": [discount.dealer_profiles.all().values_list('user__firebase_token', flat=True)],
+            "title": f"Акция",
+            'text': f"{discount.title}",
+            'link_id': discount.id,
+            "status": "action"
+        }
+        send_push_notification(**kwargs)  # TODO: delay() add here
 
     DiscountPrice.objects.bulk_create(discount_prices_to_create)
     AsiaProduct.objects.bulk_update(products_to_update, fields=['is_discount'])

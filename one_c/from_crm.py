@@ -20,8 +20,6 @@ from product.models import AsiaProduct, Category, ProductCount, ProductPrice, Co
 
 
 def sync_category_crm_to_1c(category):
-    print("<--======= CATEGORY sync =======-->")
-
     url = "http://91.211.251.134/testcrm/hs/asoi/CategoryGoodsCreate"
     payload = json.dumps({
         "NomenclatureName": '',
@@ -35,10 +33,8 @@ def sync_category_crm_to_1c(category):
 
     username = 'Директор'
     password = '757520ля***'
-    print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
                                 timeout=120)
-    print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('category_uid')
 
@@ -47,8 +43,6 @@ def sync_category_crm_to_1c(category):
 
 
 def sync_product_crm_to_1c(product):
-    print("<--======= PRODUCT sync =======-->")
-
     url = "http://91.211.251.134/testcrm/hs/asoi/GoodsCreate"
     payload = json.dumps({
         "NomenclatureName": product.title,
@@ -61,11 +55,8 @@ def sync_product_crm_to_1c(product):
     })
     username = 'Директор'
     password = '757520ля***'
-    print('***PRODUCT SYNC***')
-    print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
                                 timeout=120)
-    print(response.text)
     response_data = json.loads(response.content)
     product_uid = response_data.get('NomenclatureUID')
     product.uid = product_uid
@@ -73,8 +64,6 @@ def sync_product_crm_to_1c(product):
 
 
 def sync_dealer_back_to_1C(dealer):
-    print("<--======= DEALER sync =======-->")
-
     username = 'Директор'
     password = '757520ля***'
     url = "http://91.211.251.134/testcrm/hs/asoi/clients"
@@ -93,11 +82,8 @@ def sync_dealer_back_to_1C(dealer):
             'CityUID': profile.village.city.user_uid if profile.village else '00000000-0000-0000-0000-000000000000',
         }]})
 
-    print('***DEALER SYNC***')
-    print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
                                 timeout=120)
-    print(response.text)
     response_data = json.loads(response.content)
 
     dealer_uid = response_data.get('client')
@@ -107,8 +93,6 @@ def sync_dealer_back_to_1C(dealer):
 
 
 def sync_1c_money_doc(money_doc):
-    print("<--======= MONEY sync =======-->")
-
     url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
     if 'Нал' == money_doc.status:
         type_status = 'Наличка'
@@ -126,13 +110,10 @@ def sync_1c_money_doc(money_doc):
         "uid": "00000000-0000-0000-0000-000000000000"
     })
 
-    print('***Sync_order_pay_to_1C: ', payload)
-
     username = 'Директор'
     password = '757520ля***'
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'), password.encode('utf-8')),
                                 timeout=120)
-    print('return - ', response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
 
@@ -144,8 +125,6 @@ def sync_1c_money_doc(money_doc):
 
 
 def sync_money_doc_to_1C(order):
-    print("<--======= MONEY sync =======-->")
-
     url = "http://91.211.251.134/testcrm/hs/asoi/CreateaPyment"
     if 'cash' == order.type_status or order.type_status == 'kaspi':
         type_status = 'Наличка'
@@ -166,12 +145,10 @@ def sync_money_doc_to_1C(order):
         "uid": "00000000-0000-0000-0000-000000000000"
     })
 
-    print('sync_order_pay_to_1C: ', payload)
     username = 'Директор'
     password = '757520ля***'
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
                                                                  password.encode('utf-8')), timeout=120)
-    print('1C return - ', response.text)
 
     response_data = json.loads(response.content)
     payment_doc_uid = response_data.get('result_uid')
@@ -191,7 +168,6 @@ def sync_money_doc_to_1C(order):
 @app.task
 def sync_order_to_1C(order_id):
     order = MyOrder.objects.get(id=order_id)
-    print("<--======= ORDER sync =======-->")
 
     url = "http://91.211.251.134/testcrm/hs/asoi/CreateSale"
     products = order.order_products.all()
@@ -216,10 +192,8 @@ def sync_order_to_1C(order_id):
     username = 'Директор'
     password = '757520ля***'
 
-    print(payload)
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
                                                                  password.encode('utf-8')), timeout=120)
-    print(response.text)
     response_data = json.loads(response.content)
 
     uid = response_data.get('result_uid')
@@ -241,10 +215,8 @@ def sync_stock_1c_2_crm(stock):
 
     username = 'Директор'
     password = '757520ля***'
-    print(payload)
     response = requests.request("POST", url, data=payload,
                                 auth=(username.encode('utf-8'), password.encode('utf-8')), timeout=120)
-    print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
     stock.uid = uid
@@ -252,8 +224,6 @@ def sync_stock_1c_2_crm(stock):
 
 
 def sync_inventory_crm_2_1c(inventory):
-    print("<--======= INVENTORY sync =======-->")
-
     url = 'http://91.211.251.134/testcrm/hs/asoi/CreateInventory'
     username = 'Директор'
     password = '757520ля***'
@@ -272,10 +242,8 @@ def sync_inventory_crm_2_1c(inventory):
         ]
     })
 
-    print(data)
     response = requests.request("POST", url, data=data, auth=(username.encode('utf-8'), password.encode('utf-8')),
                                 timeout=120)
-    print(response.text)
     response_data = json.loads(response.content)
     uid = response_data.get('result_uid')
     inventory.uid = uid
@@ -283,8 +251,6 @@ def sync_inventory_crm_2_1c(inventory):
 
 
 def sync_return_order_to_1C(return_order):
-    print("<--======= RETURN sync =======-->")
-
     url = "http://91.211.251.134/testcrm/hs/asoi/ReturnGoods"
     products = return_order.products.all()
 
@@ -301,9 +267,7 @@ def sync_return_order_to_1C(return_order):
             for p in products
         ]
     })
-    print(payload)
     username = 'Директор'
     password = '757520ля***'
     response = requests.request("POST", url, data=payload, auth=(username.encode('utf-8'),
                                                                  password.encode('utf-8')), timeout=120)
-    print(response.text)

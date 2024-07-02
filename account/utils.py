@@ -31,9 +31,7 @@ def send_code_to_phone(phone, text):
     }
     # Отправка SMS
     api_url = api_url + f'?recipient={phone}&text={text}&apiKey={api_key}'
-    print(api_url)
     response = requests.get(api_url, params=params)
-    print(response.json())
 
 
 def generate_pwd() -> str:
@@ -42,28 +40,30 @@ def generate_pwd() -> str:
     return password
 
 
-def send_push_notification(users, title, text, link_id, status):
+def send_push_notification(tokens: [], title: str, text: str, link_id: int, status: str):
     url = "https://fcm.googleapis.com/fcm/send"
-    tokens = [user.firebase_token for user in users]
-    payload = json.dumps({
-      "registration_ids": tokens,
-      "notification": {
-          "title": title,
-          "body": text,
-          "payload": {
-              "id": link_id,
-              "status": status
-          }
-      }
+    data = json.dumps({
+        "registration_ids": tokens,
+        "notification": {
+            "title": title,
+            "body": text,
+            "payload": {
+                'id': link_id,
+                "status": status
+            }
+        }
     })
     headers = {
         'Authorization': f'key={config("SECRET_KEY")}',
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=data)
 
-    print(response.text)
+    if response.status_code == 200:
+        pass
+    else:
+        print(f"Failed to send push notification. Status code: {response.status_code}")
 
 
 def sync_balance_history(data, type_status):
@@ -88,11 +88,9 @@ def sync_balance_history(data, type_status):
 
     history = BalanceHistory.objects.filter(status=type_status, action_id=data.id).first()
     if history:
-        pprint(validated_data)
         for key, value in validated_data.items():
             setattr(history, key, value)
         history.save()
-        print(history.is_active)
     else:
         BalanceHistory.objects.create(**validated_data)
 
