@@ -11,6 +11,7 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelV
 from rest_framework.permissions import IsAuthenticated
 
 from account.models import MyUser
+from account.utils import send_push_notification
 from crm_kpi.utils import update_dealer_kpi_by_order
 from crm_stat.tasks import main_stat_order_sync
 from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
@@ -89,6 +90,15 @@ class WareHouseMainOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
                 order.status = 'paid'
                 order.save()
                 sync_money_doc_to_1C(order)
+                kwargs = {
+                    "tokens": [order.author.user.firebase_token],
+                    "title": f"Заказ #{order_id}",
+                    'text': "Ваш заказ оплачен!",
+                    'link_id': order_id,
+                    "status": "order"
+                }
+
+                send_push_notification(**kwargs)  # TODO: delay() add here
 
                 return Response({'detail': 'Order type status successfully changed to "paid"'},
                                 status=status.HTTP_200_OK)
@@ -425,6 +435,15 @@ class OrderPartialSentView(APIView):
             OrderProduct.objects.bulk_update(update_data, ['is_checked'])
 
             minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
+
+            kwargs = {
+                "tokens": [order.author.user.firebase_token],
+                "title": f"Заказ #{order_id}",
+                'text': "Ваш заказ отгружен!",
+                'link_id': order_id,
+                "status": "order"
+            }
+            send_push_notification(**kwargs)  # TODO: delay() add here
 
             return Response('Success!', status=status.HTTP_200_OK)
         return Response('Wrong product count data for an order shipment', status=400)

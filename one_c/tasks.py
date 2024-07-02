@@ -12,7 +12,6 @@ from product.models import ProductCount, AsiaProduct
 
 @app.task
 def sync_balance_1c_to_crm():
-    print('***sync_balance_1c_to_crm***')
     url = "http://91.211.251.134/testcrm/hs/asoi/Balance"
     username = 'Директор'
     password = '757520ля***'
@@ -48,12 +47,10 @@ def sync_balance_1c_to_crm():
 
     Wallet.objects.bulk_update([Wallet(**data) for data in update_data], ['amount_1c', 'amount_crm'])
     b = datetime.datetime.now() - a
-    print(b)
 
 
 @app.task
 def sync_product_count():
-    print("***START SYNC PRODUCT COUNT***")
     url = 'http://91.211.251.134/testcrm/hs/asoi/leftovers'
     username = 'Директор'
     password = '757520ля***'
@@ -119,7 +116,6 @@ def sync_product_count():
     ProductCount.objects.bulk_update(updated_warehouses, fields=['count_1c', 'count_order', 'count_crm'])
 
     end_time = datetime.datetime.now()
-    print("***END SYNC PRODUCT COUNT***", end_time - start_time)
 
 
 
