@@ -11,25 +11,13 @@ from notification.models import Subscription
 logger = getLogger(__name__)
 
 
-def send_web_push(subscriber_info, message_body):
-    try:
-        webpush(
-            subscription_info=subscriber_info,
-            data=message_body,
-            vapid_private_key=settings.VAPID_PRIVATE,
-            vapid_claims={"sub": f"mailto:{settings.WEB_PUSH_EMAIL}"}
-        )
-    except WebPushException as ex:
-        logger.error(ex)
-
-
 def send_web_push_notification(user_id: int, title: str, msg: str = None, data=None, message_type: str = None):
     subscribers = Subscription.objects.filter(user_id=user_id)
 
     if not subscribers.exists():
         raise Exception(f"Subscriptions for user {user_id} not found")
 
-    subscribers = subscribers.values_list("subscription_info", flat=True)
+    subscribers = subscribers.values_list("id", "subscription_info")
 
     msg_data = {
         "title": title,
@@ -39,8 +27,24 @@ def send_web_push_notification(user_id: int, title: str, msg: str = None, data=N
         "message_type": message_type
     }
 
-    for subscriber_info in subscribers:
-        send_web_push(subscriber_info, json.dumps(msg_data))
+    to_delete = []
+
+    for subscriber_id, subscriber_info in subscribers:
+        try:
+            webpush(
+                subscription_info=subscriber_info,
+                data=json.dumps(msg_data),
+                vapid_private_key=settings.VAPID_PRIVATE,
+                vapid_claims={"sub": f"mailto:{settings.WEB_PUSH_EMAIL}"}
+            )
+        except WebPushException as ex:
+            logger.error(ex)
+
+            if ex.response.status_code == 410:
+                to_delete.append(subscriber_id)
+
+    if to_delete:
+        Subscription.objects.fitler(id__in=to_delete).delete()
 
 
 def generate_vapid_keys():
