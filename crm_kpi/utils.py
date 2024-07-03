@@ -310,8 +310,6 @@ def kpi_sch_2lvl(date: datetime):
             per_done_avg_price = round(fact_avg_price / avg_price * 100)
         else:
             per_done_avg_price = 0
-        print('4')
-
 
 
 #         kpis = (

@@ -112,14 +112,7 @@ class MyOrderCreateSerializer(serializers.ModelSerializer):
         OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products])
 
         create_order_notification(order.id)  # TODO: delay() add here
-        kwargs = {
-            "users": [order.author.user],
-            "title": f"Заказ #{order.id}",
-            "text": "Ваш заказ успешно создан.",
-            "link_id": f"{order.id}",
-            "status": "order"
-        }
-        send_push_notification(**kwargs)  # TODO: delay() add here
+
         return order
 
 

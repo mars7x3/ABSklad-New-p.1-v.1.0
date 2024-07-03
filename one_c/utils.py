@@ -75,8 +75,6 @@ def sync_prod_crud_1c_crm(data):  # sync product 1C -> CRM
     if data.get('products'):
         return
 
-    print('***Product CRUD***')
-    print(data)
     dealer_statuses = DealerStatus.objects.all()
     cities = City.objects.all()
     p_types = PriceType.objects.all()
@@ -123,10 +121,8 @@ def sync_1c_money_doc_crud(data):
     cash_box = CashBox.objects.filter(uid=data.get('kassa')).first()
 
     if not user:
-        print('Контрагент не существует')
         return False, 'Контрагент не существует'
     if not cash_box and data.get('doc_type') != 'Без нал':
-        print('Касса не существует')
         return False, 'Касса не существует'
     if money_doc:
         is_check = False
@@ -142,12 +138,9 @@ def sync_1c_money_doc_crud(data):
         if is_check:
             money_doc.is_checked = False
             money_doc.save()
-            print('Check stat')
             main_stat_pds_sync(money_doc)
-            print('End Check stat')
             money_doc.is_checked = True
             money_doc.save()
-            print(money_doc.is_checked)
 
     else:
         data = {
@@ -160,12 +153,9 @@ def sync_1c_money_doc_crud(data):
             'created_at': datetime.datetime.strptime(data.get('created_at'), '%Y-%m-%dT%H:%M:%S')
         }
         money_doc = MoneyDoc.objects.create(**data)
-        print('Check stat')
         main_stat_pds_sync(money_doc)
-        print('End Check stat')
         money_doc.is_checked = True
         money_doc.save()
-        print(money_doc.is_checked)
 
     return True, 'Success!'
 
@@ -281,18 +271,13 @@ def order_1c_to_crm(data):
                     p.is_checked = False
                     update_data.append(p)
                 OrderProduct.objects.bulk_update(update_data, ['is_checked'])
-                print("START Check")
                 main_stat_order_sync(order)
-                print("END Check")
 
                 update_data = []
                 for p in order.order_products.all():
                     p.is_checked = True
                     update_data.append(p)
                 OrderProduct.objects.bulk_update(update_data, ['is_checked'])
-
-                for i in order.order_products.all():
-                    print(i.is_checked)
 
         else:
             # create order
@@ -302,17 +287,13 @@ def order_1c_to_crm(data):
             OrderProduct.objects.bulk_create([OrderProduct(order=order, **i) for i in products_data])
             minus_quantity(order)
 
-            print("START Check")
             main_stat_order_sync(order)
-            print("END Check")
 
             update_data = []
             for p in order.order_products.all():
                 p.is_checked = True
                 update_data.append(p)
             OrderProduct.objects.bulk_update(update_data, ['is_checked'])
-            for i in order.order_products.all():
-                print(i.is_checked)
 
             kwargs = {'user': user, 'title': f'Заказ #{order.id}', 'description': "Заказ успешно создан.",
                       'link_id': order.id, 'status': 'order', 'is_push': True}
@@ -428,11 +409,9 @@ def sync_1c_prod_price_crud(data):
 
 def sync_1c_inventory_crud(data):
     stock = Stock.objects.filter(uid=data.get('cityUID')).first()
-    print(stock.title)
     if not stock:
         return False, 'Stock не найден!'
     sender = stock.warehouse_profiles.filter(user__is_active=True).first()
-    print(sender)
 
     inventory_data = {
         'uid': 'd4c3a57d-bfa4-11ee-8a3c-2c59e53ae4c1',

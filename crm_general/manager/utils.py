@@ -16,7 +16,6 @@ def order_total_price(product_counts, dealer_status, city=None, price_type=None)
         ProductPrice.objects.only("product_id", "price")
         .filter(**filters)
     )
-    print(prices)
     return sum([price_obj.price * product_counts[str(price_obj.product_id)] for price_obj in prices])
 
 
