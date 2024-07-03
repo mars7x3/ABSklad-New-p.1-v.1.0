@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django_filters',
     'django_celery_beat',
 
+    'notification',
     'mongo_logger',
     'account',
     'one_c',
@@ -109,14 +110,8 @@ DATABASES = {
 REDIS_HOST = config("REDIS_HOST", default='localhost')
 REDIS_PASSWORD = config("REDIS_PASSWORD", default='')
 REDIS_PORT = config("REDIS_PORT", default=6379)
-REDIS_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/'
+REDIS_URL = f'redis://default:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/'
 
-CACHES = {
-    'default': {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL + '0',
-    }
-}
 
 CHANNEL_LAYERS = {
     "default": {
@@ -172,7 +167,7 @@ USE_TZ = True
 USE_DEPRECATED_PYTZ = True
 
 STATIC_URL = '/static-files/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = BASE_DIR / 'static'
 
 MEDIA_URL = '/media-files/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -311,3 +306,29 @@ KPI_INCREASE_THRESHOLD = 0.2
 SERVER_URL = "http://81.31.197.124/"
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 3000000
+
+ONE_C_USERNAME = config("ONE_C_USERNAME")
+ONE_C_PASSWORD = config("ONE_C_PASSWORD")
+
+ONE_C_TASK_DATA_EXPIRE = 604800  # 7 days
+ONE_C_TASK_DATA_PREFIX = "one-c-task"
+ONE_C_TASK_CACHE = "one_c"
+
+CACHES = {
+    'default': {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL + '0',
+    },
+    ONE_C_TASK_CACHE: {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL + '1',
+    }
+}
+
+NOTIFICATION_ICON = 'http://80.85.141.182/favicon.ico'
+WEB_PUSH_EMAIL = config("WEB_PUSH_EMAIL")
+
+VAPID_PRIVATE = BASE_DIR / 'private.pem'
+VAPID_PUBLIC = BASE_DIR / 'public.pem'
+VAPID_PUBLIC_BASE64 = BASE_DIR / 'public_base64.txt'
+ONE_C_TASK_URL = "http://80.85.141.182/tasks/%s"

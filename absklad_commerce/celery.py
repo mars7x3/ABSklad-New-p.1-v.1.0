@@ -78,3 +78,4 @@ app.conf.beat_schedule = {
 }
 
 app.conf.timezone = settings.TIME_ZONE
+app.conf.update(result_extended=True)

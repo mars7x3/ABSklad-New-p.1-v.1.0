@@ -1,11 +1,19 @@
-from django.urls import path, include
+from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from .views import *
 
+from one_c import task_views
+
 router = DefaultRouter()
 
-urlpatterns = [
+one_c_task_urlpatterns = [
+    path('crm/user-tasks/', task_views.tasks_list_view, name="one-c-tasks-list"),
+    re_path("^crm/user-tasks/(?P<task_key>.+)/detail/$", task_views.task_detail_view, name="one-c-tasks-detail"),
+    re_path("^crm/user-tasks/(?P<task_key>.+)/remove/$", task_views.task_destroy_view, name="one-c-tasks-destroy"),
+    re_path("^crm/user-tasks/(?P<task_key>.+)/repeat/$", task_views.task_repeat_view, name="one-c-tasks-repeat"),
+]
 
+urlpatterns = [
     path('crm/sync/1c-to-crm/', SyncProductCRUDView.as_view()),  # product crud
     path('crm/1c/sync/category/', SyncCategoryCRUDView.as_view()),  # category crud
     path('crm/sync/dealer/1c-to-crm/', SyncDealerCRUDView.as_view()),  # dealer crud
@@ -21,4 +29,4 @@ urlpatterns = [
     path('crm/1c/sync/return/', SyncReturnCRUDView.as_view()),
 
     path('', include(router.urls)),
-]
+] + one_c_task_urlpatterns

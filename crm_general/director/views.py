@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile, WarehouseProfile
+from crm_general.director.one_c_serializers import ValidateProductSerializer
 from crm_general.director.permissions import IsDirector
 from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSerializer, BalanceHistoryListSerializer, \
     DirectorProductListSerializer, DirectorCollectionListSerializer, CollectionCategoryListSerializer, \
@@ -30,9 +31,8 @@ from crm_kpi.models import DealerKPI
 
 from general_service.models import Stock, City, PriceType
 from crm_general.views import CRMPaginationClass
-from one_c.from_crm import sync_category_crm_to_1c
+from one_c import sync_tasks, task_views
 from one_c.models import MoneyDoc
-from order.db_request import query_debugger
 from order.models import MyOrder, CartProduct
 from product.models import ProductPrice, AsiaProduct, Collection, Category, ProductCostPrice
 from promotion.models import Discount, Motivation
@@ -1028,17 +1028,25 @@ class DealerStatusModelViewSet(viewsets.ModelViewSet):
     serializer_class = DirectorDealerStatusSerializer
 
 
-class DirectorCategoryModelViewSet(viewsets.ModelViewSet):
+class DirectorCategoryModelViewSet(task_views.OneCModelView):
     queryset = Category.objects.all()
-    permission_classes = [IsAuthenticated, IsDirector]
+    permission_classes = [IsAuthenticated]
     serializer_class = DirectorCategorySerializer
+    create_task = sync_tasks.task_create_category
+    update_task = sync_tasks.task_update_category
+    delete_task = sync_tasks.task_delete_category
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        sync_category_crm_to_1c(instance)
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+
+class DirectorSyncTaskProductView(
+    task_views.OneCUpdateTaskMixin,
+    task_views.OneCDestroyTaskMixin,
+    task_views.OneCTaskGenericViewSet
+):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = AsiaProduct.objects.all()
+    serializer_class = ValidateProductSerializer
+    update_task = sync_tasks.task_update_product
+    delete_task = sync_tasks.task_delete_product
 
 
 class DirectorNotificationView(APIView):
@@ -1052,4 +1060,3 @@ class DirectorNotificationView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
-
