@@ -6,11 +6,11 @@ from one_c import task_views
 
 router = DefaultRouter()
 
-one_c_task_urlpatterns = [
-    path('crm/user-tasks/', task_views.tasks_list_view, name="one-c-tasks-list"),
-    re_path("^crm/user-tasks/(?P<task_key>.+)/detail/$", task_views.task_detail_view, name="one-c-tasks-detail"),
-    re_path("^crm/user-tasks/(?P<task_key>.+)/remove/$", task_views.task_destroy_view, name="one-c-tasks-destroy"),
-    re_path("^crm/user-tasks/(?P<task_key>.+)/repeat/$", task_views.task_repeat_view, name="one-c-tasks-repeat"),
+notifications_urlpatterns = [
+    path('crm/notifications/', task_views.tasks_list_view, name="one-c-tasks-list"),
+    re_path("^crm/notifications/(?P<task_key>.+)/detail/$", task_views.task_detail_view, name="one-c-tasks-detail"),
+    re_path("^crm/notifications/(?P<task_key>.+)/remove/$", task_views.task_destroy_view, name="one-c-tasks-destroy"),
+    re_path("^crm/notifications/(?P<task_key>.+)/repeat/$", task_views.task_repeat_view, name="one-c-tasks-repeat"),
 ]
 
 urlpatterns = [
@@ -29,4 +29,11 @@ urlpatterns = [
     path('crm/1c/sync/return/', SyncReturnCRUDView.as_view()),
 
     path('', include(router.urls)),
-] + one_c_task_urlpatterns
+] + notifications_urlpatterns
+
+"""
+list - /api/v1/crm/notifications/
+detail - /api/v1/crm/notifications/<task_key>/detail/
+delete - /api/v1/crm/notifications/<task_key>/remove/
+repeat - /api/v1/crm/notifications/<task_key>/repeat/
+"""
