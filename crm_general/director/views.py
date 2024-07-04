@@ -478,22 +478,22 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
         return paginator.get_paginated_response(serializer)
 
 
-class DirectorDealerCRUDView(task_views.OneCCreateTaskMixin,
-                             mixins.RetrieveModelMixin,
-                             task_views.OneCUpdateTaskMixin,
-                             mixins.DestroyModelMixin,
-                             task_views.OneCTaskGenericViewSet):
-    permission_classes = [IsAuthenticated, IsDirector]
-    queryset = MyUser.objects.all()
-    serializer_class = DirectorDealerCRUDSerializer
-    create_task = sync_tasks.task_create_dealer
-    update_task = sync_tasks.task_update_dealer
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.is_active = not instance.is_active
-        instance.save()
-        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+# class DirectorDealerCRUDView(task_views.OneCCreateTaskMixin,
+#                              mixins.RetrieveModelMixin,
+#                              task_views.OneCUpdateTaskMixin,
+#                              mixins.DestroyModelMixin,
+#                              task_views.OneCTaskGenericViewSet):
+#     permission_classes = [IsAuthenticated, IsDirector]
+#     queryset = MyUser.objects.all()
+#     serializer_class = DirectorDealerCRUDSerializer
+#     create_task = sync_tasks.task_create_dealer
+#     update_task = sync_tasks.task_update_dealer
+#
+#     def destroy(self, request, *args, **kwargs):
+#         instance = self.get_object()
+#         instance.is_active = not instance.is_active
+#         instance.save()
+#         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
 class DirectorBalanceHistoryListView(APIView):
