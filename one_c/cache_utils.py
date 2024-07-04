@@ -5,6 +5,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.cache import caches
 from django.utils import timezone
+from django.utils.dateformat import DateFormat
 
 from notification.utils import send_web_push_notification
 
@@ -106,7 +107,8 @@ def send_notif(
         "title": title,
         "message": message,
         "action": key_data["action"],
-        "status": status
+        "status": status,
+        "time": DateFormat(timezone.now()).format('D, j M., H:i')
     }
 
     cache = caches[settings.ONE_C_TASK_CACHE]
