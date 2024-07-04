@@ -78,13 +78,16 @@ class OneCTaskGenericMixin:
         return set_form_data(
             self.request.user.id,
             data=data,
-            view_name=self.name,
+            view_name=self.get_view_name(),
             action=self.action,
         )
 
     @staticmethod
-    def _run_task(task, cache_key):
-        task = task.apply_async(args=(cache_key,))
+    def _get_task_args(cache_key):
+        return (cache_key,)
+
+    def _run_task(self, task, cache_key):
+        task = task.apply_async(args=self._get_task_args(cache_key))
         set_launch_task(cache_key, task.task_id)
 
 
@@ -142,7 +145,7 @@ def tasks_list_view(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def task_detail_view(request, task_key):
-    rebuild_key = _check_task_key(request.user.id, task_key)
+    rebuild_key = _check_task_key(task_key, request.user.id)
 
     if rebuild_key["prefix"].startwith(NOTIFY_PREFIX):
         task_key = task_key.replace(NOTIFY_PREFIX, "")
@@ -156,7 +159,7 @@ def task_detail_view(request, task_key):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def task_destroy_view(request, task_key):
-    rebuild_key = _check_task_key(request.user.id, task_key)
+    rebuild_key = _check_task_key(task_key, request.user.id)
 
     if not rebuild_key["prefix"].startwith(NOTIFY_PREFIX):
         raise ValidationError({"detail": "Invalid key"})
