@@ -22,9 +22,8 @@ def _check_task_key(task_key, request_user_id) -> dict:
     except ValueError:
         raise ValidationError({"detail": "Invalid key"})
 
-    if key_data["user_id"] != request_user_id:
+    if str(key_data["user_id"]) != str(request_user_id):
         raise PermissionDenied()
-
     return key_data
 
 
