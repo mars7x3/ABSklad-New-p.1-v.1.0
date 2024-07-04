@@ -1,8 +1,14 @@
 import json
 from typing import Literal
+from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import caches
+
+from notification.utils import send_web_push_notification
+
+
+NOTIFY_PREFIX = "notify-"  # without ':' required!
 
 
 def build_cache_key(user_id, view, action, prefix=settings.ONE_C_TASK_DATA_PREFIX) -> str:
@@ -10,8 +16,9 @@ def build_cache_key(user_id, view, action, prefix=settings.ONE_C_TASK_DATA_PREFI
 
 
 def rebuild_cache_key(key: str):
-    _, user_id, view, action = key.split(":")
+    prefix, user_id, view, action = key.split(":")
     return {
+        "prefix": prefix,
         "user_id": user_id,
         "view": view,
         "action": action
@@ -45,7 +52,7 @@ def get_launch_task_id(cache_key) -> str | None:
     return task_id
 
 
-def get_form_data_from_cache(key: str):
+def get_from_cache(key: str):
     cache = caches[settings.ONE_C_TASK_CACHE]
     data = cache.get(key)
     cache.close()
@@ -59,11 +66,19 @@ def delete_from_cache(key) -> None:
     cache.close()
 
 
-def get_all_user_keys(user_id: int):
+def get_all_user_data_keys(user_id: int):
     cache = caches[settings.ONE_C_TASK_CACHE]
     keys = cache.keys(f'{settings.ONE_C_TASK_DATA_PREFIX}:{user_id}:*')
     cache.close()
     return keys
+
+
+def get_user_notifications(user_id: int):
+    cache = caches[settings.ONE_C_TASK_CACHE]
+    keys = cache.keys(f'{NOTIFY_PREFIX}{settings.ONE_C_TASK_DATA_PREFIX}:{user_id}:*')
+    items = cache.get_many(keys)
+    cache.close()
+    return items
 
 
 def get_title_by_action(action: str) -> str:
@@ -74,3 +89,33 @@ def get_title_by_action(action: str) -> str:
             return 'обновление'
         case _:
             return 'удаление'
+
+
+def send_notif(
+    form_data_key: str,
+    title: str,
+    message: str,
+    status: Literal["failure", "success"],
+):
+    key_data = rebuild_cache_key(form_data_key)
+
+    key = f"{NOTIFY_PREFIX}{form_data_key}"
+    message_data = {
+        "title": title,
+        "message": message,
+        "action": key_data["action"],
+        "status": status
+    }
+
+    cache = caches[settings.ONE_C_TASK_CACHE]
+    expire = settings.ONE_C_TASK_DATA_EXPIRE if status == "failure" else 300
+    cache.set(key, json.dumps(message_data), expire)
+    cache.close()
+
+    send_web_push_notification(
+        user_id=key_data["user_id"],
+        title=title,
+        msg=message,
+        data={"open_url": settings.ONE_C_TASK_URL % key},
+        message_type="task_message",
+    )

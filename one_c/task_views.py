@@ -7,18 +7,22 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.viewsets import GenericViewSet
 
 from absklad_commerce.celery import app as celery_app
-from one_c.cache_utils import (set_form_data, rebuild_cache_key, delete_from_cache, get_form_data_from_cache,
-                               get_all_user_keys, set_launch_task, get_launch_task_id)
+from one_c.cache_utils import (
+    set_form_data, rebuild_cache_key, delete_from_cache,
+    set_launch_task, get_launch_task_id, get_user_notifications, get_from_cache, NOTIFY_PREFIX
+)
 
 
-def _check_task_key(task_key, request_user_id) -> None:
+def _check_task_key(task_key, request_user_id) -> dict:
     try:
         key_data = rebuild_cache_key(task_key)
     except ValueError:
-        raise ValidationError({"detail": "Invalid task key"})
+        raise ValidationError({"detail": "Invalid key"})
 
     if key_data["user_id"] != request_user_id:
         raise PermissionDenied()
+
+    return key_data
 
 
 class OneCCreateTaskMixin:
@@ -56,20 +60,14 @@ class OneCUpdateTaskMixin:
 
 
 class OneCDestroyTaskMixin:
-    delete_task = None
-
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=204)
 
     def perform_destroy(self, instance):
-        serializer = self.get_serializer(instance)
         instance.is_active = False
         instance.save()
-        cache_key = self._save_validated_data(serializer.data)
-        self._run_task(self.delete_task, cache_key)
-        return Response(status=204)
 
 
 class OneCTaskGenericViewSet(GenericViewSet):
@@ -112,27 +110,27 @@ class OneCModelView(
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def tasks_list_view(request):
-    keys = get_all_user_keys(request.user.id)
-    if not keys:
+    data = get_user_notifications(request.user.id)
+    if not data:
         return Response(status=404)
 
-    return Response({
-        "count": len(keys),
-        "items": [
-            {
-                "task_key": key,
-                **rebuild_cache_key(key)
-            } for key in keys
-        ]
-    })
+    items = []
+    for key, item in data.items():
+        item["key"] = key
+        items.append(item)
+
+    return Response(items)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def task_detail_view(request, task_key):
-    _check_task_key(request.user.id, task_key)
+    rebuild_key = _check_task_key(request.user.id, task_key)
 
-    form_data = get_form_data_from_cache(task_key)
+    if rebuild_key["prefix"].startwith(NOTIFY_PREFIX):
+        task_key = task_key.replace(NOTIFY_PREFIX, "")
+
+    form_data = get_from_cache(task_key)
     if not form_data:
         return Response(status=404)
     return Response(form_data)
@@ -141,8 +139,13 @@ def task_detail_view(request, task_key):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def task_destroy_view(request, task_key):
-    _check_task_key(request.user.id, task_key)
+    rebuild_key = _check_task_key(request.user.id, task_key)
+
+    if not rebuild_key["prefix"].startwith(NOTIFY_PREFIX):
+        raise ValidationError({"detail": "Invalid key"})
+
     delete_from_cache(task_key)
+    delete_from_cache(task_key.replace(NOTIFY_PREFIX, ""))
     return Response(status=204)
 
 
@@ -150,6 +153,10 @@ def task_destroy_view(request, task_key):
 @permission_classes([IsAuthenticated])
 def task_repeat_view(request, task_key):
     _check_task_key(task_key, request.user.id)
+
+    if task_key.startswith(NOTIFY_PREFIX):
+        task_key = task_key.replace(NOTIFY_PREFIX, "")
+
     task_id = get_launch_task_id(task_key)
     if not task_id:
         delete_from_cache(task_key)
@@ -161,5 +168,6 @@ def task_repeat_view(request, task_key):
             return Response({"detail": "Задача уже запущена"}, status=400)
         case _:
             result.revoke()
+            delete_from_cache(f"{NOTIFY_PREFIX}{task_key}")
             celery_app.send_task(result.name, args=result.args, kwargs=result.kwargs)
     return Response(status=204)

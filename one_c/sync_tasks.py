@@ -4,10 +4,10 @@ from django.conf import settings
 from requests import HTTPError
 
 from absklad_commerce.celery import app
-from account.models import DealerStatus
-from notification.utils import send_web_push_notification
+from account.models import DealerStatus, DealerProfile
 from one_c.api.clients import OneCAPIClient
-from one_c.cache_utils import get_form_data_from_cache, rebuild_cache_key
+from one_c.api.items import DealerItem
+from one_c.cache_utils import get_from_cache, send_notif
 from product.models import Category, AsiaProduct, ProductCount, ProductPrice, ProductCostPrice
 from promotion.utils import calculate_discount
 
@@ -16,9 +16,7 @@ logger = getLogger("sync_tasks")
 
 @app.task()
 def task_create_category(form_data_key: str):
-    form_data = get_form_data_from_cache(key=form_data_key)
-    key_meta = rebuild_cache_key(key=form_data_key)
-    user_id, action = key_meta["user_id"], key_meta["action"]
+    form_data = get_from_cache(key=form_data_key)
 
     if not form_data:
         raise Exception(f"Not found redis key {form_data_key}")
@@ -35,29 +33,28 @@ def task_create_category(form_data_key: str):
     except (HTTPError, KeyError) as e:
         logger.error(e)
 
-        send_web_push_notification(
-            user_id=user_id,
+        send_notif(
+            form_data_key=form_data_key,
             title=f"Ошибка при попытке создания категории {title}",
-            msg="Не отвечает 1C-сервер",
-            data={
-                "task_id": form_data_key,
-                "open_url": settings.ONE_C_TASK_URL % form_data_key
-            },
-            message_type="task_message",
+            message="Не отвечает 1C-сервер",
+            status="failure"
         )
         return
     else:
         form_data["uid"] = category_uid
         Category(**form_data).save()
 
-        send_web_push_notification(user_id=user_id, title=f"Категория {title} успешно создана")
+        send_notif(
+            form_data_key=form_data_key,
+            title=f"Категория {title} успешно создана",
+            message="",
+            status="success"
+        )
 
 
 @app.task()
 def task_update_category(form_data_key: str):
-    form_data = get_form_data_from_cache(key=form_data_key)
-    key_meta = rebuild_cache_key(key=form_data_key)
-    user_id, action = key_meta["user_id"], key_meta["action"]
+    form_data = get_from_cache(key=form_data_key)
 
     if not form_data:
         raise Exception(f"Not found redis key {form_data_key}")
@@ -74,68 +71,27 @@ def task_update_category(form_data_key: str):
     except (HTTPError, KeyError) as e:
         logger.error(e)
 
-        send_web_push_notification(
-            user_id=user_id,
+        send_notif(
+            form_data_key=form_data_key,
             title=f"Ошибка при попытке обновления категории {category.title}",
-            msg="Не отвечает 1C-сервер",
-            data={
-                "task_id": form_data_key,
-                "open_url": settings.ONE_C_TASK_URL % form_data_key
-            },
-            message_type="task_message",
+            message="Не отвечает 1C-сервер",
+            status="failure"
         )
         return
     else:
         category.title = new_title
         category.save()
-
-        send_web_push_notification(
-            user_id=user_id,
+        send_notif(
+            form_data_key=form_data_key,
             title="Категория успешно обновлена",
-            msg=f"{original_title} -> {new_title}"
+            message=f"{original_title} -> {new_title}",
+            status="success"
         )
-
-
-@app.task()
-def task_delete_category(form_data_key: str):
-    form_data = get_form_data_from_cache(key=form_data_key)
-    key_meta = rebuild_cache_key(key=form_data_key)
-    user_id, _ = key_meta["user_id"], key_meta["action"]
-
-    if not form_data:
-        raise Exception(f"Not found redis key {form_data_key}")
-
-    category_id = form_data.pop("id")  # id on update required!
-    category = Category.objects.get(id=category_id)
-    title = category.title
-
-    one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
-    try:
-        one_c.action_category(title=category.title, uid=category.uid, to_delete=True)
-    except (HTTPError, KeyError) as e:
-        logger.error(e)
-
-        send_web_push_notification(
-            user_id=user_id,
-            title=f"Ошибка при попытке удалении категории {title}",
-            msg="Не отвечает 1C-сервер",
-            data={
-                "task_id": form_data_key,
-                "open_url": settings.ONE_C_TASK_URL % form_data_key
-            },
-            message_type="task_message",
-        )
-        return
-    else:
-        category.delete()
-        send_web_push_notification(user_id=user_id, title=f"Категория {title} успешно удалена")
 
 
 @app.task()
 def task_update_product(form_data_key: str):
-    form_data = get_form_data_from_cache(key=form_data_key)
-    key_meta = rebuild_cache_key(key=form_data_key)
-    user_id, _ = key_meta["user_id"], key_meta["action"]
+    form_data = get_from_cache(key=form_data_key)
 
     if not form_data:
         raise Exception(f"Not found redis key {form_data_key}")
@@ -163,15 +119,11 @@ def task_update_product(form_data_key: str):
     except (HTTPError, KeyError) as e:
         logger.error(e)
 
-        send_web_push_notification(
-            user_id=user_id,
+        send_notif(
+            form_data_key=form_data_key,
             title=f"Ошибка при попытке обновления продукта {product.title}",
-            msg="Не отвечает 1C-сервер",
-            data={
-                "task_id": form_data_key,
-                "open_url": settings.ONE_C_TASK_URL % form_data_key
-            },
-            message_type="task_message",
+            message="Не отвечает 1C-сервер",
+            status="failure"
         )
         return
 
@@ -254,45 +206,65 @@ def task_update_product(form_data_key: str):
         setattr(product, field, value)
 
     product.save()
-    send_web_push_notification(user_id=user_id, title=f"Продукт {product.title} успешно обновлен")
+    send_notif(
+        form_data_key=form_data_key,
+        title=f"Продукт {product.title} успешно обновлен",
+        message="",
+        status="success"
+    )
 
 
-@app.task()
-def task_delete_product(form_data_key: str):
-    form_data = get_form_data_from_cache(key=form_data_key)
-    key_meta = rebuild_cache_key(key=form_data_key)
-    user_id, _ = key_meta["user_id"], key_meta["action"]
+# @app.task()
+# def task_create_dealer(form_data_key: str):
+#     form_data = get_from_cache(key=form_data_key)
+#
+#     if not form_data:
+#         raise Exception(f"Not found redis key {form_data_key}")
+#
+#     profile = form_data["profile"]
+#     profile = DealerProfile.objects.get(id=profile["id"])
+#
+#     one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
+#     try:
+#         dealers = (
+#             DealerItem(
+#                 email=form_data["email"],
+#                 name=form_data.get("name", ""),
+#                 uid='00000000-0000-0000-0000-000000000000',
+#                 phone=form_data.get("phone", ""),
+#                 address=profile.get("address", ""),
+#                 liability=profile.get("liability", 0),
+#                 city_uid=""
+#             ),
+#         )
+#         one_c.action_dealers(
+#
+#         )
+#     except (HTTPError, KeyError) as e:
+#         logger.error(e)
+#
+#         send_notif(
+#             form_data_key=form_data_key,
+#             title=f"Ошибка при попытке обновления категории {category.title}",
+#             message="Не отвечает 1C-сервер",
+#             status="failure"
+#         )
+#         return
+#     else:
+#         category.title = new_title
+#         category.save()
+#         send_notif(
+#             form_data_key=form_data_key,
+#             title="Категория успешно обновлена",
+#             message=f"{original_title} -> {new_title}",
+#             status="success"
+#         )
 
-    if not form_data:
-        raise Exception(f"Not found redis key {form_data_key}")
 
-    product_id = form_data["id"]
-    product = AsiaProduct.objects.select_related("category").get(id=product_id)
+# order and money doc, inventory, return order
 
-    one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
-    try:
-        one_c.action_product(
-            title=product.title,
-            uid=product.uid,
-            category_title=product.category.title,
-            category_uid=product.category.uid,
-            to_delete=True,
-            vendor_code=product.vendor_code
-        )
-    except (HTTPError, KeyError) as e:
-        logger.error(e)
 
-        send_web_push_notification(
-            user_id=user_id,
-            title=f"Ошибка при попытке удаления продукта {product.title}",
-            msg="Не отвечает 1C-сервер",
-            data={
-                "task_id": form_data_key,
-                "open_url": settings.ONE_C_TASK_URL % form_data_key
-            },
-            message_type="task_message",
-        )
-        return
-
-    product.delete()
-    send_web_push_notification(user_id=user_id, title=f"Продукт {product.title} успешно удален")
+"""
+1. Разделить уведомления
+2. Задачи
+"""

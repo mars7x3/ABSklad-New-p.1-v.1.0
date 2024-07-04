@@ -1,6 +1,8 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from account.models import MyUser
+from crm_general.director.serializers import DirectorDealerProfileSerializer
 from crm_kpi.models import DealerKPI
 from general_service.models import Stock, PriceType, City
 from product.models import AsiaProduct, ProductPrice
@@ -81,6 +83,21 @@ class ValidateProductSerializer(serializers.ModelSerializer):
                 'Невозможно изменить цену на товар со скидкой'
             )
         return attrs
+
+    def update(self, instance, validated_data):
+        raise NotImplemented()
+
+    def create(self, validated_data):
+        raise NotImplemented()
+
+
+class ValidateDealerSerializer(serializers.ModelSerializer):
+    profile = DirectorDealerProfileSerializer(many=False, write_only=True, required=True)
+
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
+                  'image', 'is_active', 'status', 'profile')
 
     def update(self, instance, validated_data):
         raise NotImplemented()

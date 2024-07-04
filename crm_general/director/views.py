@@ -478,14 +478,16 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
         return paginator.get_paginated_response(serializer)
 
 
-class DirectorDealerCRUDView(mixins.CreateModelMixin,
+class DirectorDealerCRUDView(task_views.OneCCreateTaskMixin,
                              mixins.RetrieveModelMixin,
-                             mixins.UpdateModelMixin,
+                             task_views.OneCUpdateTaskMixin,
                              mixins.DestroyModelMixin,
-                             GenericViewSet):
-    # permission_classes = [IsAuthenticated, IsDirector]
+                             task_views.OneCTaskGenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
     queryset = MyUser.objects.all()
     serializer_class = DirectorDealerCRUDSerializer
+    create_task = sync_tasks.task_create_dealer
+    update_task = sync_tasks.task_update_dealer
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -1034,19 +1036,16 @@ class DirectorCategoryModelViewSet(task_views.OneCModelView):
     serializer_class = DirectorCategorySerializer
     create_task = sync_tasks.task_create_category
     update_task = sync_tasks.task_update_category
-    delete_task = sync_tasks.task_delete_category
 
 
 class DirectorSyncTaskProductView(
     task_views.OneCUpdateTaskMixin,
-    task_views.OneCDestroyTaskMixin,
     task_views.OneCTaskGenericViewSet
 ):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = AsiaProduct.objects.all()
     serializer_class = ValidateProductSerializer
     update_task = sync_tasks.task_update_product
-    delete_task = sync_tasks.task_delete_product
 
 
 class DirectorNotificationView(APIView):
