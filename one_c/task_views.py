@@ -1,6 +1,9 @@
+import json
+
 from celery.result import AsyncResult
 from rest_framework import mixins
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -70,9 +73,7 @@ class OneCDestroyTaskMixin:
         instance.save()
 
 
-class OneCTaskGenericViewSet(GenericViewSet):
-    permission_classes = [IsAuthenticated]  # required!
-
+class OneCTaskGenericMixin:
     def _save_validated_data(self, data):
         return set_form_data(
             self.request.user.id,
@@ -87,10 +88,13 @@ class OneCTaskGenericViewSet(GenericViewSet):
         set_launch_task(cache_key, task.task_id)
 
 
+class OneCTaskGenericViewSet(OneCTaskGenericMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated]  # required!
+
+
 class OneCActionView(
     OneCCreateTaskMixin,
     OneCUpdateTaskMixin,
-    OneCDestroyTaskMixin,
     OneCTaskGenericViewSet
 ):
     pass
@@ -107,6 +111,18 @@ class OneCModelView(
     pass
 
 
+class OneCTaskGenericAPIView(OneCTaskGenericMixin, GenericAPIView):
+    permission_classes = [IsAuthenticated]  # required!
+
+
+class OneCTaskActionAPIView(
+    OneCCreateTaskMixin,
+    OneCUpdateTaskMixin,
+    OneCTaskGenericAPIView
+):
+    pass
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def tasks_list_view(request):
@@ -115,7 +131,8 @@ def tasks_list_view(request):
         return Response(status=404)
 
     items = []
-    for key, item in data.items():
+    for key, value in data.items():
+        item = json.loads(value)
         item["key"] = key
         items.append(item)
 
