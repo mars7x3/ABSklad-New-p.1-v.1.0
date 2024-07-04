@@ -185,6 +185,8 @@ def task_repeat_view(request, task_key):
     match result.state:
         case 'PENDING':
             return Response({"detail": "Задача уже запущена"}, status=400)
+        case 'STARTED':
+            return Response({"detail": "Задача уже запущена"}, status=400)
         case _:
             result.revoke()
             delete_from_cache(f"{NOTIFY_PREFIX}{task_key}")
