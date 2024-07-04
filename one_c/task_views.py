@@ -146,7 +146,7 @@ def tasks_list_view(request):
 def task_detail_view(request, task_key):
     rebuild_key = _check_task_key(task_key, request.user.id)
 
-    if rebuild_key["prefix"].startwith(NOTIFY_PREFIX):
+    if rebuild_key["prefix"].startswith(NOTIFY_PREFIX):
         task_key = task_key.replace(NOTIFY_PREFIX, "")
 
     form_data = get_from_cache(task_key)
@@ -160,7 +160,7 @@ def task_detail_view(request, task_key):
 def task_destroy_view(request, task_key):
     rebuild_key = _check_task_key(task_key, request.user.id)
 
-    if not rebuild_key["prefix"].startwith(NOTIFY_PREFIX):
+    if not rebuild_key["prefix"].startswith(NOTIFY_PREFIX):
         raise ValidationError({"detail": "Invalid key"})
 
     delete_from_cache(task_key)
