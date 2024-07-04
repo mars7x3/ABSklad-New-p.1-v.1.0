@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import caches
+from django.utils import timezone
 
 from notification.utils import send_web_push_notification
 
@@ -12,16 +13,17 @@ NOTIFY_PREFIX = "notify-"  # without ':' required!
 
 
 def build_cache_key(user_id, view, action, prefix=settings.ONE_C_TASK_DATA_PREFIX) -> str:
-    return f'{prefix}:{user_id}:{view}:{action}'
+    return f'{prefix}:{user_id}:{view}:{action}:{int(timezone.now().timestamp())}'
 
 
 def rebuild_cache_key(key: str):
-    prefix, user_id, view, action = key.split(":")
+    prefix, user_id, view, action, ts = key.split(":")
     return {
         "prefix": prefix,
         "user_id": user_id,
         "view": view,
-        "action": action
+        "action": action,
+        "timestamp": ts
     }
 
 
