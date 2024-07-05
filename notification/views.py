@@ -18,8 +18,12 @@ def subscribe(request):
     return Response({"message": "Subscription added successfully"}, status=201)
 
 
-@api_view(['DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def unsubscribe(request):
-    Subscription.objects.filter(user=request.user).delete()
+    subscription_data = json.loads(request.body)
+    query = Subscription.objects.filter(subscription_info=subscription_data)
+    if not query.exists():
+        return Response(status=404)
+    query.delete()
     return Response(status=204)
