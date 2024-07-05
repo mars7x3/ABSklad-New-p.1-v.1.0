@@ -364,7 +364,7 @@ class CollectionCategoryProductListView(APIView):
 
 
 class DirectorProductCRUDView(mixins.RetrieveModelMixin,
-                              mixins.UpdateModelMixin,
+                              # mixins.UpdateModelMixin,
                               mixins.DestroyModelMixin,
                               GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
