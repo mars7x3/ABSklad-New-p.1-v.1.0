@@ -16,3 +16,10 @@ def subscribe(request):
 
     Subscription(user=request.user, subscription_info=subscription_data).save()
     return Response({"message": "Subscription added successfully"}, status=201)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def unsubscribe(request):
+    Subscription.objects.filter(user=request.user).delete()
+    return Response(status=204)
