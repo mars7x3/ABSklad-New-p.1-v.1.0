@@ -60,6 +60,10 @@ class OneCUpdateTaskMixin:
         cache_key = self._save_validated_data(validated_data)
         self._run_task(self.update_task, cache_key)
 
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
 
 class OneCTaskMixin:
     def _save_validated_data(self, data):
