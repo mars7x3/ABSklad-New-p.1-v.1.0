@@ -440,16 +440,17 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
     def validate(self, attrs):
         price_type = attrs.pop("price_type_id", None)
         price_city = attrs.pop("price_city_id", None)
-        attrs['managers'] = [self.context['request'].user]
+        attrs['managers'] = [self.context['request'].user.id]
         if price_type:
-            attrs["price_type"] = price_type
-        if price_city:
-            attrs["price_city"] = price_city
-        if price_type is None:
+            attrs["price_type_id"] = price_type.id
+        elif price_type is None:
             attrs['price_type'] = None
+        if price_city:
+            attrs["price_city_id"] = price_city.id
+
         dealer_status = attrs.pop("dealer_status_id", None)
         if dealer_status:
-            attrs["dealer_status"] = dealer_status
+            attrs["dealer_status_id"] = dealer_status.id
         return attrs
 
 

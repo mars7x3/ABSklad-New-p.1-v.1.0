@@ -23,7 +23,8 @@ from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSer
     DirectorTaskListSerializer, DirectorMotivationListSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
     DirectorKPIListSerializer, DirectorStaffListSerializer, PriceTypeCRUDSerializer, \
-    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer, DirectorCategorySerializer
+    RopProfileSerializer, UserListSerializer, DirectorDealerStatusSerializer, DirectorCategorySerializer, \
+    ValidateStockSerializer
 from crm_general.filters import FilterByFields
 from crm_general.models import CRMTask, KPI
 from crm_general.permissions import IsStaff
@@ -478,22 +479,22 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
         return paginator.get_paginated_response(serializer)
 
 
-# class DirectorDealerCRUDView(task_views.OneCCreateTaskMixin,
-#                              mixins.RetrieveModelMixin,
-#                              task_views.OneCUpdateTaskMixin,
-#                              mixins.DestroyModelMixin,
-#                              task_views.OneCTaskGenericViewSet):
-#     permission_classes = [IsAuthenticated, IsDirector]
-#     queryset = MyUser.objects.all()
-#     serializer_class = DirectorDealerCRUDSerializer
-#     create_task = sync_tasks.task_create_dealer
-#     update_task = sync_tasks.task_update_dealer
-#
-#     def destroy(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         instance.is_active = not instance.is_active
-#         instance.save()
-#         return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
+class DirectorDealerCRUDView(mixins.DestroyModelMixin,
+                             mixins.RetrieveModelMixin,
+                             task_views.OneCCreateTaskMixin,
+                             task_views.OneCUpdateTaskMixin,
+                             task_views.OneCTaskGenericViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = MyUser.objects.all()
+    serializer_class = DirectorDealerCRUDSerializer
+    create_task = sync_tasks.task_create_dealer
+    update_task = sync_tasks.task_update_dealer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = not instance.is_active
+        instance.save()
+        return Response({'text': 'Success!'}, status=status.HTTP_200_OK)
 
 
 class DirectorBalanceHistoryListView(APIView):
@@ -806,6 +807,12 @@ class DirectorStockCRUDView(viewsets.ModelViewSet):
     serializer_class = DirectorStockCRUDSerializer
 
 
+class DirectorStockTaskView(task_views.OneCModelViewSet):
+    permission_classes = [IsAuthenticated, IsDirector]
+    queryset = Stock.objects.select_related('city').all()
+    serializer_class = ValidateStockSerializer
+
+
 class DirectorStockListView(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Stock.objects.select_related('city').all()
@@ -1030,12 +1037,18 @@ class DealerStatusModelViewSet(viewsets.ModelViewSet):
     serializer_class = DirectorDealerStatusSerializer
 
 
-class DirectorCategoryModelViewSet(task_views.OneCModelView):
+class DirectorCategoryModelViewSet(task_views.OneCModelViewSet):
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated]
     serializer_class = DirectorCategorySerializer
     create_task = sync_tasks.task_create_category
     update_task = sync_tasks.task_update_category
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=204)
 
 
 class DirectorSyncTaskProductView(

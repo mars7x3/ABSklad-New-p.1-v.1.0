@@ -94,7 +94,7 @@ def get_title_by_action(action: str) -> str:
             return 'удаление'
 
 
-def send_notif(
+def send_web_notif(
     form_data_key: str,
     title: str,
     message: str,

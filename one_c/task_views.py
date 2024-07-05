@@ -61,18 +61,7 @@ class OneCUpdateTaskMixin:
         self._run_task(self.update_task, cache_key)
 
 
-class OneCDestroyTaskMixin:
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(status=204)
-
-    def perform_destroy(self, instance):
-        instance.is_active = False
-        instance.save()
-
-
-class OneCTaskGenericMixin:
+class OneCTaskMixin:
     def _save_validated_data(self, data):
         return set_form_data(
             self.request.user.id,
@@ -90,7 +79,7 @@ class OneCTaskGenericMixin:
         set_launch_task(cache_key, task.task_id)
 
 
-class OneCTaskGenericViewSet(OneCTaskGenericMixin, GenericViewSet):
+class OneCTaskGenericViewSet(OneCTaskMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]  # required!
 
 
@@ -102,18 +91,18 @@ class OneCActionView(
     pass
 
 
-class OneCModelView(
+class OneCModelViewSet(
     mixins.RetrieveModelMixin,
     mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
     OneCCreateTaskMixin,
     OneCUpdateTaskMixin,
-    OneCDestroyTaskMixin,
     OneCTaskGenericViewSet
 ):
     pass
 
 
-class OneCTaskGenericAPIView(OneCTaskGenericMixin, GenericAPIView):
+class OneCTaskGenericAPIView(OneCTaskMixin, GenericAPIView):
     permission_classes = [IsAuthenticated]  # required!
 
 

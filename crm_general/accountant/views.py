@@ -1,10 +1,8 @@
 import datetime
 
-from django.db import transaction
-from django.db.models import Case, When, Sum, F, Q
+from django.db.models import Sum, F, Q
 from django.utils import timezone
-from rest_framework.filters import SearchFilter
-from rest_framework import viewsets, status, mixins, generics, filters
+from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -14,6 +12,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from account.models import DealerProfile, MyUser, Wallet, BalancePlus, Notification
 from account.utils import send_push_notification
+from crm_general.accountant.one_c_serializers import BalancePlusModerationSerializer
 from crm_general.accountant.permissions import IsAccountant
 from crm_general.accountant.serializers import MainOrderListSerializer, MainOrderDetailSerializer, \
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
@@ -21,16 +20,15 @@ from crm_general.accountant.serializers import MainOrderListSerializer, MainOrde
     DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer, InventorySerializer, \
     AccountantStockShortSerializer, InventoryDetailSerializer, ReturnOrderDetailSerializer, ReturnOrderSerializer, \
     ReturnOrderProductSerializer
-from crm_general.filters import FilterByFields
 from crm_general.models import Inventory, CRMTask
 from crm_general.paginations import GeneralPurposePagination
+from crm_general.serializers import OrderModerationSerializer
 
-from crm_general.utils import string_date_to_date, today_on_true, convert_bool_string_to_bool
-from crm_stat.tasks import main_stat_order_sync, main_stat_pds_sync
 from general_service.models import Stock
 from crm_general.views import CRMPaginationClass
+from one_c import task_views, sync_tasks
 from one_c.from_crm import sync_1c_money_doc, sync_money_doc_to_1C
-from one_c.models import MoneyDoc, MovementProduct1C, MovementProducts
+from one_c.models import MoneyDoc, MovementProduct1C
 from order.models import MyOrder, ReturnOrder, ReturnOrderProduct, MainOrder
 from crm_general.tasks import minus_quantity
 from product.models import AsiaProduct, Collection, Category
@@ -304,6 +302,12 @@ class BalancePlusModerationView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class BalancePlusModerationTaskView(task_views.OneCCreateTaskMixin, task_views.OneCTaskGenericAPIView):
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = BalancePlusModerationSerializer
+    create_task = sync_tasks.task_balance_plus_moderation
+
+
 class AccountantOrderModerationView(APIView):
     permission_classes = [IsAuthenticated, IsAccountant]
 
@@ -339,6 +343,12 @@ class AccountantOrderModerationView(APIView):
 
             return Response({'status': 'Error', 'text': 'Permission denied!'}, status=status.HTTP_403_FORBIDDEN)
         return Response({'status': 'Error', 'text': 'order_id required!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountantOrderPaidModerationTaskView(task_views.OneCCreateTaskMixin, task_views.OneCTaskGenericAPIView):
+    permission_classes = [IsAuthenticated, IsAccountant]
+    serializer_class = OrderModerationSerializer
+    create_task = sync_tasks.task_order_paid_moderation
 
 
 class AccountantProductListView(ListModelMixin, GenericViewSet):
@@ -438,14 +448,20 @@ class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet)
 
 class InventoryListUpdateView(ListModelMixin,
                               RetrieveModelMixin,
-                              UpdateModelMixin,
-                              GenericViewSet):
+                              task_views.OneCUpdateTaskMixin,
+                              task_views.OneCTaskGenericViewSet):
 
     queryset = Inventory.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = InventorySerializer
     retrieve_serializer_class = InventoryDetailSerializer
     pagination_class = GeneralPurposePagination
+    update_task = sync_tasks.task_inventory_update
+
+    def _save_validated_data(self, data):
+        data.pop("receiver", None)
+        data["receiver_id"] = self.request.user.id
+        return super()._save_validated_data(data)
 
     def get_serializer_class(self):
         if self.detail:
@@ -503,10 +519,11 @@ class ReturnOrderView(ListModelMixin,
         return self.serializer_class
 
 
-class ReturnOrderProductUpdateView(UpdateModelMixin, GenericViewSet):
+class ReturnOrderProductUpdateView(task_views.OneCUpdateTaskMixin, task_views.OneCTaskGenericViewSet):
     queryset = ReturnOrderProduct.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = ReturnOrderProductSerializer
+    update_task = sync_tasks.task_update_return_order
 
 
 class AccountantNotificationView(APIView):
@@ -525,7 +542,6 @@ class AccountantNotificationView(APIView):
             'balances_plus_count': balances_plus_count,
             'tasks_count': tasks_count,
         }
-
         return Response(data, status=status.HTTP_200_OK)
 
 

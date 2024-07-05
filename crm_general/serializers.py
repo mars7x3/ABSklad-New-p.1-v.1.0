@@ -12,6 +12,7 @@ from account.models import MyUser, DealerStatus, DealerProfile
 from crm_general.models import CRMTaskFile, CRMTask
 from general_service.models import Stock, City, PriceType, Village
 from one_c.from_crm import sync_dealer_back_to_1C
+from order.models import MainOrder
 from product.models import AsiaProduct, ProductImage, Category, Collection
 from promotion.models import Story
 
@@ -74,34 +75,28 @@ class CRMUserSerializer(serializers.ModelSerializer):
             "phone": {"required": True}
         }
 
+    def _usr_queryset(self):
+        if self.instance:
+            return MyUser.objects.exclude(id=self.instance.id)
+        return MyUser.objects.all()
+
     def validate(self, attrs):
+        if attrs.get('username') and self._usr_queryset().filter(username=attrs['username']).exists():
+            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
+
+        if attrs.get('email') and self._usr_queryset().filter(email=attrs['email']).exists():
+            raise serializers.ValidationError({"email": "Пользователь с данным параметром уже существует!"})
+
         # this place can be deleted since the manager._create_user and set_password methods do the same thing
         password = attrs.get("password")
         if password:
             attrs['pwd'] = password
-
         return attrs
-
-    def create(self, validated_data):
-        if MyUser.objects.filter(username=validated_data["username"]).exists():
-            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
-
-        if MyUser.objects.filter(username=validated_data["email"]).exists():
-            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
-        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         for attr, value in deepcopy(validated_data).items():
             if getattr(instance, attr) == value:
                 validated_data.pop(attr)
-
-        username = validated_data.get('username')
-        if username and MyUser.objects.exclude(id=instance.id).filter(username=username).exists():
-            raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
-
-        email = validated_data.get('email')
-        if email and MyUser.objects.exclude(id=instance.id).filter(email=email).exists():
-            raise serializers.ValidationError({"email": "Пользователь с данным параметром уже существует!"})
 
         password = validated_data.pop("password", None)
         if password:
@@ -120,18 +115,6 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
-
-        # TODO: move validating user data to CRMUserSerializer
-        if MyUser.objects.filter(username=user_data["username"]).exists():
-            raise serializers.ValidationError(
-                {"user": {"username": "Пользователь с данным параметром уже существует!"}}
-            )
-
-        if MyUser.objects.filter(email=user_data["email"]).exists():
-            raise serializers.ValidationError(
-                {"user": {"email": "Пользователь с данным параметром уже существует!"}}
-            )
-
         validated_data['user'] = MyUser.objects.create_user(status=self._user_status, **user_data)
         # calling this method `create` should not return an error.
         # Therefore, the validation must be perfect,
@@ -366,3 +349,21 @@ class VillageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Village
         fields = ('id', 'title')
+
+
+class OrderModerationSerializer(serializers.Serializer):
+    order_id = serializers.PrimaryKeyRelatedField(
+        queryset=MainOrder.objects.all(),
+        many=False,
+        required=True,
+        write_only=True
+    )
+    status = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        if attrs["status"] not in ('paid', 'rejected'):
+            raise serializers.ValidationError(
+                {'status': 'Error', 'text': 'Permission denied!'},
+                code=403
+            )
+        return attrs

@@ -5,13 +5,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
+from crm_general.models import CRMTask
 from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
-from crm_general.paginations import AppPaginationClass, ProductPagination, GeneralPurposePagination
-from crm_general.utils import string_date_to_date, convert_bool_string_to_bool, today_on_true
-from general_service.models import Stock
+from crm_general.paginations import AppPaginationClass, GeneralPurposePagination
+from crm_general.utils import string_date_to_date, convert_bool_string_to_bool
+from one_c import task_views, sync_tasks
 from order.models import MyOrder, CartProduct, MainOrder
-from product.models import ProductPrice, Collection, Category, AsiaProduct
+from product.models import Collection, Category, AsiaProduct
 
 from .mixins import BaseOrderMixin, BaseDealerViewMixin, BaseDealerRelationViewMixin, BaseManagerMixin
 from .permissions import IsManager, ManagerOrderPermission
@@ -23,7 +24,6 @@ from .serializers import (
     WalletListSerializer, BalancePlusSerializer, ProductListForOrderSerializer,
     ShortProductSerializer, MainOrderUpdateSerializer
 )
-from ..models import CRMTask
 
 
 # ---------------------------------------------------- ORDERS
@@ -191,14 +191,24 @@ class DealerRetrieveAPIView(BaseDealerViewMixin, generics.RetrieveAPIView):
     lookup_field = "user_id"
 
 
-class DealerCreateAPIView(BaseDealerViewMixin, generics.CreateAPIView):
+class DealerCreateAPIView(BaseDealerViewMixin, task_views.OneCCreateTaskMixin, task_views.OneCTaskGenericAPIView):
     serializer_class = DealerProfileDetailSerializer
+    create_task = sync_tasks.task_create_dealer
+
+    @staticmethod
+    def _get_task_args(cache_key):
+        return cache_key, True
 
 
-class DealerUpdateAPIView(BaseDealerViewMixin, generics.UpdateAPIView):
+class DealerUpdateAPIView(BaseDealerViewMixin, task_views.OneCUpdateTaskMixin, task_views.OneCTaskGenericAPIView):
     serializer_class = DealerProfileDetailSerializer
     lookup_field = "user_id"
     lookup_url_kwarg = "user_id"
+    update_task = sync_tasks.task_update_dealer
+
+    @staticmethod
+    def _get_task_args(cache_key):
+        return cache_key, True
 
 
 class DealerChangeActivityView(BaseDealerViewMixin, generics.GenericAPIView):

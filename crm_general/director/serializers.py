@@ -901,6 +901,26 @@ class StockManagerSerializer(serializers.ModelSerializer):
         return rep
 
 
+class StockPhoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StockPhone
+        fields = ('phone',)
+
+
+class ValidateStockSerializer(serializers.ModelSerializer):
+    phones = StockPhoneSerializer(many=True, required=True)
+
+    class Meta:
+        model = Stock
+        exclude = ('uid', 'is_show')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
+        return rep
+
+
 class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
@@ -917,7 +937,7 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         phones = self.context['request'].data['phones']
         stock = Stock.objects.create(**validated_data)
-        create_product_counts_for_stock(stock=stock)
+        # create_product_counts_for_stock(stock=stock)
         phones_list = []
         for p in phones:
             phones_list.append(StockPhone(stock=stock, phone=p['phone']))
@@ -942,12 +962,6 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         sync_stock_1c_2_crm(instance)
         return instance
-
-
-class StockPhoneSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StockPhone
-        fields = ('phone',)
 
 
 class StockListSerializer(serializers.ModelSerializer):
