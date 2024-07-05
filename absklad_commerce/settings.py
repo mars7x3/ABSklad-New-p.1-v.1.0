@@ -26,6 +26,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', cast=list)
 CORS_ALLOW_ALL_ORIGINS = True
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=list)
 
 # Application definition
 
@@ -303,7 +304,7 @@ SIMPLE_JWT = {
 KPI_CHECK_MONTHS = 3
 KPI_INCREASE_THRESHOLD = 0.2
 
-SERVER_URL = "http://80.85.141.182/"
+SERVER_URL = "https://m312.ru/"
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 3000000
 
