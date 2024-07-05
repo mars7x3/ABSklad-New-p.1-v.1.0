@@ -96,7 +96,7 @@ hr_urlpatterns = [
 director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
 director_router.register("director/product/detail", DirectorProductCRUDView)
-director_router.register("director/product/detail", DirectorSyncTaskProductView)
+director_router.register("director/product/update", DirectorSyncTaskProductView)
 director_router.register("director/discount/crud", DirectorDiscountCRUDView)
 director_router.register("director/dealer/list", DirectorDealerListView)
 director_router.register("director/dealer/crud", DirectorDealerCRUDView)
