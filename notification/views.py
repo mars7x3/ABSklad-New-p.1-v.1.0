@@ -19,7 +19,6 @@ def subscribe(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def unsubscribe(request):
     subscription_data = json.loads(request.body)
     query = Subscription.objects.filter(subscription_info=subscription_data)
