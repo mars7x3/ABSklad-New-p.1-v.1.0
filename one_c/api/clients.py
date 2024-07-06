@@ -1,6 +1,5 @@
 from typing import Collection, Iterable
 
-from requests import Request, HTTPError
 from requests.adapters import HTTPAdapter
 
 from .additions import RetryWithDelay
@@ -30,9 +29,6 @@ class OneCAPIClient(APIClient):
 
         super().__init__()
         self.__setup_session()
-
-    def _process_request(self, request: Request) -> None:
-        raise HTTPError("Test error")
 
     def __setup_session(self):
         self._session.auth = self._auth
