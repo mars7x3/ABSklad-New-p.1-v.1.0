@@ -438,13 +438,17 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         read_only_fields = ("motivations",)
 
     def validate(self, attrs):
-        price_type = attrs.pop("price_type_id", None)
-        price_city = attrs.pop("price_city_id", None)
         attrs['managers'] = [self.context['request'].user.id]
+
+        village = attrs.pop("village", None)
+        if village:
+            attrs["village"] = village.id
+
+        price_type = attrs.pop("price_type_id", None)
         if price_type:
             attrs["price_type_id"] = price_type.id
-        elif price_type is None:
-            attrs['price_type'] = None
+
+        price_city = attrs.pop("price_city_id", None)
         if price_city:
             attrs["price_city_id"] = price_city.id
 
