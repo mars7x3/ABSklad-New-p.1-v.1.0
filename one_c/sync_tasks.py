@@ -252,7 +252,7 @@ def task_create_dealer(form_data_key: str, from_profile: bool = False):
             ),
         )
         response_data = one_c.action_dealers(dealers)
-        dealer_uid = response_data["client"]
+        user_data["uid"] = response_data["client"]
     except (HTTPError, KeyError) as e:
         logger.error(e)
 
@@ -264,11 +264,14 @@ def task_create_dealer(form_data_key: str, from_profile: bool = False):
         )
         return
     else:
+        managers = profile_data.pop("managers", None)
+
         with transaction.atomic():
             dealer = MyUser.objects.create_user(**user_data)
-            dealer.uid = dealer_uid
-            dealer.save()
-            DealerProfile.objects.create(user=dealer, **profile_data)
+            profile = DealerProfile.objects.create(user=dealer, **profile_data)
+
+            if managers:
+                profile.managers.set(managers)
 
 
 @app.task()
@@ -330,6 +333,8 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
         )
         return
     else:
+        managers = profile_data.pop("managers", None)
+
         for field, value in profile_data.items():
             setattr(profile, field, value)
 
@@ -339,6 +344,9 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
         with transaction.atomic():
             profile.save()
             user.save()
+
+            if managers:
+                profile.managers.set(managers)
 
 
 @app.task()
