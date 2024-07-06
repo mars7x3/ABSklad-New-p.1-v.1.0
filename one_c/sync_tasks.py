@@ -151,7 +151,7 @@ def task_update_product(form_data_key: str):
 
             for dealer_status in dealer_statuses:
                 dealer_price = ProductPrice.objects.filter(
-                    city_id=price['city'],
+                    city_id=city_price['city'],
                     product_id=product_id,
                     d_status=dealer_status
                 ).first()
@@ -204,7 +204,6 @@ def task_update_product(form_data_key: str):
         setattr(product, field, value)
 
     product.save()
-
 
 
 @app.task()
