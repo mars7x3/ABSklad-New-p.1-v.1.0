@@ -332,21 +332,21 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
             status="failure"
         )
         return
-    else:
-        managers = profile_data.pop("managers", None)
 
+    managers = profile_data.pop("managers", None)
+
+    with transaction.atomic():
         for field, value in profile_data.items():
             setattr(profile, field, value)
 
         for field, value in user_data.items():
             setattr(user, field, value)
 
-        with transaction.atomic():
-            profile.save()
-            user.save()
+        profile.save()
+        user.save()
 
-            if managers:
-                profile.managers.set(managers)
+        if managers:
+            profile.managers.set(managers)
 
 
 @app.task()
