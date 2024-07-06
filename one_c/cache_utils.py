@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from typing import Literal
 from uuid import uuid4
 
@@ -28,10 +29,20 @@ def rebuild_cache_key(key: str):
     }
 
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Decimal):
+            # wanted a simple yield str(o) in the next line,
+            # but that would mean a yield on the line with super(...),
+            # which wouldn't work (see my comment below), so...
+            return (str(o) for o in [o])
+        return super().default(o)
+
+
 def set_form_data(user_id: int, data: dict, view_name: str, action: Literal['create', 'update', 'delete']) -> str:
     cache = caches[settings.ONE_C_TASK_CACHE]
     cache_key = build_cache_key(user_id, view_name, action)
-    cache.set(cache_key, json.dumps(data), settings.ONE_C_TASK_DATA_EXPIRE)
+    cache.set(cache_key, json.dumps(data, cls=DecimalEncoder), settings.ONE_C_TASK_DATA_EXPIRE)
     cache.close()
     return cache_key
 
