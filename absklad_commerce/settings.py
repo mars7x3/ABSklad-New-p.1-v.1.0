@@ -29,8 +29,6 @@ CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = config('DJANGO_CSRF_TRUSTED_ORIGINS',
                               cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 
-print(CSRF_TRUSTED_ORIGINS)
-
 # Application definition
 
 INSTALLED_APPS = [
