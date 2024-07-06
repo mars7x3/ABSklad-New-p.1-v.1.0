@@ -456,6 +456,10 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
         model = DealerProfile
         exclude = ('id', 'user')
 
+    def validate(self, attrs):
+        attrs["village_id"] = attrs["village"].id
+        return attrs
+
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['city_title'] = instance.village.city.title if instance.village else '---'
