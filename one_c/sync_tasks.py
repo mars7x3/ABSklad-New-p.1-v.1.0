@@ -155,7 +155,10 @@ def task_update_product(form_data_key: str):
                     product_id=product_id,
                     d_status=dealer_status
                 ).first()
-                dealer_price.price = calculate_discount(city_price['price'], dealer_status.discount)
+                dealer_price.price = calculate_discount(
+                    price=round(price),
+                    discount=dealer_status.discount,
+                )
                 to_update.append(dealer_price)
 
         if to_update:
@@ -167,22 +170,25 @@ def task_update_product(form_data_key: str):
         to_update = []
 
         dealer_statuses = DealerStatus.objects.all()
-        for price in type_prices:
-            price = price['price']
+        for price_data in type_prices:
+            price = price_data['price']
 
-            product_price = ProductPrice.objects.get(id=price['id'])
+            product_price = ProductPrice.objects.get(id=price_data['id'])
             product_price.price = price
             to_update.append(product_price)
 
             for d_status in dealer_statuses:
                 dealer_price = ProductPrice.objects.filter(
-                    price_type_id=price['price_type'],
+                    price_type_id=price_data['price_type'],
                     product_id=product_id,
                     d_status=d_status
                 ).first()
 
                 if dealer_price:
-                    discount_price = calculate_discount(price, d_status.discount)
+                    discount_price = calculate_discount(
+                        price=round(price),
+                        discount=d_status.discount,
+                    )
                     dealer_price.price = discount_price
                     to_update.append(dealer_price)
 
