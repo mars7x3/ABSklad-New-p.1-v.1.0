@@ -1,3 +1,4 @@
+from decimal import Decimal
 from logging import getLogger
 
 from django.conf import settings
@@ -143,7 +144,7 @@ def task_update_product(form_data_key: str):
         dealer_statuses = DealerStatus.objects.all()
 
         for city_price in city_prices:
-            price = city_price['price']
+            price = Decimal(city_price['price'])
 
             product_price = ProductPrice.objects.get(id=city_price['id'])
             product_price.price = price
@@ -171,7 +172,7 @@ def task_update_product(form_data_key: str):
 
         dealer_statuses = DealerStatus.objects.all()
         for price_data in type_prices:
-            price = price_data['price']
+            price = Decimal(price_data['price'])
 
             product_price = ProductPrice.objects.get(id=price_data['id'])
             product_price.price = price
