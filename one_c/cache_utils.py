@@ -1,4 +1,5 @@
 import json
+import logging
 from decimal import Decimal
 from typing import Literal
 from uuid import uuid4
@@ -42,7 +43,14 @@ class DecimalEncoder(json.JSONEncoder):
 def set_form_data(user_id: int, data: dict, view_name: str, action: Literal['create', 'update', 'delete']) -> str:
     cache = caches[settings.ONE_C_TASK_CACHE]
     cache_key = build_cache_key(user_id, view_name, action)
-    cache.set(cache_key, json.dumps(data, cls=DecimalEncoder), settings.ONE_C_TASK_DATA_EXPIRE)
+
+    try:
+        data = json.dumps(data, cls=DecimalEncoder)
+    except Exception as e:
+        logging.error(f"JSON dumps error on body: {data}")
+        raise e
+
+    cache.set(cache_key, data, settings.ONE_C_TASK_DATA_EXPIRE)
     cache.close()
     return cache_key
 
