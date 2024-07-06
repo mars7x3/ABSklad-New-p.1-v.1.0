@@ -95,7 +95,7 @@ class OneCAPIClient(APIClient):
         )
 
     def action_dealers(self, dealers: Iterable[DealerItem]):
-        return self.post("/clients", json={"clients": [[item.to_payload() for item in dealers]]})
+        return self.post("clients", json={"clients": [[item.to_payload() for item in dealers]]})
 
     def action_money_doc(
             self,
