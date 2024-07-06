@@ -187,7 +187,7 @@ manager_urlpatterns = [
          name="crm_general-manager-dealers-birthdays-list"),
     re_path("^manager/dealers/(?P<user_id>.+)/detail/$", ManagerDealerRetrieveAPIView.as_view(),
             name="crm_general-manager-dealers-detail"),
-    re_path("^manager/dealers/(?P<user_id>.+)/update/$", ManagerDealerUpdateAPIView.as_view(),
+    re_path("^manager/dealers/update/(?P<user_id>.+)/$", ManagerDealerUpdateAPIView.as_view(),
             name="crm_general-manager-dealers-update"),
     re_path("^manager/dealers/(?P<user_id>.+)/update-image/$", ManagerDealerImageUpdateAPIView.as_view(),
             name="crm_general-manager-dealers-update-image"),
