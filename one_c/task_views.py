@@ -66,12 +66,25 @@ class OneCUpdateTaskMixin:
 
 
 class OneCTaskMixin:
+    def _get_task_action(self):
+        match self.request.method:
+            case "POST":
+                return "create"
+            case "PUT":
+                return "update"
+            case "PATCH":
+                return "partial_update"
+            case "DELETE":
+                return "destroy"
+            case _:
+                return "default"
+
     def _save_validated_data(self, data):
         return set_form_data(
             self.request.user.id,
             data=data,
             view_name=self.get_view_name(),
-            action=self.action,
+            action=self._get_task_action(),
         )
 
     @staticmethod
