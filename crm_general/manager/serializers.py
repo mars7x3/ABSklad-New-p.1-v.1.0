@@ -442,7 +442,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
 
         village = attrs.pop("village", None)
         if village:
-            attrs["village"] = village.id
+            attrs["village_id"] = village.id
 
         price_type = attrs.pop("price_type_id", None)
         if price_type:
