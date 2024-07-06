@@ -460,6 +460,18 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
         village = attrs.pop("village", None)
         if village:
             attrs["village_id"] = village.id
+
+        d_status = attrs.pop("dealer_status", None)
+        if d_status:
+            attrs["dealer_status_id"] = d_status.id
+
+        price_city = attrs.pop("price_city", None)
+        if price_city:
+            attrs["price_city_id"] = price_city.id
+
+        price_type = attrs.pop("price_type", None)
+        if price_type:
+            attrs["price_type_id"] = price_type.id
         return attrs
 
     def to_representation(self, instance):
