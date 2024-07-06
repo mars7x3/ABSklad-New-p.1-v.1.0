@@ -636,7 +636,7 @@ def task_create_stock(form_data_key: str):
     if not form_data:
         raise Exception(f"Not found redis key {form_data_key}")
 
-    phones = form_data.pop("phones")
+    phones = form_data.pop("phones", None)
     one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
     try:
         response_data = one_c.action_stock(
@@ -644,7 +644,7 @@ def task_create_stock(form_data_key: str):
             title=form_data.get("title", ""),
             to_delete=False
         )
-        uid = response_data['result_uid']
+        form_data["uid"] = response_data['result_uid']
     except (HTTPError, KeyError) as e:
         logger.error(e)
 
@@ -657,8 +657,9 @@ def task_create_stock(form_data_key: str):
         return
 
     with transaction.atomic():
-        stock = Stock.objects.create(uid=uid, **form_data)
-        StockPhone.objects.bulk_create([StockPhone(stock=stock, phone=data['phone']) for data in phones])
+        stock = Stock.objects.create(**form_data)
+        if phones:
+            StockPhone.objects.bulk_create([StockPhone(stock=stock, phone=data['phone']) for data in phones])
         create_prod_counts(stock)
 
 
