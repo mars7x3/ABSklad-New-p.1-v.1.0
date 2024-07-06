@@ -811,6 +811,8 @@ class DirectorStockTaskView(task_views.OneCModelViewSet):
     permission_classes = [IsAuthenticated, IsDirector]
     queryset = Stock.objects.select_related('city').all()
     serializer_class = ValidateStockSerializer
+    create_task = sync_tasks.task_create_stock
+    update_task = sync_tasks.task_update_stock
 
 
 class DirectorStockListView(mixins.ListModelMixin, GenericViewSet):
