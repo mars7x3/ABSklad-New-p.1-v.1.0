@@ -451,62 +451,6 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         return rep
 
 
-class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MyUser
-        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
-                  'image', 'is_active', 'status')
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['profile'] = DirectorDealerProfileSerializer(instance.dealer_profile, context=self.context).data
-        rep['managers'] = DirectorStaffListSerializer(instance.dealer_profile.managers.all(),
-                                                      many=True, context=self.context).data
-
-        return rep
-
-    def create(self, validated_data):
-        # username = validated_data.get('username')
-        # pwd = validated_data.get('password')
-        # if username:
-        #     if not username_is_valid(username):
-        #         raise serializers.ValidationError({"username": "Некорректный username"})
-        # if pwd:
-        #     if not pwd_is_valid(pwd):
-        #         raise serializers.ValidationError({"password": "Некорректный password"})
-
-        profile = self.context.get('request').data.get('profile')
-        user = MyUser.objects.create_user(**validated_data)
-        profile_serializer = DirectorDealerProfileSerializer(data=profile)
-        profile_serializer.is_valid(raise_exception=True)
-        profile_serializer.save(user=user)
-        sync_dealer_back_to_1C(user)
-        return user
-
-    def update(self, instance, validated_data):
-        # username = validated_data.get('username')
-        # pwd = validated_data.get('password')
-        # if username:
-        #     if not username_is_valid(username):
-        #         raise serializers.ValidationError({"username": "Некорректный username"})
-        # if pwd:
-        #     if not pwd_is_valid(pwd):
-        #         raise serializers.ValidationError({"password": "Некорректный password"})
-
-        profile = self.context.get('request').data.get('profile')
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-        # instance.pwd = validated_data.get('password')
-        # instance.set_password(validated_data.get('password'))
-        instance.save()
-
-        profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
-        profile_serializer.is_valid(raise_exception=True)
-        profile_serializer.save()
-        sync_dealer_back_to_1C(instance)
-        return instance
-
-
 class DirectorDealerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealerProfile
@@ -521,6 +465,42 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
         rep['balance_1c'] = instance.wallet.amount_1c
         rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores.all(), many=True, context=self.context).data
         return rep
+
+
+class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
+    profile = DirectorDealerProfileSerializer(many=False, required=True)
+
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
+                  'image', 'is_active', 'status')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['managers'] = DirectorStaffListSerializer(instance.dealer_profile.managers.all(),
+                                                      many=True, context=self.context).data
+
+        return rep
+
+    def create(self, validated_data):
+        # username = validated_data.get('username')
+        # pwd = validated_data.get('password')
+        # if username:
+        #     if not username_is_valid(username):
+        #         raise serializers.ValidationError({"username": "Некорректный username"})
+        # if pwd:
+        #     if not pwd_is_valid(pwd):
+        #         raise serializers.ValidationError({"password": "Некорректный password"})
+        profile = validated_data["profile"]
+        user = MyUser.objects.create_user(**validated_data)
+        DealerProfile.objects.create(**profile, user=user)
+        sync_dealer_back_to_1C(user)
+        return user
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        sync_dealer_back_to_1C(instance)
+        return instance
 
 
 class DirectorDealerStoreSerializer(serializers.ModelSerializer):
