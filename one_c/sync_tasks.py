@@ -2,6 +2,7 @@ from decimal import Decimal
 from logging import getLogger
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from requests import HTTPError
 
@@ -126,91 +127,89 @@ def task_update_product(form_data_key: str):
         )
         return
 
-    stocks = {stock["stock_id"]: stock["count_norm"] for stock in form_data.pop("stocks", None) or []}
-    if stocks:
-        to_update = []
+    with transaction.atomic():
+        stocks = {stock["stock_id"]: stock["count_norm"] for stock in form_data.pop("stocks", None) or []}
+        if stocks:
+            to_update = []
 
-        for count_obj in ProductCount.objects.filter(product_id=product_id, stock_id__in=stocks.keys()):
-            count_obj.count_norm = stocks[count_obj.stock_id]
-            to_update.append(count_obj)
+            for count_obj in ProductCount.objects.filter(product_id=product_id, stock_id__in=stocks.keys()):
+                count_obj.count_norm = stocks[count_obj.stock_id]
+                to_update.append(count_obj)
 
-        if to_update:
-            ProductCount.objects.bulk_update(to_update, ['count_norm'])
+            if to_update:
+                ProductCount.objects.bulk_update(to_update, ['count_norm'])
 
-    city_prices = form_data.pop("city_prices", None)
-    if city_prices:
-        to_update = []
+        city_prices = form_data.pop("city_prices", None)
+        if city_prices:
+            to_update = []
 
-        dealer_statuses = DealerStatus.objects.all()
+            dealer_statuses = DealerStatus.objects.all()
 
-        for city_price in city_prices:
-            price = Decimal(city_price['price'])
+            for city_price in city_prices:
+                price = Decimal(city_price['price'])
 
-            product_price = ProductPrice.objects.get(id=city_price['id'])
-            product_price.price = price
-            to_update.append(product_price)
+                product_price = ProductPrice.objects.get(id=city_price['id'])
+                product_price.price = price
+                to_update.append(product_price)
 
-            for dealer_status in dealer_statuses:
-                dealer_price = ProductPrice.objects.filter(
-                    city_id=city_price['city'],
-                    product_id=product_id,
-                    d_status=dealer_status
-                ).first()
-                dealer_price.price = calculate_discount(
-                    price=round(price),
-                    discount=dealer_status.discount,
-                )
-                to_update.append(dealer_price)
-
-        if to_update:
-            ProductPrice.objects.bulk_update(to_update, ['price'])
-
-    type_prices = form_data.pop("type_prices", None)
-
-    if type_prices:
-        to_update = []
-
-        dealer_statuses = DealerStatus.objects.all()
-        for price_data in type_prices:
-            price = Decimal(price_data['price'])
-
-            product_price = ProductPrice.objects.get(id=price_data['id'])
-            product_price.price = price
-            to_update.append(product_price)
-
-            for d_status in dealer_statuses:
-                dealer_price = ProductPrice.objects.filter(
-                    price_type_id=price_data['price_type'],
-                    product_id=product_id,
-                    d_status=d_status
-                ).first()
-
-                if dealer_price:
-                    discount_price = calculate_discount(
+                for dealer_status in dealer_statuses:
+                    dealer_price = ProductPrice.objects.filter(
+                        city_id=city_price['city'],
+                        product_id=product_id,
+                        d_status=dealer_status
+                    ).first()
+                    dealer_price.price = calculate_discount(
                         price=round(price),
-                        discount=d_status.discount,
+                        discount=dealer_status.discount,
                     )
-                    dealer_price.price = discount_price
                     to_update.append(dealer_price)
 
-        if to_update:
-            ProductPrice.objects.bulk_update(to_update, ['price'])
+            if to_update:
+                ProductPrice.objects.bulk_update(to_update, ['price'])
 
-    cost_price = form_data.pop("cost_price", None)
+        type_prices = form_data.pop("type_prices", None)
+        if type_prices:
+            to_update = []
 
-    if cost_price:
-        cost_price_obj = product.cost_prices.filter(is_active=True).first()
+            dealer_statuses = DealerStatus.objects.all()
+            for price_data in type_prices:
+                price = Decimal(price_data['price'])
 
-        if cost_price_obj:
-            cost_price_obj.price = cost_price
-            cost_price_obj.save()
-        else:
-            ProductCostPrice.objects.create(product=product, price=cost_price, is_active=True)
+                product_price = ProductPrice.objects.get(id=price_data['id'])
+                product_price.price = price
+                to_update.append(product_price)
 
-    for field, value in form_data.items():
-        setattr(product, field, value)
+                for d_status in dealer_statuses:
+                    dealer_price = ProductPrice.objects.filter(
+                        price_type_id=price_data['price_type'],
+                        product_id=product_id,
+                        d_status=d_status
+                    ).first()
 
-    product.save()
+                    if dealer_price:
+                        discount_price = calculate_discount(
+                            price=round(price),
+                            discount=d_status.discount,
+                        )
+                        dealer_price.price = discount_price
+                        to_update.append(dealer_price)
+
+            if to_update:
+                ProductPrice.objects.bulk_update(to_update, ['price'])
+
+        cost_price = form_data.pop("cost_price", None)
+        if cost_price:
+            cost_price_obj = product.cost_prices.filter(is_active=True).first()
+
+            if cost_price_obj:
+                cost_price_obj.price = cost_price
+                cost_price_obj.save()
+            else:
+                ProductCostPrice.objects.create(product=product, price=cost_price, is_active=True)
+
+        for field, value in form_data.items():
+            setattr(product, field, value)
+        product.save()
 
 
 @app.task()
@@ -265,10 +264,11 @@ def task_create_dealer(form_data_key: str, from_profile: bool = False):
         )
         return
     else:
-        dealer = MyUser.objects.create_user(**user_data)
-        dealer.uid = dealer_uid
-        dealer.save()
-        DealerProfile.objects.create(user=dealer, **profile_data)
+        with transaction.atomic():
+            dealer = MyUser.objects.create_user(**user_data)
+            dealer.uid = dealer_uid
+            dealer.save()
+            DealerProfile.objects.create(user=dealer, **profile_data)
 
 
 @app.task()
@@ -333,12 +333,12 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
         for field, value in profile_data.items():
             setattr(profile, field, value)
 
-        profile.save()
-
         for field, value in user_data.items():
             setattr(user, field, value)
 
-        user.save()
+        with transaction.atomic():
+            profile.save()
+            user.save()
 
 
 @app.task()
@@ -417,7 +417,6 @@ def task_balance_plus_moderation(form_data_key: str):
         return
     else:
         money_doc.save()
-
         send_push_notification(
             text="Заявка на пополнение одобрена!",
             title=f"Заявка на пополнение #{balance_id}",
@@ -486,21 +485,21 @@ def task_order_paid_moderation(form_data_key: str):
         )
         return
     else:
-        order.paid_at = timezone.make_aware(timezone.localtime().now())
-        order.save()
-        minus_quantity(order.id, order.stock.id)
+        with transaction.atomic():
+            order.paid_at = timezone.make_aware(timezone.localtime().now())
+            order.save()
+            minus_quantity(order.id, order.stock.id)
 
-        cash_box = order.stock.cash_box
-        money_doc = MoneyDoc.objects.create(
-            user=order.author.user,
-            amount=order.price,
-            uid=order.payment_doc_uid,
-            cash_box=cash_box,
-            status=create_type_status
-        )
-        main_stat_pds_sync(money_doc)
-        money_doc.is_checked = True
-        money_doc.save()
+            money_doc = MoneyDoc.objects.create(
+                user=order.author.user,
+                amount=order.price,
+                uid=order.payment_doc_uid,
+                cash_box=order.stock.cash_box,
+                status=create_type_status
+            )
+            main_stat_pds_sync(money_doc)
+            money_doc.is_checked = True
+            money_doc.save()
 
         send_push_notification(
             tokens=[order.author.user.firebase_token],
@@ -592,7 +591,8 @@ def task_order_partial_sent(form_data_key: str):
             status="failure"
         )
         return
-    else:
+
+    with transaction.atomic():
         order = MyOrder.objects.create(
             uid=response_data['result_uid'],
             price=order_total_price(product_objs, products_data, main_order.author),
@@ -614,13 +614,13 @@ def task_order_partial_sent(form_data_key: str):
         order.order_products.update(is_checked=True)
         minus_quantity(order.id, wh_stock_id)
 
-        send_push_notification(
-            tokens=[main_order.author.user.firebase_token],
-            title=f"Заказ #{order_id}",
-            text="Ваш заказ отгружен!",
-            link_id=order_id,
-            status="order"
-        )
+    send_push_notification(
+        tokens=[main_order.author.user.firebase_token],
+        title=f"Заказ #{order_id}",
+        text="Ваш заказ отгружен!",
+        link_id=order_id,
+        status="order"
+    )
 
 
 @app.task()
@@ -648,7 +648,8 @@ def task_create_stock(form_data_key: str):
             status="failure"
         )
         return
-    else:
+
+    with transaction.atomic():
         stock = Stock.objects.create(uid=uid, **form_data)
         StockPhone.objects.bulk_create([StockPhone(stock=stock, phone=data['phone']) for data in phones])
         create_prod_counts(stock)
@@ -669,7 +670,7 @@ def task_update_stock(form_data_key: str):
         one_c.action_stock(
             uid=stock_obj.uid,
             title=form_data.get("title", stock_obj.title),
-            to_delete=not stock_obj.is_active
+            to_delete=False
         )
     except (HTTPError, KeyError) as e:
         logger.error(e)
@@ -681,13 +682,15 @@ def task_update_stock(form_data_key: str):
             status="failure"
         )
         return
-    else:
-        for field, value in form_data.items():
-            setattr(stock_obj, field, value)
+
+    for field, value in form_data.items():
+        setattr(stock_obj, field, value)
+
+    with transaction.atomic():
         stock_obj.save()
 
-        stock_obj.phones.all().delete()
         if phones:
+            stock_obj.phones.all().delete()
             StockPhone.objects.bulk_create([StockPhone(stock=stock_obj, phone=data['phone']) for data in phones])
 
 
@@ -718,7 +721,7 @@ def task_inventory_update(form_data_key: str):
         response_data = one_c.action_inventory(
             uid=inventory_obj.uid,
             user_uid='fcac9f0f-34d2-11ed-8a2f-2c59e53ae4c3',
-            to_delete=not inventory_obj.is_active,
+            to_delete=False,
             created_at=f'{timezone.localtime(inventory_obj.created_at)}',
             city_uid=stock_uid,
             products=(
@@ -751,7 +754,7 @@ def task_update_return_order(form_data_key: str):
         raise Exception(f"Not found redis key {form_data_key}")
 
     return_product_id = form_data.pop("id")
-    return_product_obj = ReturnOrderProduct.objects.select_related("return_order").get(id=return_product_id)
+    return_product_obj = ReturnOrderProduct.objects.select_related("return_order", "product").get(id=return_product_id)
     status = form_data.get("status", "")
     return_order_obj = return_product_obj.return_order
     order_obj = return_order_obj.order
@@ -768,7 +771,7 @@ def task_update_return_order(form_data_key: str):
         one_c.action_return_order(
             uid=return_order_obj.order.uid,
             return_uid=return_order_obj.uid,
-            to_delete=not return_order_obj.is_active,
+            to_delete=False,
             created_at=f'{timezone.localtime(return_order_obj.created_at)}',
             products=(
                 ProductMetaItem(
@@ -788,9 +791,10 @@ def task_update_return_order(form_data_key: str):
             status="failure"
         )
         return
-    else:
+
+    with transaction.atomic():
         order_product = OrderProduct.objects.get(
-            order_id=order_obj,
+            order=order_obj,
             ab_product_id=return_product_obj.product.id
         )
         product_count = order_product.count
