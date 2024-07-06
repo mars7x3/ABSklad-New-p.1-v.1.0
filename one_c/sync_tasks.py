@@ -285,15 +285,14 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
         user_data = form_data.pop("user", {})
         profile_data = form_data
 
-        user = MyUser.objects.get(id=form_data.pop("id"))
-        profile = user.dealer_profile
-
+        profile = DealerProfile.objects.get(id=form_data.pop("id"))
+        user = profile.user
     else:
         profile_data = form_data.pop("dealer_profile", {})
         user_data = form_data
 
-        profile = DealerProfile.objects.get(user_id=form_data.pop("id"))
-        user = profile.user
+        user = MyUser.objects.get(id=form_data.pop("id"))
+        profile = user.dealer_profile
 
     if profile_data.get("village_id"):
         village = Village.objects.select_related("city").get(id=profile_data["village_id"])
