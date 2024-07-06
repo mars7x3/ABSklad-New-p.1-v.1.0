@@ -1,5 +1,6 @@
 from typing import Collection, Iterable
 
+from requests import Request
 from requests.adapters import HTTPAdapter
 
 from .additions import RetryWithDelay
@@ -30,9 +31,14 @@ class OneCAPIClient(APIClient):
         super().__init__()
         self.__setup_session()
 
-    def __setup_session(self):
-        self._session.auth = self._auth
+    @property
+    def _auth(self) -> tuple[str, str]:
+        return self._username.encode("utf-8"), self._password.encode("utf-8")
 
+    def _process_request(self, request: Request) -> None:
+        request.auth = self._auth
+
+    def __setup_session(self):
         if self.timeout and self.timeout > 0:
             self._session_kwargs["timeout"] = self.timeout
 
@@ -46,10 +52,6 @@ class OneCAPIClient(APIClient):
                 )
             )
             self._session.mount("http://", retry_adapter)
-
-    @property
-    def _auth(self) -> tuple[str, str]:
-        return self._username.encode("utf-8"), self._password.encode("utf-8")
 
     def action_category(
             self,
