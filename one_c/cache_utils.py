@@ -5,6 +5,7 @@ from typing import Literal
 from django.conf import settings
 from django.core.cache import caches
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Model
 from django.utils import timezone
 from django.utils.dateformat import DateFormat
 
@@ -12,6 +13,17 @@ from notification.utils import send_web_push_notification
 
 
 NOTIFY_PREFIX = "notify-"  # without ':' required!
+
+
+class CustomJSONEncoder(DjangoJSONEncoder):
+    """
+    extract pk if decode object is instance of Model
+    """
+    def default(self, o):
+        if isinstance(o, Model):
+            return o.pk
+        else:
+            return super().default(o)
 
 
 def build_cache_key(user_id, view, action, prefix=settings.ONE_C_TASK_DATA_PREFIX) -> str:
@@ -34,7 +46,7 @@ def set_form_data(user_id: int, data: dict, view_name: str, action: Literal['cre
     cache_key = build_cache_key(user_id, view_name, action)
 
     try:
-        data = json.dumps(data, cls=DjangoJSONEncoder)
+        data = json.dumps(data, cls=CustomJSONEncoder)
     except Exception as e:
         logging.error(f"JSON dumps error on body: {data}")
         raise e
