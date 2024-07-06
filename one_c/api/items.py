@@ -19,11 +19,11 @@ class DealerItem(BaseItem):
     liability: int = 0
     city: str = ""
     city_uid: str = None
-    to_delete: int = 0
+    to_delete: bool = False
 
     def to_payload(self) -> dict[str, int | str]:
         return {
-            "delete": self.to_delete,
+            "delete": 0 if self.to_delete is False else 1,
             "Name": self.name,
             "UID": self.uid,
             "Telephone": self.phone,
