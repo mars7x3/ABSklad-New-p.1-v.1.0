@@ -56,13 +56,6 @@ def task_create_category(form_data_key: str):
         form_data["uid"] = category_uid
         Category(**form_data).save()
 
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Категория {title} успешно создана",
-            message="",
-            status="success"
-        )
-
 
 @app.task()
 def task_update_category(form_data_key: str):
@@ -93,12 +86,6 @@ def task_update_category(form_data_key: str):
     else:
         category.title = new_title
         category.save()
-        send_web_notif(
-            form_data_key=form_data_key,
-            title="Категория успешно обновлена",
-            message=f"{original_title} -> {new_title}",
-            status="success"
-        )
 
 
 @app.task()
@@ -218,12 +205,7 @@ def task_update_product(form_data_key: str):
         setattr(product, field, value)
 
     product.save()
-    send_web_notif(
-        form_data_key=form_data_key,
-        title=f"Продукт {product.title} успешно обновлен",
-        message="",
-        status="success"
-    )
+
 
 
 @app.task()
@@ -282,13 +264,6 @@ def task_create_dealer(form_data_key: str, from_profile: bool = False):
         dealer.uid = dealer_uid
         dealer.save()
         DealerProfile.objects.create(user=dealer, **profile_data)
-
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Пользователь {email} добавлен",
-            message="",
-            status="success"
-        )
 
 
 @app.task()
@@ -350,8 +325,6 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
         )
         return
     else:
-        original_email = user.email
-
         for field, value in profile_data.items():
             setattr(profile, field, value)
 
@@ -361,12 +334,6 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
             setattr(user, field, value)
 
         user.save()
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Пользователь {original_email} обновлён",
-            message="",
-            status="success"
-        )
 
 
 @app.task()
@@ -386,7 +353,7 @@ def task_balance_plus_moderation(form_data_key: str):
             form_data_key=form_data_key,
             title=f"Ошибка модерации заявки на полнение баланса #{balance_id}",
             message="Не найден счет или он ранее уже был обработан",
-            status="success"
+            status="error"
         )
         return
 
@@ -452,12 +419,6 @@ def task_balance_plus_moderation(form_data_key: str):
             tokens=[balance.dealer.user.firebase_token],
             link_id=balance_id,
             status="balance",
-        )
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Модерация заявки на полнение баланса #{balance_id}",
-            message="Успешно завершена",
-            status="success"
         )
 
 
@@ -548,13 +509,6 @@ def task_order_paid_moderation(form_data_key: str):
             title=f'Заказ #{order.id}',
             link_id=order_id,
             status='order'
-        )
-
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Модерация оплаты заказа #{order_id}",
-            message="Успешно завершена",
-            status="success"
         )
 
 
@@ -662,12 +616,6 @@ def task_order_partial_sent(form_data_key: str):
             link_id=order_id,
             status="order"
         )
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Отгрузки заказа #{order_id}",
-            message="Успешно завершена",
-            status="success"
-        )
 
 
 @app.task()
@@ -699,12 +647,6 @@ def task_create_stock(form_data_key: str):
         stock = Stock.objects.create(uid=uid, **form_data)
         StockPhone.objects.bulk_create([StockPhone(stock=stock, phone=data['phone']) for data in phones])
         create_prod_counts(stock)
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Склад {stock.title} успешно создан",
-            message="",
-            status="success"
-        )
 
 
 @app.task()
@@ -742,13 +684,6 @@ def task_update_stock(form_data_key: str):
         stock_obj.phones.all().delete()
         if phones:
             StockPhone.objects.bulk_create([StockPhone(stock=stock_obj, phone=data['phone']) for data in phones])
-
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Склад {stock_obj.title} успешно обновлен",
-            message="",
-            status="success"
-        )
 
 
 @app.task()
@@ -803,13 +738,6 @@ def task_inventory_update(form_data_key: str):
     else:
         inventory_obj.save()
 
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Инвентарь #{inventory_obj.id} успешно обновлен",
-            message="",
-            status="success"
-        )
-
 
 @app.task()
 def task_update_return_order(form_data_key: str):
@@ -828,13 +756,6 @@ def task_update_return_order(form_data_key: str):
             setattr(return_product_obj, field, value)
 
         return_product_obj.save()
-
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Возрат #{order_obj.id} успешно обновлен",
-            message="",
-            status="success"
-        )
         return
 
     one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
@@ -885,11 +806,3 @@ def task_update_return_order(form_data_key: str):
             setattr(return_product_obj, field, value)
 
         return_product_obj.save()
-
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Возрат #{order_obj.id} успешно обновлен",
-            message="",
-            status="success"
-        )
-
