@@ -81,6 +81,9 @@ class CRMUserSerializer(serializers.ModelSerializer):
         return MyUser.objects.all()
 
     def validate(self, attrs):
+        if self.context.get("set_status"):
+            attrs["status"] = self.context["set_status"]
+
         if attrs.get('username') and self._usr_queryset().filter(username=attrs['username']).exists():
             raise serializers.ValidationError({"username": "Пользователь с данным параметром уже существует!"})
 
@@ -107,6 +110,10 @@ class CRMUserSerializer(serializers.ModelSerializer):
 class BaseProfileSerializer(serializers.ModelSerializer):
     user = CRMUserSerializer(many=False, required=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context["set_status"] = self._user_status
+
     @property
     def _user_status(self):
         status = getattr(getattr(self, 'Meta'), 'user_status', None)
@@ -115,6 +122,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
+        user_data.pop("status", None)
         validated_data['user'] = MyUser.objects.create_user(status=self._user_status, **user_data)
         # calling this method `create` should not return an error.
         # Therefore, the validation must be perfect,
