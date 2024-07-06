@@ -228,8 +228,8 @@ def task_create_dealer(form_data_key: str, from_profile: bool = False):
 
     email = user_data["email"]
 
-    if form_data.get("village"):
-        village = Village.objects.select_related("city").get(id=form_data["village"])
+    if form_data.get("village_id"):
+        village = Village.objects.select_related("city").get(id=form_data["village_id"])
         city_title = village.city.title
         city_uid = village.city.user_uid
     else:
@@ -295,8 +295,8 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
         profile = DealerProfile.objects.get(user_id=form_data.pop("id"))
         user = profile.user
 
-    if profile_data.get("village"):
-        village = Village.objects.select_related("city").get(id=profile_data["village"])
+    if profile_data.get("village_id"):
+        village = Village.objects.select_related("city").get(id=profile_data["village_id"])
         city_title = village.city.title
         city_uid = village.city.user_uid
     elif profile.village:
