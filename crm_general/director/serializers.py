@@ -468,7 +468,7 @@ class DirectorDealerProfileSerializer(serializers.ModelSerializer):
 
 
 class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
-    profile = DirectorDealerProfileSerializer(many=False, required=True)
+    profile = DirectorDealerProfileSerializer(many=False, required=True, source="dealer_profile")
 
     class Meta:
         model = MyUser
@@ -491,14 +491,24 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
         # if pwd:
         #     if not pwd_is_valid(pwd):
         #         raise serializers.ValidationError({"password": "Некорректный password"})
-        profile = validated_data["profile"]
+        profile = validated_data.pop("profile")
         user = MyUser.objects.create_user(**validated_data)
         DealerProfile.objects.create(**profile, user=user)
         sync_dealer_back_to_1C(user)
         return user
 
     def update(self, instance, validated_data):
+        profile = validated_data.pop("profile", None)
         instance = super().update(instance, validated_data)
+
+        if profile:
+            dealer_profile = instance.dealer_profile
+
+            for field, value in profile.items():
+                setattr(dealer_profile, field, value)
+
+            dealer_profile.save()
+
         sync_dealer_back_to_1C(instance)
         return instance
 
