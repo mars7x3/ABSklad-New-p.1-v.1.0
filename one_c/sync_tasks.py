@@ -227,75 +227,6 @@ def task_update_product(form_data_key: str):
 
 
 @app.task()
-def task_director_update_dealer(form_data_key: str):
-    form_data = get_from_cache(key=form_data_key)
-
-    if not form_data:
-        raise Exception(f"Not found redis key {form_data_key}")
-
-    user_id = form_data["id"]
-    user = MyUser.objects.get(id=user_id)
-    profile = user.dealer_profile
-    profile_data = form_data.pop("profile", {})
-
-    if profile_data.get("village"):
-        village = Village.objects.select_related("city").get(id=profile_data["village"])
-        city_title = village.city.title
-        city_uid = village.city.user_uid
-    elif profile.village:
-        city_title = profile.village.city.title
-        city_uid = profile.village.city.user_uid
-    else:
-        city_title = ""
-        city_uid = "00000000-0000-0000-0000-000000000000"
-
-    one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
-    try:
-        dealers = (
-            DealerItem(
-                email=form_data.get("email", user.email),
-                name=form_data.get("name", user.name),
-                uid=user.uid,
-                phone=form_data.get("phone", user.phone),
-                address=profile_data.get("address", profile.address),
-                liability=profile_data.get("liability", profile.liability),
-                city_uid=city_uid,
-                city=city_title,
-                to_delete=False
-            ),
-        )
-        one_c.action_dealers(dealers)
-    except HTTPError as e:
-        logger.error(e)
-
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Ошибка при попытке обновления клиента {user.email}",
-            message="Не отвечает 1C-сервер",
-            status="failure"
-        )
-        return
-    else:
-        original_email = user.email
-
-        for field, value in profile_data.items():
-            setattr(profile, field, value)
-
-        profile.save()
-
-        for field, value in form_data.items():
-            setattr(user, field, value)
-
-        user.save()
-        send_web_notif(
-            form_data_key=form_data_key,
-            title=f"Пользователь {original_email} обновлён",
-            message="",
-            status="success"
-        )
-
-
-@app.task()
 def task_create_dealer(form_data_key: str, from_profile: bool = False):
     form_data = get_from_cache(key=form_data_key)
 
@@ -307,7 +238,7 @@ def task_create_dealer(form_data_key: str, from_profile: bool = False):
         profile_data = form_data
     else:
         user_data = form_data
-        profile_data = form_data.pop("profile")
+        profile_data = form_data.pop("dealer_profile")
 
     email = user_data["email"]
 
@@ -375,7 +306,7 @@ def task_update_dealer(form_data_key: str, from_profile: bool = False):
         profile = user.dealer_profile
 
     else:
-        profile_data = form_data.pop("profile", {})
+        profile_data = form_data.pop("dealer_profile", {})
         user_data = form_data
 
         profile = DealerProfile.objects.get(id=form_data.pop("id"))
