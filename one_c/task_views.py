@@ -30,6 +30,9 @@ def _check_task_key(task_key, request_user_id) -> dict:
 class OneCCreateTaskMixin:
     create_task = None
 
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         assert self.create_task
         serializer = self.get_serializer(data=request.data)
@@ -44,6 +47,12 @@ class OneCCreateTaskMixin:
 
 class OneCUpdateTaskMixin:
     update_task = None
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         assert self.update_task
@@ -117,6 +126,7 @@ class OneCModelViewSet(
     OneCTaskGenericViewSet
 ):
     pass
+
 
 
 class OneCTaskGenericAPIView(OneCTaskMixin, GenericAPIView):
