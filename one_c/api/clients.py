@@ -8,7 +8,7 @@ from .items import DealerItem, SaleProductItem, ProductMetaItem
 
 
 class OneCAPIClient(APIClient):
-    base_url = "http://91.211.251.134/testcrm/hs/asoi"
+    base_url = "http://91.211.251.134/testcrm/hs/asoi/"
 
     def __init__(
             self,
@@ -58,7 +58,7 @@ class OneCAPIClient(APIClient):
             to_delete: bool = False
     ):
         return self.post(
-            "/CategoryGoodsCreate",
+            "CategoryGoodsCreate",
             json={
                 "NomenclatureName": "",
                 "NomenclatureUID": "",
@@ -80,7 +80,7 @@ class OneCAPIClient(APIClient):
             vendor_code: str = "",
     ):
         return self.post(
-            "/GoodsCreate",
+            "GoodsCreate",
             json={
                 "NomenclatureName": title,
                 "NomenclatureUID": uid,
@@ -106,7 +106,7 @@ class OneCAPIClient(APIClient):
             to_delete: bool = False,
     ):
         return self.post(
-            "/CreateaPyment",
+            "CreateaPyment",
             json={
                 "user_uid": user_uid,
                 "amount": amount,
@@ -129,7 +129,7 @@ class OneCAPIClient(APIClient):
             to_delete: bool = False,
     ):
         return self.post(
-            "/CreateSale",
+            "CreateSale",
             json={
                 "user_uid": user_uid,
                 "created_at": created_at,
@@ -143,7 +143,7 @@ class OneCAPIClient(APIClient):
 
     def action_stock(self, uid: str, title: str, to_delete: bool = False):
         return self.post(
-            "/Warehouses",
+            "Warehouses",
             json={
                 "CategoryUID": uid,
                 "title": title,
@@ -161,7 +161,7 @@ class OneCAPIClient(APIClient):
             to_delete: bool = False,
     ):
         return self.post(
-            "/CreateInventory",
+            "CreateInventory",
             json={
                 'uid': uid,
                 'user_uid': user_uid,
@@ -181,7 +181,7 @@ class OneCAPIClient(APIClient):
             to_delete: bool = False,
     ):
         return self.post(
-            "/ReturnGoods",
+            "ReturnGoods",
             json={
                 "uid_return": return_uid,
                 "uid": uid,
