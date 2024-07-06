@@ -473,7 +473,7 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
-                  'image', 'is_active', 'status')
+                  'image', 'is_active', 'status', 'profile')
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
