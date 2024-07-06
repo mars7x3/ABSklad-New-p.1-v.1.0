@@ -68,8 +68,6 @@ def task_update_category(form_data_key: str):
     new_title = form_data["title"]
 
     category = Category.objects.get(id=category_id)
-    original_title = category.title
-
     one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
     try:
         one_c.action_category(title=new_title, uid=category.uid, to_delete=False)
@@ -84,7 +82,8 @@ def task_update_category(form_data_key: str):
         )
         return
     else:
-        category.title = new_title
+        for field, value in form_data.items():
+            setattr(category, field, value)
         category.save()
 
 
