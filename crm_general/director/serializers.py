@@ -922,6 +922,12 @@ class ValidateStockSerializer(serializers.ModelSerializer):
         model = Stock
         exclude = ('uid', 'is_show')
 
+    def validate(self, attrs):
+        city = attrs.pop("city", None)
+        if city:
+            attrs["city_id"] = city
+        return attrs
+
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['city_title'] = instance.city.title if instance.city else '---'
