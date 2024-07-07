@@ -98,8 +98,6 @@ def check_product_before_activation(sender, instance, created, **kwargs):
         and
         instance.sizes.exists()
     ):
-        instance.is_active = True
+        AsiaProduct.objects.filter(pk=instance.pk).update(is_active=True)
     else:
-        instance.is_active = False
-
-    instance.save()
+        AsiaProduct.objects.filter(pk=instance.pk).update(is_active=False)
