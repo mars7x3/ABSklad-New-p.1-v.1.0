@@ -21,7 +21,7 @@ from product.models import AsiaProduct, Collection, Category, ProductCount
 from crm_general.paginations import GeneralPurposePagination
 from crm_general.models import Inventory, CRMTask, InventoryProduct
 from crm_general.serializers import OrderModerationSerializer
-from crm_general.tasks import minus_quantity
+from crm_general.tasks import minus_quantity, minus_quantity_order
 from .one_c_serializers import OrderPartialSentSerializer
 
 from .permissions import IsWareHouseManager
@@ -441,7 +441,7 @@ class OrderPartialSentView(APIView):
                 update_data.append(p)
             OrderProduct.objects.bulk_update(update_data, ['is_checked'])
 
-            minus_quantity(order.id, self.request.user.warehouse_profile.stock.id)
+            minus_quantity_order(order.id, self.request.user.warehouse_profile.stock.id)
 
             kwargs = {
                 "tokens": [order.author.user.firebase_token],

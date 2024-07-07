@@ -11,7 +11,7 @@ from account.models import DealerStatus, DealerProfile, MyUser, BalancePlus, Not
 from account.utils import send_push_notification
 from crm_general.director.utils import create_prod_counts
 from crm_general.models import Inventory
-from crm_general.tasks import minus_quantity
+from crm_general.tasks import minus_quantity, minus_quantity_order
 from crm_general.warehouse_manager.utils import minus_count
 from crm_stat.tasks import main_stat_pds_sync, main_stat_order_sync
 from general_service.models import Village, Stock, StockPhone
@@ -633,7 +633,7 @@ def task_order_partial_sent(form_data_key: str):
         update_main_order_status(main_order)
         main_stat_order_sync(order)
         order.order_products.update(is_checked=True)
-        minus_quantity(order.id, wh_stock_id)
+        minus_quantity_order(order.id, wh_stock_id)
 
     send_push_notification(
         tokens=[main_order.author.user.firebase_token],
