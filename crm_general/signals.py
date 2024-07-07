@@ -74,41 +74,32 @@ def on_delete_order_product(sender, instance, **kwargs):
 
 @receiver(post_save, sender=AsiaProduct)
 def check_product_before_activation(sender, instance, created, **kwargs):
-    count = 0
-
-    if not instance.is_active:
+    if instance.is_active is False:
         remove_product_from_banner_story(instance)
         return
-    dealer_status_count = DealerStatus.objects.all().count()
-    d_status_city_counts = dealer_status_count * City.objects.filter(is_active=True).count()
-    d_status_type_counts = dealer_status_count * PriceType.objects.filter(is_active=True).count()
-    final_price_count = d_status_city_counts + d_status_type_counts
-    product_price_count = instance.prices.all().count()
-    zero_price = instance.prices.filter(price=0).first()
 
-    if final_price_count <= product_price_count and zero_price is None:
-        count += 1
+    d_status_qty = DealerStatus.objects.all().count()
+    general_prices_qty = (
+        # Count of statuses in active cities
+        d_status_qty * City.objects.filter(is_active=True).count()
+        +
+        # Count of statuses with active price types
+        d_status_qty * PriceType.objects.filter(is_active=True).count()
+    )
 
-    cost_prices = instance.cost_prices.filter(is_active=True).first()
-    if cost_prices:
-        count += 1
-
-    if instance.description:
-        if len(instance.description) > 100:
-            count += 1
-
-    images = instance.images.first()
-    if images:
-        count += 1
-
-    sizes = instance.sizes.first()
-    if sizes:
-        count += 1
-
-    if count < 5:
-        instance.is_active = False
-        AsiaProduct.objects.filter(pk=instance.pk).update(is_active=False)
-
-    elif count == 5:
+    if (
+        general_prices_qty <= instance.prices.all().count() and not instance.prices.filter(price=0).exists()
+        and
+        instance.description and len(instance.description) > 100
+        and
+        instance.cost_prices.filter(is_active=True).exists()
+        and
+        instance.images.exists()
+        and
+        instance.sizes.exists()
+    ):
         instance.is_active = True
-        AsiaProduct.objects.filter(pk=instance.pk).update(is_active=True)
+    else:
+        instance.is_active = False
+
+    instance.save()
