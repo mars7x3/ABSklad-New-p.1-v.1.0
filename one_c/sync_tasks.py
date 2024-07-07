@@ -617,7 +617,7 @@ def task_order_partial_sent(form_data_key: str):
         order = MyOrder.objects.create(
             uid=response_data['result_uid'],
             price=order_total_price(product_objs, products_data, main_order.author),
-            cost_price=order_cost_price(products_data, product_objs),
+            cost_price=order_cost_price(product_objs, products_data),
             main_order_id=order_id,
             author=main_order.author,
             stock=main_order.stock,
