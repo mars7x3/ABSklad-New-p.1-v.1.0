@@ -21,7 +21,7 @@ logger = logging.getLogger('tasks_management')
 
 @app.task
 def minus_quantity(order_id, stock_id):
-    order = MainOrder.objects.get(id=order_id)
+    order = MyOrder.objects.get(id=order_id)  # здесь должен быть MyOrder!
     stock = Stock.objects.get(id=stock_id)
     products_id = order.products.all().values_list('ab_product_id', 'count')
     counts = ProductCount.objects.filter(stock=stock)
