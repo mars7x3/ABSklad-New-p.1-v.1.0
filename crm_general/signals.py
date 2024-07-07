@@ -89,7 +89,7 @@ def check_product_before_activation(sender, instance, created, **kwargs):
     if final_price_count <= product_price_count and zero_price is None:
         count += 1
 
-    cost_prices = instance.cost_prices.filter(price=0).first()
+    cost_prices = instance.cost_prices.filter(is_active=True).first()
     if cost_prices is None:
         count += 1
 

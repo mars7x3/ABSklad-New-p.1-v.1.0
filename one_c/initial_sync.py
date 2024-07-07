@@ -375,8 +375,12 @@ def warehouses_create():
 
     MyUser.objects.bulk_create(warehouse_list)
     WarehouseProfile.objects.bulk_create(warehouse_profiles)
+    update_list = []
     for warehouse in MyUser.objects.filter(status='warehouse'):
         warehouse.set_password('absklad123')
+        update_list.append(warehouse)
+    MyUser.objects.bulk_update(update_list, ['password'])
+
     update_sequence(MyUser)
 
 
@@ -498,3 +502,21 @@ def main_initial_sync():
 
 
 
+from product.models import AsiaProduct, ProductPrice
+from general_service.models import City
+from account.models import DealerStatus
+
+city = City.objects.get(id=2)
+dealer_status = DealerStatus.objects.first()
+create_list = []
+for p in AsiaProduct.objects.all():
+    create_list.append(
+        ProductPrice(
+            product=p,
+            d_status=dealer_status,
+            city=city,
+
+        )
+    )
+
+ProductPrice.objects.bulk_create(create_list)
