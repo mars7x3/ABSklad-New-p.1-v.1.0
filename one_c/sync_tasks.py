@@ -629,6 +629,7 @@ def task_order_partial_sent(form_data_key: str):
         )
         OrderProduct.objects.bulk_create([OrderProduct(order=order, **p_data) for p_data in order_products_data])
 
+    with transaction.atomic():
         minus_count(main_order, order_products_data)
         update_main_order_status(main_order)
         main_stat_order_sync(order)
