@@ -432,6 +432,7 @@ def task_balance_plus_moderation(form_data_key: str):
         return
 
     with transaction.atomic():
+        balance.save()
         money_doc.save()
         main_stat_pds_sync(money_doc)
         money_doc.is_checked = True
