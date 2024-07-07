@@ -791,17 +791,19 @@ def task_update_return_order(form_data_key: str):
 
     one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
     try:
-        one_c.action_return_order(
-            uid=return_order_obj.order.uid,
-            return_uid=return_order_obj.uid,
-            to_delete=False,
-            created_at=f'{timezone.localtime(return_order_obj.created_at)}',
-            products=(
-                ProductMetaItem(
-                    product_uid=p.product.uid,
-                    count=int(p.count),
-                    use_prod_uid=False
-                ) for p in return_order_obj.products.all()
+        print(
+            one_c.action_return_order(
+                uid=return_order_obj.order.uid,
+                return_uid=return_order_obj.uid,
+                to_delete=False,
+                created_at=f'{timezone.localtime(return_order_obj.created_at)}',
+                products=(
+                    ProductMetaItem(
+                        product_uid=p.product.uid,
+                        count=int(p.count),
+                        use_prod_uid=False
+                    ) for p in return_order_obj.products.all()
+                )
             )
         )
     except (HTTPError, KeyError) as e:
