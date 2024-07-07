@@ -391,15 +391,15 @@ def task_balance_plus_moderation(form_data_key: str):
         created_at=timezone.now()
     )
 
-    if 'Нал' == money_doc.status:
-        order_type = 'Наличка'
-        cash_box_uid = money_doc.cash_box.uid
-    else:
-        order_type = 'Без нал'
-        cash_box_uid = ''
-
     one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
     try:
+        if 'Нал' == money_doc.status:
+            order_type = 'Наличка'
+            cash_box_uid = money_doc.cash_box.uid
+        else:
+            order_type = 'Без нал'
+            cash_box_uid = ''
+
         payload = one_c.action_money_doc(
             user_uid=balance.dealer.user.uid,
             amount=int(balance.amount),
@@ -410,9 +410,7 @@ def task_balance_plus_moderation(form_data_key: str):
             uid="00000000-0000-0000-0000-000000000000"
         )
         money_doc.uid = payload["result_uid"]
-        main_stat_pds_sync(money_doc)
-        money_doc.is_checked = True
-    except HTTPError as e:
+    except (HTTPError, KeyError) as e:
         logger.error(e)
 
         send_web_notif(
@@ -422,15 +420,30 @@ def task_balance_plus_moderation(form_data_key: str):
             status="failure"
         )
         return
-    else:
-        money_doc.save()
-        send_push_notification(
-            text="Заявка на пополнение одобрена!",
-            title=f"Заявка на пополнение #{balance_id}",
-            tokens=[balance.dealer.user.firebase_token],
-            link_id=balance_id,
-            status="balance",
+    except AttributeError as e:
+        logger.error(e)
+
+        send_web_notif(
+            form_data_key=form_data_key,
+            title=f"Ошибка модерации заявки на полнение баланса #{balance_id}",
+            message="Не найдена касса",
+            status="failure"
         )
+        return
+
+    with transaction.atomic():
+        money_doc.save()
+        main_stat_pds_sync(money_doc)
+        money_doc.is_checked = True
+        money_doc.save()
+
+    send_push_notification(
+        text="Заявка на пополнение одобрена!",
+        title=f"Заявка на пополнение #{balance_id}",
+        tokens=[balance.dealer.user.firebase_token],
+        link_id=balance_id,
+        status="balance",
+    )
 
 
 @app.task()
