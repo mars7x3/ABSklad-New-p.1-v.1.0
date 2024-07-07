@@ -451,15 +451,50 @@ class DirectorDealerSerializer(serializers.ModelSerializer):
         return rep
 
 
-class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
+class DirectorDealerProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MyUser
-        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
-                  'image', 'is_active', 'status')
+        model = DealerProfile
+        exclude = ('id', 'user')
+
+    def validate(self, attrs):
+        village = attrs.pop("village", None)
+        if village:
+            attrs["village_id"] = village.id
+
+        d_status = attrs.pop("dealer_status", None)
+        if d_status:
+            attrs["dealer_status_id"] = d_status.id
+
+        price_city = attrs.pop("price_city", None)
+        if price_city:
+            attrs["price_city_id"] = price_city.id
+
+        price_type = attrs.pop("price_type", None)
+        if price_type:
+            attrs["price_type_id"] = price_type.id
+        return attrs
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['profile'] = DirectorDealerProfileSerializer(instance.dealer_profile, context=self.context).data
+        rep['city_title'] = instance.village.city.title if instance.village else '---'
+        rep['price_city_title'] = instance.price_city.title if instance.price_city else '---'
+        rep['dealer_status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
+        rep['balance_crm'] = instance.wallet.amount_crm
+        rep['balance_1c'] = instance.wallet.amount_1c
+        rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores.all(), many=True, context=self.context).data
+        return rep
+
+
+class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
+    profile = DirectorDealerProfileSerializer(many=False, required=True, source="dealer_profile")
+
+    class Meta:
+        model = MyUser
+        fields = ('id', 'name', 'username', 'date_joined', 'email', 'phone', 'pwd', 'updated_at', 'password',
+                  'image', 'is_active', 'status', 'profile')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
         rep['managers'] = DirectorStaffListSerializer(instance.dealer_profile.managers.all(),
                                                       many=True, context=self.context).data
 
@@ -474,53 +509,26 @@ class DirectorDealerCRUDSerializer(serializers.ModelSerializer):
         # if pwd:
         #     if not pwd_is_valid(pwd):
         #         raise serializers.ValidationError({"password": "Некорректный password"})
-
-        profile = self.context.get('request').data.get('profile')
+        profile = validated_data.pop("profile")
         user = MyUser.objects.create_user(**validated_data)
-        profile_serializer = DirectorDealerProfileSerializer(data=profile)
-        profile_serializer.is_valid(raise_exception=True)
-        profile_serializer.save(user=user)
+        DealerProfile.objects.create(**profile, user=user)
         sync_dealer_back_to_1C(user)
         return user
 
     def update(self, instance, validated_data):
-        # username = validated_data.get('username')
-        # pwd = validated_data.get('password')
-        # if username:
-        #     if not username_is_valid(username):
-        #         raise serializers.ValidationError({"username": "Некорректный username"})
-        # if pwd:
-        #     if not pwd_is_valid(pwd):
-        #         raise serializers.ValidationError({"password": "Некорректный password"})
+        profile = validated_data.pop("profile", None)
+        instance = super().update(instance, validated_data)
 
-        profile = self.context.get('request').data.get('profile')
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-        # instance.pwd = validated_data.get('password')
-        # instance.set_password(validated_data.get('password'))
-        instance.save()
+        if profile:
+            dealer_profile = instance.dealer_profile
 
-        profile_serializer = DirectorDealerProfileSerializer(instance.dealer_profile, data=profile)
-        profile_serializer.is_valid(raise_exception=True)
-        profile_serializer.save()
+            for field, value in profile.items():
+                setattr(dealer_profile, field, value)
+
+            dealer_profile.save()
+
         sync_dealer_back_to_1C(instance)
         return instance
-
-
-class DirectorDealerProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DealerProfile
-        exclude = ('id', 'user')
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['city_title'] = instance.village.city.title if instance.village else '---'
-        rep['price_city_title'] = instance.price_city.title if instance.price_city else '---'
-        rep['dealer_status_title'] = instance.dealer_status.title if instance.dealer_status else '---'
-        rep['balance_crm'] = instance.wallet.amount_crm
-        rep['balance_1c'] = instance.wallet.amount_1c
-        rep['stores'] = DirectorDealerStoreSerializer(instance.dealer_stores.all(), many=True, context=self.context).data
-        return rep
 
 
 class DirectorDealerStoreSerializer(serializers.ModelSerializer):
@@ -901,6 +909,26 @@ class StockManagerSerializer(serializers.ModelSerializer):
         return rep
 
 
+class StockPhoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StockPhone
+        fields = ('phone',)
+
+
+class ValidateStockSerializer(serializers.ModelSerializer):
+    phones = StockPhoneSerializer(many=True, required=True)
+
+    class Meta:
+        model = Stock
+        exclude = ('uid', 'is_show')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['city_title'] = instance.city.title if instance.city else '---'
+        rep['warehouses'] = StockWarehouseSerializer(instance.warehouse_profiles, many=True, context=self.context).data
+        return rep
+
+
 class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
@@ -917,7 +945,7 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         phones = self.context['request'].data['phones']
         stock = Stock.objects.create(**validated_data)
-        create_product_counts_for_stock(stock=stock)
+        # create_product_counts_for_stock(stock=stock)
         phones_list = []
         for p in phones:
             phones_list.append(StockPhone(stock=stock, phone=p['phone']))
@@ -942,12 +970,6 @@ class DirectorStockCRUDSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         sync_stock_1c_2_crm(instance)
         return instance
-
-
-class StockPhoneSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StockPhone
-        fields = ('phone',)
 
 
 class StockListSerializer(serializers.ModelSerializer):

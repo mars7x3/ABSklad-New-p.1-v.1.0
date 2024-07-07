@@ -36,7 +36,8 @@ urlpatterns = [
     path('ws/chat/', include('chat.urls')),
     path('api/v1/', include('crm_general.urls')),
     path('api/v1/stats/', include('crm_stat.urls')),
-    path('api/v1/', include('crm_kpi.urls'))
+    path('api/v1/', include('crm_kpi.urls')),
+    path('api/v1/notifications/', include('notification.urls')),
 ]
 
 if settings.DEBUG:

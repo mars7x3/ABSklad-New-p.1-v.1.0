@@ -68,7 +68,8 @@ from .marketer.views import (
 from .warehouse_manager.views import (
     WareHouseMainOrderView, WareHouseCollectionViewSet, WareHouseProductViewSet, WareHouseCategoryViewSet,
     WareHouseSaleReportView, WareHouseInventoryView, WareHouseSaleReportDetailView, ReturnOrderProductView,
-    InventoryProductDeleteView, WareHouseNotificationView, VerifyOrderAuthorView, OrderPartialSentView
+    InventoryProductDeleteView, WareHouseNotificationView, VerifyOrderAuthorView,
+    OrderPartialSentTaskView
 )
 
 main_director_router = SimpleRouter()
@@ -95,6 +96,7 @@ hr_urlpatterns = [
 director_router = SimpleRouter()
 director_router.register("director/staff/crud", StaffCRUDView)
 director_router.register("director/product/detail", DirectorProductCRUDView)
+director_router.register("director/product/update", DirectorSyncTaskProductView)
 director_router.register("director/discount/crud", DirectorDiscountCRUDView)
 director_router.register("director/dealer/list", DirectorDealerListView)
 director_router.register("director/dealer/crud", DirectorDealerCRUDView)
@@ -108,7 +110,7 @@ director_router.register("director/price/list", DirectorPriceListView)
 director_router.register("director/task/crud", DirectorTaskCRUDView)
 director_router.register("director/task/list", DirectorTaskListView)
 director_router.register("director/staff/list", DirectorStaffListView)
-director_router.register("director/stock/crud", DirectorStockCRUDView)
+director_router.register("director/stock/crud", DirectorStockTaskView)
 director_router.register("director/stock/list", DirectorStockListView)
 director_router.register("director/stock/product/list", DStockProductListView)
 # director_router.register("director/kpi/crud", DirectorKPICRUDView)
@@ -164,8 +166,8 @@ accountant_urlpatterns = [
     path('accountant/order/total-info/', AccountantOrderTotalInfoView.as_view()),
     path('accountant/balance/history/list/', AccountantBalanceHistoryListView.as_view()),
     path('accountant/balance/history/total/', AccountantTotalEcoBalanceView.as_view()),
-    path('accountant/balance/plus/moderation/', BalancePlusModerationView.as_view()),
-    path('accountant/order/moderation/paid/', AccountantOrderModerationView.as_view()),
+    path('accountant/balance/plus/moderation/', BalancePlusModerationTaskView.as_view()),
+    path('accountant/order/moderation/paid/', AccountantOrderPaidModerationTaskView.as_view()),
     path('accountant/notifications/', AccountantNotificationView.as_view()),
     path('accountant/product/history/list/', ProductHistoryView.as_view()),
 
@@ -178,7 +180,6 @@ manager_router = SimpleRouter()
 manager_router.register("dealers", ManagerDealerListViewSet, basename="crm_general-manager-dealers")
 manager_router.register("balances", ManagerBalanceViewSet, basename="crm_general-manager-balances")
 
-
 manager_urlpatterns = [
     # Dealers
     path("manager/dealers/create/", ManagerDealerCreateAPIView.as_view(), name="crm_general-manager-dealers-create"),
@@ -186,7 +187,7 @@ manager_urlpatterns = [
          name="crm_general-manager-dealers-birthdays-list"),
     re_path("^manager/dealers/(?P<user_id>.+)/detail/$", ManagerDealerRetrieveAPIView.as_view(),
             name="crm_general-manager-dealers-detail"),
-    re_path("^manager/dealers/(?P<user_id>.+)/update/$", ManagerDealerUpdateAPIView.as_view(),
+    re_path("^manager/dealers/update/(?P<user_id>.+)/$", ManagerDealerUpdateAPIView.as_view(),
             name="crm_general-manager-dealers-update"),
     re_path("^manager/dealers/(?P<user_id>.+)/update-image/$", ManagerDealerImageUpdateAPIView.as_view(),
             name="crm_general-manager-dealers-update-image"),
@@ -318,7 +319,7 @@ warehouse_manager_urlpatterns = [
     path('warehouse-manager/report/<int:pk>/', WareHouseSaleReportDetailView.as_view()),
     path('warehouse/notifications/', WareHouseNotificationView.as_view()),
     path('warehouse/order/verify/', VerifyOrderAuthorView.as_view()),
-    path('warehouse/order/partial/sent/', OrderPartialSentView.as_view())
+    path('warehouse/order/partial/sent/', OrderPartialSentTaskView.as_view())
 
 ]
 

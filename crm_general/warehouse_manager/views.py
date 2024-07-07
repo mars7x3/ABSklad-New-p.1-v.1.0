@@ -1,41 +1,41 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q, Sum, F
-from django.utils import timezone
+from django.db.models import Sum
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin, \
     DestroyModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
-from account.models import MyUser
 from account.utils import send_push_notification
-from crm_kpi.utils import update_dealer_kpi_by_order
 from crm_stat.tasks import main_stat_order_sync
-from one_c.from_crm import sync_money_doc_to_1C, sync_order_to_1C
+from one_c import sync_tasks, task_views
+from one_c.from_crm import sync_order_to_1C
 from one_c.models import MovementProducts
-from order.db_request import query_debugger
-from order.models import MyOrder, OrderProduct, ReturnOrderProduct, ReturnOrder, ReturnOrderProductFile, MainOrder, \
-    MainOrderProduct
+from order.models import MyOrder, OrderProduct, ReturnOrder, MainOrder
 from order.utils import get_product_list, order_total_price, order_cost_price, generate_order_products, \
     validate_order_before_sending, update_main_order_status
 from product.models import AsiaProduct, Collection, Category, ProductCount
+from crm_general.paginations import GeneralPurposePagination
+from crm_general.models import Inventory, CRMTask, InventoryProduct
+from crm_general.serializers import OrderModerationSerializer
+from crm_general.tasks import minus_quantity
+from .one_c_serializers import OrderPartialSentSerializer
+
 from .permissions import IsWareHouseManager
-from crm_general.paginations import GeneralPurposePagination, ProductPagination
 from .serializers import MainOrderListSerializer, WareHouseProductListSerializer, \
     WareHouseCollectionListSerializer, WareHouseCategoryListSerializer, \
     WareHouseProductSerializer, WareHouseInventorySerializer, \
-    InventoryProductListSerializer, ReturnOrderProductSerializer, ReturnOrderSerializer, InventoryProductSerializer, \
+    InventoryProductListSerializer, ReturnOrderSerializer, InventoryProductSerializer, \
     MainOrderDetailSerializer
+
 from .mixins import WareHouseManagerMixin
 from .utils import create_validated_data, minus_count
-from ..models import Inventory, CRMTask, InventoryProduct
-from ..tasks import minus_quantity
 
 
-class WareHouseMainOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
+class WareHouseMainOrderView(WareHouseManagerMixin, task_views.OneCTaskMixin, ReadOnlyModelViewSet):
     queryset = MainOrder.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsWareHouseManager]
     pagination_class = GeneralPurposePagination
@@ -75,35 +75,42 @@ class WareHouseMainOrderView(WareHouseManagerMixin, ReadOnlyModelViewSet):
 
     @action(methods=['PATCH'], detail=False, url_path='update-status')
     def update_order_status(self, request):
-        order_status = self.request.data.get('status')
-        order_id = self.request.data.get('order_id')
-        try:
-            order = MainOrder.objects.get(id=order_id)
-        except ObjectDoesNotExist:
-            return Response({'detail': 'order_id is required or order does not exist'},
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = OrderModerationSerializer(data=self.request.data, context=self.get_serializer_context())
+        serializer.is_valid(raise_exception=True)
 
-        if order_status == 'paid':
-            if order.type_status == 'cash':
-                paid_at = timezone.localtime().now()
-                order.paid_at = paid_at
-                order.status = 'paid'
-                order.save()
-                sync_money_doc_to_1C(order)
-                kwargs = {
-                    "tokens": [order.author.user.firebase_token],
-                    "title": f"Заказ #{order_id}",
-                    'text': "Ваш заказ оплачен!",
-                    'link_id': order_id,
-                    "status": "order"
-                }
+        cache_key = self._save_validated_data(serializer.validated_data)
+        self._run_task(sync_tasks.task_order_paid_moderation, cache_key)
+        return Response(status=204)
 
-                send_push_notification(**kwargs)  # TODO: delay() add here
-
-                return Response({'detail': 'Order type status successfully changed to "paid"'},
-                                status=status.HTTP_200_OK)
-            return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
-                            status=status.HTTP_400_BAD_REQUEST)
+        # order_status = self.request.data.get('status')
+        # order_id = self.request.data.get('order_id')
+        # try:
+        #     order = MainOrder.objects.get(id=order_id)
+        # except ObjectDoesNotExist:
+        #     return Response({'detail': 'order_id is required or order does not exist'},
+        #                     status=status.HTTP_400_BAD_REQUEST)
+        #
+        # if order_status == 'paid':
+        #     if order.type_status == 'cash':
+        #         paid_at = timezone.localtime().now()
+        #         order.paid_at = paid_at
+        #         order.status = 'paid'
+        #         order.save()
+        #         sync_money_doc_to_1C(order)
+        #         kwargs = {
+        #             "tokens": [order.author.user.firebase_token],
+        #             "title": f"Заказ #{order_id}",
+        #             'text': "Ваш заказ оплачен!",
+        #             'link_id': order_id,
+        #             "status": "order"
+        #         }
+        #
+        #         send_push_notification(**kwargs)  # TODO: delay() add here
+        #
+        #         return Response({'detail': 'Order type status successfully changed to "paid"'},
+        #                         status=status.HTTP_200_OK)
+        #     return Response({'detail': 'Order type status must be "cash" to change to "paid"'},
+        #                     status=status.HTTP_400_BAD_REQUEST)
 
         # if order_status == 'sent':
         #     if order.status == 'paid':
@@ -447,3 +454,13 @@ class OrderPartialSentView(APIView):
 
             return Response('Success!', status=status.HTTP_200_OK)
         return Response('Wrong product count data for an order shipment', status=400)
+
+
+class OrderPartialSentTaskView(task_views.OneCCreateTaskMixin, task_views.OneCTaskGenericAPIView):
+    permission_classes = [IsAuthenticated, IsWareHouseManager]
+    serializer_class = OrderPartialSentSerializer
+    create_task = sync_tasks.task_order_partial_sent
+
+    def _save_validated_data(self, data):
+        data["wh_stock_id"] = self.request.user.warehouse_profile.stock.id
+        return super()._save_validated_data(data)
