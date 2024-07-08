@@ -66,7 +66,7 @@ def one_c_task_wrapper(notify_title: str, form_keys_on_err: list[str] = None):
                 password=settings.ONE_C_PASSWORD,
                 retries=5,
                 retries_delay=60,
-                retries_force_statuses=[502, 412, 403, 429, 408, 409],
+                retry_force_statuses=[502, 412, 403, 429, 408, 409],
                 timeout=60
             )
             try:
