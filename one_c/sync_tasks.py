@@ -490,7 +490,7 @@ def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
         raise NotifyException(key="key_err")
 
     order.payment_doc_uid = response_data['result_uid']
-    with transaction.atomic():  # create a savepoint
+    with transaction.atomic():
         order.paid_at = timezone.make_aware(timezone.localtime().now())
         order.save()
         minus_quantity(order.id, order.stock.id)
