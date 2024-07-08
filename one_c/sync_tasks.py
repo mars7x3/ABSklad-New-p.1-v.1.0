@@ -427,12 +427,7 @@ def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
     money_doc.uid = payload["result_uid"]
 
     with transaction.atomic():
-        with transaction.atomic():  # create a savepoint
-            balance.save()
-            money_doc.save()
-
-        main_stat_pds_sync(money_doc)
-        money_doc.is_checked = True
+        balance.save()
         money_doc.save()
 
     mobile_notification(
@@ -442,6 +437,11 @@ def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
         link_id=balance_id,
         status="balance",
     )
+    # stats
+    with transaction.atomic():
+        main_stat_pds_sync(money_doc)
+        money_doc.is_checked = True
+        money_doc.save()
 
 
 @app.task()
@@ -490,22 +490,17 @@ def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
         raise NotifyException(key="key_err")
 
     order.payment_doc_uid = response_data['result_uid']
-    with transaction.atomic():  
-        with transaction.atomic():  # create a savepoint
-            order.paid_at = timezone.make_aware(timezone.localtime().now())
-            order.save()
-            minus_quantity(order.id, order.stock.id)
-            money_doc = MoneyDoc.objects.create(
-                user=order.author.user,
-                amount=order.price,
-                uid=order.payment_doc_uid,
-                cash_box=order.stock.cash_box,
-                status=create_type_status
-            )
-
-        main_stat_pds_sync(money_doc)
-        money_doc.is_checked = True
-        money_doc.save()
+    with transaction.atomic():  # create a savepoint
+        order.paid_at = timezone.make_aware(timezone.localtime().now())
+        order.save()
+        minus_quantity(order.id, order.stock.id)
+        money_doc = MoneyDoc.objects.create(
+            user=order.author.user,
+            amount=order.price,
+            uid=order.payment_doc_uid,
+            cash_box=order.stock.cash_box,
+            status=create_type_status
+        )
 
     mobile_notification(
         tokens=[order.author.user.firebase_token],
@@ -520,6 +515,13 @@ def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
         link_id=order_id,
         status='order'
     )
+
+    # stats
+    with transaction.atomic():
+        main_stat_pds_sync(money_doc)
+        money_doc.is_checked = True
+        money_doc.save()
+
 
 
 @app.task()
@@ -579,28 +581,23 @@ def task_order_partial_sent(one_c: OneCAPIClient, form_data):
         raise NotifyException(key="key_err")
 
     with transaction.atomic():
-        with transaction.atomic():  # create save point
-            order = MyOrder.objects.create(
-                uid=response_data['result_uid'],
-                price=order_total_price(product_objs, products_data, main_order.author),
-                cost_price=order_cost_price(product_objs, products_data),
-                main_order_id=order_id,
-                author=main_order.author,
-                stock=main_order.stock,
-                status="sent",
-                type_status=main_order.type_status,
-                created_at=main_order.created_at,
-                released_at=timezone.make_aware(timezone.localtime().now()),
-                paid_at=main_order.paid_at,
-            )
-            OrderProduct.objects.bulk_create([OrderProduct(order=order, **p_data) for p_data in order_products_data])
+        order = MyOrder.objects.create(
+            uid=response_data['result_uid'],
+            price=order_total_price(product_objs, products_data, main_order.author),
+            cost_price=order_cost_price(product_objs, products_data),
+            main_order_id=order_id,
+            author=main_order.author,
+            stock=main_order.stock,
+            status="sent",
+            type_status=main_order.type_status,
+            created_at=main_order.created_at,
+            released_at=timezone.make_aware(timezone.localtime().now()),
+            paid_at=main_order.paid_at,
+        )
+        OrderProduct.objects.bulk_create([OrderProduct(order=order, **p_data) for p_data in order_products_data])
 
-            minus_count(main_order, order_products_data)
-            update_main_order_status(main_order)
-
-        main_stat_order_sync(order)
-        order.order_products.update(is_checked=True)
-        minus_quantity_order(order.id, wh_stock_id)
+        minus_count(main_order, order_products_data)
+        update_main_order_status(main_order)
 
     mobile_notification(
         tokens=[main_order.author.user.firebase_token],
@@ -609,6 +606,12 @@ def task_order_partial_sent(one_c: OneCAPIClient, form_data):
         link_id=order_id,
         status="order"
     )
+
+    # stats
+    with transaction.atomic():
+        main_stat_order_sync(order)
+        order.order_products.update(is_checked=True)
+        minus_quantity_order(order.id, wh_stock_id)
 
 
 @app.task()
