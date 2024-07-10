@@ -257,12 +257,12 @@ def sync_order_histories_1c_to_crm():
 
 
 def sync_pay_doc_histories():
-    response = requests.get(config('SYNC_1C_BASE_URL') + 'GetPyments',
+    response = requests.get(config('SYNC_1C_BASE_URL') + 'GetPyments', timeout=30,
                             auth=(config('SYNC_1C_USERNAME').encode('utf-8'), config('SYNC_1C_PWD').encode('utf-8')))
     payments = json.loads(response.content).get('pyments')
 
     users = {key: value for key, value in MyUser.objects.all().values_list('uid', 'id')}
-    cash_boxs = {key: value for key, value in MyUser.objects.all().values_list('uid', 'id')}
+    cash_boxs = {key: value for key, value in CashBox.objects.all().values_list('uid', 'id')}
     data_payment = []
 
     for p in payments:
@@ -502,21 +502,21 @@ def main_initial_sync():
 
 
 
-from product.models import AsiaProduct, ProductPrice
-from general_service.models import City
-from account.models import DealerStatus
-
-city = City.objects.get(id=2)
-dealer_status = DealerStatus.objects.first()
-create_list = []
-for p in AsiaProduct.objects.all():
-    create_list.append(
-        ProductPrice(
-            product=p,
-            d_status=dealer_status,
-            city=city,
-
-        )
-    )
-
-ProductPrice.objects.bulk_create(create_list)
+# from product.models import AsiaProduct, ProductPrice
+# from general_service.models import City
+# from account.models import DealerStatus
+#
+# city = City.objects.get(id=2)
+# dealer_status = DealerStatus.objects.first()
+# create_list = []
+# for p in AsiaProduct.objects.all():
+#     create_list.append(
+#         ProductPrice(
+#             product=p,
+#             d_status=dealer_status,
+#             city=city,
+#
+#         )
+#     )
+#
+# ProductPrice.objects.bulk_create(create_list)
