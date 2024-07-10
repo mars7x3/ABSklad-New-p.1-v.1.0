@@ -479,6 +479,38 @@ def sync_movement_history():
     MovementProducts.objects.bulk_create(products_list)
 
 
+def other_employees():
+    user = MyUser.objects.create_user(
+        status='director',
+        username='director',
+        email='director@absklad.com',
+        pwd='absklad123',
+        password='absklad123',
+        name='Director')
+    user.set_password('absklad123')
+    user.save()
+
+    user = MyUser.objects.create_user(
+        status='accountant',
+        username='accountant',
+        email='accountant@absklad.com',
+        pwd='absklad123',
+        password='absklad123',
+        name='Accountant')
+    user.set_password('absklad123')
+    user.save()
+
+    user = MyUser.objects.create_user(
+        status='marketer',
+        username='marketer',
+        email='marketer@absklad.com',
+        pwd='absklad123',
+        password='absklad123',
+        name='Marketer')
+    user.set_password('absklad123')
+    user.save()
+
+
 def main_initial_sync():
     collections_create()
     dealer_statuses_create()
@@ -486,9 +518,9 @@ def main_initial_sync():
     stocks_create()
     cash_boxs_create()
 
-    managers_create()
+    other_employees()
     rop_create()
-
+    managers_create()
     warehouses_create()
 
     sync_categories()
@@ -497,7 +529,6 @@ def main_initial_sync():
     dealer_mng_join()
     sync_order_histories_1c_to_crm()
     sync_pay_doc_histories()
-
     sync_movement_history()
 
 
