@@ -92,7 +92,7 @@ def sync_prods_list():
 
                 for dealer_status in dealer_statuses:
                     for city_uid, city_id in price_cities.items():
-                        is_create = True
+                        is_create = False
                         for c in p.get('Prices'):
                             if city_uid == c['PricetypesUID']:
                                 amount = int(c.get('PriceAmount'))
@@ -102,9 +102,9 @@ def sync_prods_list():
                                         d_status_id=dealer_status, price=amount
                                     )
                                 )
-                                is_create = False
+                                is_create = True
                                 break
-                        if is_create:
+                        if not is_create:
                             product_price_list.append(
                                 ProductPrice(
                                     city_id=city_id, product_id=product_id,
@@ -395,7 +395,7 @@ def cities_create():
         City(title='Кызылорда', user_uid='215eba93-3407-11ed-8a2f-2c59e53ae4c3',
              slug='kyzylorda', price_uid='07d8ff4c-1f17-11ee-8a38-2c59e53ae4c2'),
         City(title='Астана', user_uid='7400e4a9-37fc-11ed-8a2f-2c59e53ae4c3',
-             slug='astana', price_uid='37c308db-1f17-11ee-8a38-2c59e53ae4c2'),
+             slug='astana', price_uid='46a70327-1f17-11ee-8a38-2c59e53ae4c2'),
         City(title='Атырау', user_uid='8362254b-cb31-11ee-8a3c-2c59e53ae4c1',
              slug='atyrau', price_uid='9cb83a4a-edb7-11ee-8a3d-2c59e53ae4c1'),
         City(title='Тараз', user_uid='11a53ca4-66c9-11ee-8a3b-2c59e53ae4c3',
