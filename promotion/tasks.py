@@ -87,9 +87,9 @@ def activate_discount():
                     )
         create_notifications_for_users(crm_status='action', link_id=discount.id)
         kwargs = {
-            "tokens": [discount.dealer_profiles.all().values_list('user__firebase_token', flat=True)],
+            "tokens": list(discount.dealer_profiles.all().values_list('user__firebase_token', flat=True)),
             "title": f"Акция",
-            'text': f"{discount.title}",
+            'text': str(discount.title),
             'link_id': discount.id,
             "status": "action"
         }
