@@ -530,6 +530,8 @@ def main_initial_sync():
     sync_order_histories_1c_to_crm()
     sync_pay_doc_histories()
     sync_movement_history()
+    # Добавить инвентаризацию
+
 
 
 
