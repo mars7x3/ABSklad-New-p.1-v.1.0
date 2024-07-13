@@ -1,3 +1,5 @@
+import logging
+
 from django.utils import timezone
 
 from absklad_commerce.celery import app
@@ -20,6 +22,7 @@ def activate_discount():
     discounts_to_activate = []
     discount_prices_to_create = []
     products_to_update = []
+    notifications = []
 
     for discount in discounts:
         print(f'---Activating discount {discount.id} | Discount status -> {discount.status}')
@@ -85,19 +88,29 @@ def activate_discount():
                             is_active=True
                         )
                     )
-        create_notifications_for_users(crm_status='action', link_id=discount.id)
-        kwargs = {
-            "tokens": list(discount.dealer_profiles.all().values_list('user__firebase_token', flat=True)),
-            "title": f"Акция",
-            'text': str(discount.title),
-            'link_id': discount.id,
-            "status": "action"
-        }
-        send_push_notification(**kwargs)  # TODO: delay() add here
+
+        notifications.append(
+            {
+                "tokens": list(discount.dealer_profiles.all().values_list('user__firebase_token', flat=True)),
+                "title": f"Акция",
+                'text': str(discount.title),
+                'link_id': discount.id,
+                "status": "action"
+            }
+        )
 
     DiscountPrice.objects.bulk_create(discount_prices_to_create)
     AsiaProduct.objects.bulk_update(products_to_update, fields=['is_discount'])
     Discount.objects.bulk_update(discounts_to_activate, fields=['is_active'])
+
+    # important: send notification after discount update, otherwise notification will be false
+    for notif_kwargs in notifications:
+        try:
+            create_notifications_for_users(crm_status='action', link_id=notif_kwargs["link_id"])
+            send_push_notification(**notif_kwargs)   # TODO: delay() add here
+        except Exception as exc:
+            logging.error(exc)
+
 
 
 @app.task
