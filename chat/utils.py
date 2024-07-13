@@ -1,14 +1,16 @@
-from typing import Any
+from typing import Any, Iterable
 from urllib.parse import urljoin
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
 from account.models import DealerProfile
 from chat.constants import CHATS_IGNORE_COLS, CHAT_FIELDS_SUBSTITUTES
+from chat.models import Chat
 
 
 def convert_to_int(page, default: int):
@@ -86,3 +88,27 @@ def build_chats_data(chats_data) -> list[dict[str, Any]]:
 
 def build_file_url(file_path):
     return urljoin(settings.SERVER_URL, file_path)
+
+
+def create_chats_for_dealers(user_ids: Iterable[int] = None) -> list[Chat] | None:
+    user_model = get_user_model()
+
+    if user_ids is None:
+        user_ids = user_model.objects.exclude(
+            id__in=Chat.objects.all().values_list("dealer_id", flat=True)
+        ).values_list("id", flat=True)
+    else:
+        created_chat_user_ids = list(Chat.objects.all().values_list("dealer_id", flat=True))
+
+        user_ids = [
+            user_id
+            for user_id in user_ids
+            if user_id not in created_chat_user_ids
+        ]
+
+    new_chats = [
+        Chat(dealer_id=new_user_id)
+        for new_user_id in user_ids
+    ]
+    if new_chats:
+        return Chat.objects.bulk_create(new_chats)
