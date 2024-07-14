@@ -41,14 +41,6 @@ NOTIFY_ERRORS = {
 }
 
 
-class NotifyException(Exception):
-    def __init__(self, *args, key: str = None):
-        if key:
-            super().__init__(NOTIFY_ERRORS[key])
-        else:
-            super().__init__(*args)
-
-
 class OneCSyncTask(Task):
     typing = False
 
@@ -64,65 +56,58 @@ class OneCSyncTask(Task):
             retry_force_statuses=[502, 412, 403, 429, 408, 409],
             timeout=60
         )
+        self.key = None
+        self.form_data = None
 
-    def run(self, *args, **kwargs):
-        key = kwargs.pop("key")
-        form_data = get_from_cache(key=key)
+    def __call__(self, *args, **kwargs):
+        self.key = kwargs.pop("key")
+        self.form_data = get_from_cache(key=self.key)
 
-        if not form_data:
-            raise Exception(f"Not found redis key {key} or body is empty")
+        if not self.form_data:
+            raise Exception(f"Not found redis key {self.key} or body is empty")
 
         if self.use_key_on_err:
-            title = self.notify_title.format(*[form_data[key] for key in self.use_key_on_err if key in form_data])
-        else:
-            title = self.notify_title
-
-        try:
-            kwargs["one_c"] = self.one_c_client
-            kwargs["form_data"] = form_data
-            return super().run(**kwargs)
-        except NotifyException as notify_exc:
-            logger.error(notify_exc)
-            send_web_notif(
-                form_data_key=key,
-                title=title,
-                status="failure",
-                message=str(notify_exc)
+            self.notify_title = self.notify_title.format(
+                *[self.form_data[key] for key in self.use_key_on_err if key in self.form_data]
             )
+
+        if not self.bind:
+            kwargs["one_c"] = self.one_c_client
+            kwargs["form_data"] = self.form_data
+        return super().__call__(*args, **kwargs)
+
+    def send_failure_notify(self, message) -> None:
+        send_web_notif(
+            form_data_key=self.key,
+            title=self.notify_title,
+            status="failure",
+            message=message
+        )
+
+    def run(self, *args, **kwargs):
+        try:
+            return super().run(*args, **kwargs)
         except ConnectTimeout as timeout_exc:
             logger.error(timeout_exc)
-            send_web_notif(
-                form_data_key=key,
-                title=title,
-                status="failure",
-                message=NOTIFY_ERRORS["timeout"]
-            )
+            self.send_failure_notify(NOTIFY_ERRORS["timeout"])
         except ConnectionError as con_exc:
             logger.error(con_exc)
-            send_web_notif(
-                form_data_key=key,
-                title=title,
-                status="failure",
-                message=NOTIFY_ERRORS["connection_err"]
-            )
+            self.send_failure_notify(NOTIFY_ERRORS["connection_err"])
         except RequestException as http_exc:
             logger.error(http_exc)
-            notify_kwargs = dict(
-                form_data_key=key,
-                title=title,
-                status="failure"
-            )
+
             match http_exc.response.status_code:
                 case 404:
-                    notify_kwargs["message"] = NOTIFY_ERRORS["not_found"]
+                    msg = NOTIFY_ERRORS["not_found"]
                 case 400:
-                    notify_kwargs["message"] = NOTIFY_ERRORS["bad_request"]
+                    msg = NOTIFY_ERRORS["bad_request"]
                 case 500:
-                    notify_kwargs["message"] = NOTIFY_ERRORS["req_err"]
+                    msg = NOTIFY_ERRORS["req_err"]
                 # TODO: handle other error statuses
                 case _:
-                    notify_kwargs["message"] = NOTIFY_ERRORS["default"]
-            send_web_notif(**notify_kwargs)
+                    msg = NOTIFY_ERRORS["default"]
+
+            self.send_failure_notify(msg)
 
 
 def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:
@@ -136,18 +121,19 @@ def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:
     notify_title="Ошибка при попытке создания категории %s",
     use_key_on_err=["title"]
 )
-def task_create_category(one_c: OneCAPIClient, form_data):
-    title = form_data["title"]
-    response_data = one_c.action_category(
+def task_create_category(self):
+    title = self.form_data["title"]
+    response_data = self.one_c_client.action_category(
         title=title,
         uid="00000000-0000-0000-0000-000000000000",
         to_delete=False,
     )
     if 'category_uid' not in response_data:
-        raise NotifyException(key="key_err")
+        self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
 
-    form_data["uid"] = response_data['category_uid']
-    Category(**form_data).save()
+    self.form_data["uid"] = response_data['category_uid']
+    Category(**self.form_data).save()
 
 
 @app.task(
@@ -156,16 +142,16 @@ def task_create_category(one_c: OneCAPIClient, form_data):
     notify_title="Ошибка при попытке обновления категории #%s",
     use_key_on_err=["title"]
 )
-def task_update_category(one_c: OneCAPIClient, form_data):
-    category_id = form_data.pop("id")  # id on update required!
-    new_title = form_data["title"]
+def task_update_category(self):
+    category_id = self.form_data.pop("id")  # id on update required!
+    new_title = self.form_data["title"]
 
     category = Category.objects.get(id=category_id)
     # successful response expected
-    response_data = one_c.action_category(title=new_title, uid=category.uid, to_delete=False)
+    response_data = self.one_c_client.action_category(title=new_title, uid=category.uid, to_delete=False)
     logger.debug(response_data)
 
-    _set_attrs_from_dict(category, form_data)
+    _set_attrs_from_dict(category, self.form_data)
     category.save()
 
 
@@ -175,10 +161,10 @@ def task_update_category(one_c: OneCAPIClient, form_data):
     notify_title="Ошибка при попытке обновления продукта #%s",
     use_key_on_err=["id"]
 )
-def task_update_product(one_c: OneCAPIClient, form_data):
-    product_id = form_data.pop("id")
+def task_update_product(self):
+    product_id = self.form_data.pop("id")
     product = AsiaProduct.objects.select_related("category").get(id=product_id)
-    category_id = form_data.pop("category", None)
+    category_id = self.form_data.pop("category", None)
 
     if not category_id:
         category = product.category
@@ -187,18 +173,18 @@ def task_update_product(one_c: OneCAPIClient, form_data):
         product.category = category
 
     # successful response expected
-    response_data = one_c.action_product(
-        title=form_data.get("title", product.title),
-        uid=form_data.get("uid", product.uid),
+    response_data = self.one_c_client.action_product(
+        title=self.form_data.get("title", product.title),
+        uid=self.form_data.get("uid", product.uid),
         category_title=category.title,
         category_uid=category.uid,
         to_delete=False,
-        vendor_code=form_data.get("vendor_code", product.vendor_code)
+        vendor_code=self.form_data.get("vendor_code", product.vendor_code)
     )
     logger.debug(response_data)
 
     with transaction.atomic():
-        stocks = {stock["stock_id"]: stock["count_norm"] for stock in form_data.pop("stocks", None) or []}
+        stocks = {stock["stock_id"]: stock["count_norm"] for stock in self.form_data.pop("stocks", None) or []}
         if stocks:
             to_update = []
 
@@ -209,7 +195,7 @@ def task_update_product(one_c: OneCAPIClient, form_data):
             if to_update:
                 ProductCount.objects.bulk_update(to_update, ['count_norm'])
 
-        city_prices = form_data.pop("city_prices", None)
+        city_prices = self.form_data.pop("city_prices", None)
         if city_prices:
             to_update = []
             dealer_statuses = DealerStatus.objects.all()
@@ -236,7 +222,7 @@ def task_update_product(one_c: OneCAPIClient, form_data):
             if to_update:
                 ProductPrice.objects.bulk_update(to_update, ['price'])
 
-        type_prices = form_data.pop("type_prices", None)
+        type_prices = self.form_data.pop("type_prices", None)
         if type_prices:
             to_update = []
 
@@ -266,7 +252,7 @@ def task_update_product(one_c: OneCAPIClient, form_data):
             if to_update:
                 ProductPrice.objects.bulk_update(to_update, ['price'])
 
-        cost_price = form_data.pop("cost_price", None)
+        cost_price = self.form_data.pop("cost_price", None)
         if cost_price:
             cost_price_obj = product.cost_prices.filter(is_active=True).first()
 
@@ -276,7 +262,7 @@ def task_update_product(one_c: OneCAPIClient, form_data):
             else:
                 ProductCostPrice.objects.create(product=product, price=cost_price, is_active=True)
 
-        _set_attrs_from_dict(product, form_data)
+        _set_attrs_from_dict(product, self.form_data)
         product.save()
 
 
@@ -285,18 +271,18 @@ def task_update_product(one_c: OneCAPIClient, form_data):
     base=OneCSyncTask,
     notify_title="Ошибка при попытке создания контрагента"
 )
-def task_create_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = False):
+def task_create_dealer(self, from_profile: bool = False):
     if from_profile:
-        user_data = form_data.pop("user")
-        profile_data = form_data
+        user_data = self.form_data.pop("user")
+        profile_data = self.form_data
     else:
-        user_data = form_data
-        profile_data = form_data.pop("dealer_profile")
+        user_data = self.form_data
+        profile_data = self.form_data.pop("dealer_profile")
 
     email = user_data["email"]
 
-    if form_data.get("village_id"):
-        village = Village.objects.select_related("city").get(id=form_data["village_id"])
+    if self.form_data.get("village_id"):
+        village = Village.objects.select_related("city").get(id=self.form_data["village_id"])
         city_title = village.city.title
         city_uid = village.city.user_uid
     else:
@@ -316,10 +302,11 @@ def task_create_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = Fal
             to_delete=False
         ),
     )
-    response_data = one_c.action_dealers(dealers)
+    response_data = self.one_c_client.action_dealers(dealers)
     
     if "client" not in response_data:
-        raise NotifyException(key="key_err")
+        self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
 
     user_data["uid"] = response_data["client"]
     managers = profile_data.pop("managers", None)
@@ -337,18 +324,18 @@ def task_create_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = Fal
     base=OneCSyncTask,
     notify_title="Ошибка при попытке обновления контрагента"
 )
-def task_update_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = False):
+def task_update_dealer(self, from_profile: bool = False):
     if from_profile:
-        user_data = form_data.pop("user", {})
-        profile_data = form_data
+        user_data = self.form_data.pop("user", {})
+        profile_data = self.form_data
 
-        profile = DealerProfile.objects.get(id=form_data.pop("id"))
+        profile = DealerProfile.objects.get(id=self.form_data.pop("id"))
         user = profile.user
     else:
-        profile_data = form_data.pop("dealer_profile", {})
-        user_data = form_data
+        profile_data = self.form_data.pop("dealer_profile", {})
+        user_data = self.form_data
 
-        user = MyUser.objects.get(id=form_data.pop("id"))
+        user = MyUser.objects.get(id=self.form_data.pop("id"))
         profile = user.dealer_profile
 
     if profile_data.get("village_id"):
@@ -376,7 +363,7 @@ def task_update_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = Fal
         ),
     )
     # successful response expected
-    response_data = one_c.action_dealers(dealers)
+    response_data = self.one_c_client.action_dealers(dealers)
     logger.debug(response_data)
 
     managers = profile_data.pop("managers", None)
@@ -397,16 +384,18 @@ def task_update_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = Fal
     notify_title="Ошибка модерации заявки на полнение баланса #%s",
     use_key_on_err=["balance_id"]
 )
-def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
-    balance_id = form_data["balance_id"]
-    is_success = form_data["is_success"]
-    status = form_data['status']
+def task_balance_plus_moderation(self):
+    balance_id = self.form_data["balance_id"]
+    is_success = self.form_data["is_success"]
+    status = self.form_data['status']
 
     balance = BalancePlus.objects.filter(is_moderation=False, id=balance_id).first()
     if not balance:
         if BalancePlus.objects.filter(is_moderation=True, id=balance_id).exists():
-            raise NotifyException("Cчет ранее уже был обработан!")
-        raise NotifyException("Счет не найден!")
+            self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        else:
+            self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
 
     balance.is_moderation = True
     balance.is_success = is_success
@@ -437,10 +426,11 @@ def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
         else:
             order_type = 'Без нал'
             cash_box_uid = ''
-    except AttributeError:
-        raise NotifyException("Не найдена касса")
+    except AttributeError as exc:
+        self.send_failure_notify("Не найдена касса")
+        raise exc
 
-    payload = one_c.action_money_doc(
+    payload = self.one_c_client.action_money_doc(
         user_uid=balance.dealer.user.uid,
         amount=int(balance.amount),
         created_at=f'{timezone.localtime(money_doc.created_at)}',
@@ -450,7 +440,8 @@ def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
         uid="00000000-0000-0000-0000-000000000000"
     )
     if "result_uid" not in payload:
-        raise NotifyException(key="key_err")
+        self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
 
     money_doc.uid = payload["result_uid"]
 
@@ -478,10 +469,10 @@ def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
     notify_title="Ошибка модерации оплаты заказа #%s",
     use_key_on_err=["order_id"]
 )
-def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
-    order_id = form_data["order_id"]
+def task_order_paid_moderation(self):
+    order_id = self.form_data["order_id"]
     order = MainOrder.objects.get(id=order_id)
-    order.status = form_data["status"]
+    order.status = self.form_data["status"]
 
     if order.status != "paid":
         order.save()
@@ -509,7 +500,7 @@ def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
         cash_box_uid = ''
         create_type_status = 'Без нал'
 
-    response_data = one_c.action_money_doc(
+    response_data = self.one_c_client.action_money_doc(
         user_uid=order.author.user.uid,
         amount=int(order.price),
         created_at=f"{timezone.localtime(order.created_at)}",
@@ -519,7 +510,8 @@ def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
         uid="00000000-0000-0000-0000-000000000000"
     )
     if 'result_uid' not in response_data:
-        raise NotifyException(key="key_err")
+        self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
 
     order.payment_doc_uid = response_data['result_uid']
     with transaction.atomic():
@@ -561,10 +553,10 @@ def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
     notify_title="Ошибка отгрузки заказа #%s",
     use_key_on_err=["order_id"]
 )
-def task_order_partial_sent(one_c: OneCAPIClient, form_data):
-    order_id = form_data['order_id']
-    products_data = form_data['products']
-    wh_stock_id = form_data.pop("wh_stock_id")
+def task_order_partial_sent(self):
+    order_id = self.form_data['order_id']
+    products_data = self.form_data['products']
+    wh_stock_id = self.form_data.pop("wh_stock_id")
 
     main_order = MainOrder.objects.select_related("author", "stock").get(id=order_id)
     product_objs = AsiaProduct.objects.filter(id__in=[key for key in products_data])
@@ -584,8 +576,9 @@ def task_order_partial_sent(one_c: OneCAPIClient, form_data):
                     d_status=main_order.author.dealer_status
                 ).first()
             ).price
-        except AttributeError:
-            raise NotifyException(f"Не найдена цена для товара #{product_obj.id}")
+        except AttributeError as exc:
+            self.send_failure_notify(f"Не найдена цена для товара #{product_obj.id}")
+            raise exc
 
         order_products_data.append(
             {
@@ -595,7 +588,7 @@ def task_order_partial_sent(one_c: OneCAPIClient, form_data):
             }
         )
 
-    response_data = one_c.action_sale(
+    response_data = self.one_c_client.action_sale(
         user_uid=main_order.author.user.uid,
         created_at=f'{released_at}',
         payment_doc_uid=main_order.payment_doc_uid,
@@ -613,7 +606,8 @@ def task_order_partial_sent(one_c: OneCAPIClient, form_data):
     )
     
     if 'result_uid' not in response_data:
-        raise NotifyException(key="key_err")
+        self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
 
     with transaction.atomic():
         order = MyOrder.objects.create(
@@ -654,21 +648,22 @@ def task_order_partial_sent(one_c: OneCAPIClient, form_data):
     base=OneCSyncTask,
     notify_title="Ошибка при попытке создания склада"
 )
-def task_create_stock(one_c: OneCAPIClient, form_data):
-    response_data = one_c.action_stock(
+def task_create_stock(self):
+    response_data = self.one_c_client.action_stock(
         uid="",
-        title=form_data.get("title", ""),
+        title=self.form_data.get("title", ""),
         to_delete=False
     )
     
     if 'result_uid' not in response_data:
-        raise NotifyException(key="key_err")
-    
-    form_data["uid"] = response_data['result_uid']
-    phones = form_data.pop("phones", None)
+        self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
+
+    self.form_data["uid"] = response_data['result_uid']
+    phones = self.form_data.pop("phones", None)
 
     with transaction.atomic():
-        stock = Stock.objects.create(**form_data)
+        stock = Stock.objects.create(**self.form_data)
         if phones:
             StockPhone.objects.bulk_create([StockPhone(stock=stock, phone=data['phone']) for data in phones])
         create_prod_counts(stock)
@@ -680,22 +675,22 @@ def task_create_stock(one_c: OneCAPIClient, form_data):
     notify_title="Ошибка при попытке обновления склада #%s",
     use_key_on_err=["id"]
 )
-def task_update_stock(one_c: OneCAPIClient, form_data):
-    stock_id = form_data.pop("id")
+def task_update_stock(self):
+    stock_id = self.form_data.pop("id")
     stock_obj = Stock.objects.get(id=stock_id)
 
     # successfully response status excepted
-    response_data = one_c.action_stock(
+    response_data = self.one_c_client.action_stock(
         uid=stock_obj.uid,
-        title=form_data.get("title", stock_obj.title),
+        title=self.form_data.get("title", stock_obj.title),
         to_delete=False
     )
     logger.debug(response_data)
 
-    phones = form_data.pop("phones", None)
+    phones = self.form_data.pop("phones", None)
     
     with transaction.atomic():
-        _set_attrs_from_dict(stock_obj, form_data)
+        _set_attrs_from_dict(stock_obj, self.form_data)
         stock_obj.save()
 
         if phones:
@@ -709,13 +704,13 @@ def task_update_stock(one_c: OneCAPIClient, form_data):
     notify_title="Ошибка при попытке обновления инвентаря #%s",
     use_key_on_err=["id"]
 )
-def task_inventory_update(one_c: OneCAPIClient, form_data):
-    inventory_id = form_data.pop("id")
+def task_inventory_update(self):
+    inventory_id = self.form_data.pop("id")
     inventory_obj = Inventory.objects.get(id=inventory_id)
     
-    _set_attrs_from_dict(inventory_obj, form_data)
+    _set_attrs_from_dict(inventory_obj, self.form_data)
 
-    if form_data.get("status", "") != "moderated" or inventory_obj.status != "moderated":
+    if self.form_data.get("status", "") != "moderated" or inventory_obj.status != "moderated":
         inventory_obj.save()
         return
 
@@ -725,7 +720,7 @@ def task_inventory_update(one_c: OneCAPIClient, form_data):
     else:
         stock_uid = ""
 
-    response_data = one_c.action_inventory(
+    response_data = self.one_c_client.action_inventory(
         uid=inventory_obj.uid,
         user_uid='fcac9f0f-34d2-11ed-8a2f-2c59e53ae4c3',
         to_delete=False,
@@ -740,7 +735,8 @@ def task_inventory_update(one_c: OneCAPIClient, form_data):
         )
     )
     if 'result_uid' not in response_data:
-        raise NotifyException(key="key_err")
+        self.send_failure_notify(NOTIFY_ERRORS["key_err"])
+        return
 
     inventory_obj.uid = response_data['result_uid']
     inventory_obj.save()
@@ -752,23 +748,22 @@ def task_inventory_update(one_c: OneCAPIClient, form_data):
     notify_title="Ошибка при попытке обновления возрата #%s",
     use_key_on_err=["id"]
 )
-def task_update_return_order(one_c: OneCAPIClient, form_data):
-    return_product_id = form_data.pop("id")
+def task_update_return_order(self):
+    return_product_id = self.form_data.pop("id")
     return_product_obj = ReturnOrderProduct.objects.select_related("return_order", "product").get(id=return_product_id)
-    status = form_data.get("status", "")
+    status = self.form_data.get("status", "")
     return_order_obj = return_product_obj.return_order
     order_obj = return_order_obj.order
 
     if status != "success" or return_product_obj.status != "success":
-        for field, value in form_data.items():
+        for field, value in self.form_data.items():
             setattr(return_product_obj, field, value)
 
         return_product_obj.save()
         return
 
-    one_c = OneCAPIClient(username=settings.ONE_C_USERNAME, password=settings.ONE_C_PASSWORD)
     # TODO: save Return order uid from response data
-    response_data = one_c.action_return_order(
+    response_data = self.one_c_client.action_return_order(
         uid=return_order_obj.order.uid,
         return_uid=return_order_obj.uid,
         to_delete=False,
@@ -803,5 +798,5 @@ def task_update_return_order(one_c: OneCAPIClient, form_data):
         order_obj.price = total_order_price
         order_obj.save()
 
-        _set_attrs_from_dict(return_product_obj, form_data)
+        _set_attrs_from_dict(return_product_obj, self.form_data)
         return_product_obj.save()
