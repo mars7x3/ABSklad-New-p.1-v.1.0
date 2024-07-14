@@ -457,10 +457,9 @@ def task_balance_plus_moderation(self):
         status="balance",
     )
     # stats
-    with transaction.atomic():
-        main_stat_pds_sync(money_doc)
-        money_doc.is_checked = True
-        money_doc.save()
+    main_stat_pds_sync(money_doc)
+    money_doc.is_checked = True
+    money_doc.save()
 
 
 @app.task(
@@ -541,10 +540,9 @@ def task_order_paid_moderation(self):
     )
 
     # stats
-    with transaction.atomic():
-        main_stat_pds_sync(money_doc)
-        money_doc.is_checked = True
-        money_doc.save()
+    main_stat_pds_sync(money_doc)
+    money_doc.is_checked = True
+    money_doc.save()
 
 
 @app.task(
@@ -637,10 +635,9 @@ def task_order_partial_sent(self):
     )
 
     # stats
-    with transaction.atomic():
-        main_stat_order_sync(order)
-        order.order_products.update(is_checked=True)
-        minus_quantity_order(order.id, wh_stock_id)
+    main_stat_order_sync(order)
+    order.order_products.update(is_checked=True)
+    minus_quantity_order(order.id, wh_stock_id)
 
 
 @app.task(
