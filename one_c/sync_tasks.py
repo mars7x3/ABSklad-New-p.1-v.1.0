@@ -50,6 +50,8 @@ class NotifyException(Exception):
 
 
 class OneCSyncTask(Task):
+    typing = False
+
     def __init__(self, *args, notify_title: str = None, use_key_on_err: list[str] = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.notify_title = notify_title
