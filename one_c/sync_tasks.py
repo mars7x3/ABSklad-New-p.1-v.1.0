@@ -2,6 +2,7 @@ from decimal import Decimal
 from logging import getLogger
 from typing import Any
 
+from celery import Task
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -48,75 +49,77 @@ class NotifyException(Exception):
             super().__init__(*args)
 
 
-def one_c_task_wrapper(notify_title: str, form_keys_on_err: list[str] = None):
-    def handler_decorator(func):
-        def handler(*args, key: str, **kwargs):
-            form_data = get_from_cache(key=key)
+class OneCSyncTask(Task):
+    def __init__(self, *args, notify_title: str = None, use_key_on_err: list[str] = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.notify_title = notify_title
+        self.use_key_on_err = use_key_on_err
+        self.one_c_client = OneCAPIClient(
+            username=settings.ONE_C_USERNAME,
+            password=settings.ONE_C_PASSWORD,
+            retries=5,
+            retries_delay=60,
+            retry_force_statuses=[502, 412, 403, 429, 408, 409],
+            timeout=60
+        )
 
-            if not form_data:
-                raise Exception(f"Not found redis key {key} or body is empty")
+    def run(self, *args, key: str, **kwargs):
+        form_data = get_from_cache(key=key)
 
-            if form_keys_on_err:
-                title = notify_title.format(*[key for key in form_data.keys() if key in form_keys_on_err])
-            else:
-                title = notify_title
+        if not form_data:
+            raise Exception(f"Not found redis key {key} or body is empty")
 
-            one_c = OneCAPIClient(
-                username=settings.ONE_C_USERNAME,
-                password=settings.ONE_C_PASSWORD,
-                retries=5,
-                retries_delay=60,
-                retry_force_statuses=[502, 412, 403, 429, 408, 409],
-                timeout=60
+        if self.use_key_on_err:
+            title = self.notify_title.format(*[form_data[key] for key in self.use_key_on_err if key in form_data])
+        else:
+            title = self.notify_title
+
+        try:
+            kwargs["one_c"] = self.one_c_client
+            kwargs["form_data"] = form_data
+            return super().run(*args, **kwargs)
+        except NotifyException as notify_exc:
+            logger.error(notify_exc)
+            send_web_notif(
+                form_data_key=key,
+                title=title,
+                status="failure",
+                message=str(notify_exc)
             )
-            try:
-                kwargs["one_c"] = one_c
-                kwargs["form_data"] = form_data
-                return func(*args, **kwargs)
-            except NotifyException as notify_exc:
-                logger.error(notify_exc)
-                send_web_notif(
-                    form_data_key=key,
-                    title=title,
-                    status="failure",
-                    message=str(notify_exc)
-                )
-            except ConnectTimeout as timeout_exc:
-                logger.error(timeout_exc)
-                send_web_notif(
-                    form_data_key=key,
-                    title=title,
-                    status="failure",
-                    message=NOTIFY_ERRORS["timeout"]
-                )
-            except ConnectionError as con_exc:
-                logger.error(con_exc)
-                send_web_notif(
-                    form_data_key=key,
-                    title=title,
-                    status="failure",
-                    message=NOTIFY_ERRORS["connection_err"]
-                )
-            except RequestException as http_exc:
-                logger.error(http_exc)
-                notify_kwargs = dict(
-                    form_data_key=key,
-                    title=title,
-                    status="failure"
-                )
-                match http_exc.response.status_code:
-                    case 404:
-                        notify_kwargs["message"] = NOTIFY_ERRORS["not_found"]
-                    case 400:
-                        notify_kwargs["message"] = NOTIFY_ERRORS["bad_request"]
-                    case 500:
-                        notify_kwargs["message"] = NOTIFY_ERRORS["req_err"]
-                    # TODO: handle other error statuses
-                    case _:
-                        notify_kwargs["message"] = NOTIFY_ERRORS["default"]
-                send_web_notif(**notify_kwargs)
-        return handler
-    return handler_decorator
+        except ConnectTimeout as timeout_exc:
+            logger.error(timeout_exc)
+            send_web_notif(
+                form_data_key=key,
+                title=title,
+                status="failure",
+                message=NOTIFY_ERRORS["timeout"]
+            )
+        except ConnectionError as con_exc:
+            logger.error(con_exc)
+            send_web_notif(
+                form_data_key=key,
+                title=title,
+                status="failure",
+                message=NOTIFY_ERRORS["connection_err"]
+            )
+        except RequestException as http_exc:
+            logger.error(http_exc)
+            notify_kwargs = dict(
+                form_data_key=key,
+                title=title,
+                status="failure"
+            )
+            match http_exc.response.status_code:
+                case 404:
+                    notify_kwargs["message"] = NOTIFY_ERRORS["not_found"]
+                case 400:
+                    notify_kwargs["message"] = NOTIFY_ERRORS["bad_request"]
+                case 500:
+                    notify_kwargs["message"] = NOTIFY_ERRORS["req_err"]
+                # TODO: handle other error statuses
+                case _:
+                    notify_kwargs["message"] = NOTIFY_ERRORS["default"]
+            send_web_notif(**notify_kwargs)
 
 
 def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:
@@ -124,8 +127,12 @@ def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:
         setattr(obj, field, value)
         
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке создания категории %s", ["title"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке создания категории %s",
+    use_key_on_err=["title"]
+)
 def task_create_category(one_c: OneCAPIClient, form_data):
     title = form_data["title"]
     response_data = one_c.action_category(
@@ -140,8 +147,12 @@ def task_create_category(one_c: OneCAPIClient, form_data):
     Category(**form_data).save()
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке обновления категории #%s", ["id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке обновления категории #%s",
+    use_key_on_err=["title"]
+)
 def task_update_category(one_c: OneCAPIClient, form_data):
     category_id = form_data.pop("id")  # id on update required!
     new_title = form_data["title"]
@@ -155,8 +166,12 @@ def task_update_category(one_c: OneCAPIClient, form_data):
     category.save()
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке обновления продукта #%s", ["id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке обновления продукта #%s",
+    use_key_on_err=["id"]
+)
 def task_update_product(one_c: OneCAPIClient, form_data):
     product_id = form_data.pop("id")
     product = AsiaProduct.objects.select_related("category").get(id=product_id)
@@ -262,8 +277,11 @@ def task_update_product(one_c: OneCAPIClient, form_data):
         product.save()
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке создания контрагента")
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке создания контрагента"
+)
 def task_create_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = False):
     if from_profile:
         user_data = form_data.pop("user")
@@ -311,8 +329,11 @@ def task_create_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = Fal
             profile.managers.set(managers)
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке обновления контрагента")
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке обновления контрагента"
+)
 def task_update_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = False):
     if from_profile:
         user_data = form_data.pop("user", {})
@@ -367,8 +388,12 @@ def task_update_dealer(one_c: OneCAPIClient, form_data, from_profile: bool = Fal
             profile.managers.set(managers)
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка модерации заявки на полнение баланса #%s", ["balance_id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка модерации заявки на полнение баланса #%s",
+    use_key_on_err=["balance_id"]
+)
 def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
     balance_id = form_data["balance_id"]
     is_success = form_data["is_success"]
@@ -444,8 +469,12 @@ def task_balance_plus_moderation(one_c: OneCAPIClient, form_data):
         money_doc.save()
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка модерации оплаты заказа #%s", ["order_id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка модерации оплаты заказа #%s",
+    use_key_on_err=["order_id"]
+)
 def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
     order_id = form_data["order_id"]
     order = MainOrder.objects.get(id=order_id)
@@ -523,9 +552,12 @@ def task_order_paid_moderation(one_c: OneCAPIClient, form_data):
         money_doc.save()
 
 
-
-@app.task()
-@one_c_task_wrapper("Ошибка отгрузки заказа #%s", ["order_id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка отгрузки заказа #%s",
+    use_key_on_err=["order_id"]
+)
 def task_order_partial_sent(one_c: OneCAPIClient, form_data):
     order_id = form_data['order_id']
     products_data = form_data['products']
@@ -614,8 +646,11 @@ def task_order_partial_sent(one_c: OneCAPIClient, form_data):
         minus_quantity_order(order.id, wh_stock_id)
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке создания склада")
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке создания склада"
+)
 def task_create_stock(one_c: OneCAPIClient, form_data):
     response_data = one_c.action_stock(
         uid="",
@@ -636,8 +671,12 @@ def task_create_stock(one_c: OneCAPIClient, form_data):
         create_prod_counts(stock)
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке обновления склада #%s", ["id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке обновления склада #%s",
+    use_key_on_err=["id"]
+)
 def task_update_stock(one_c: OneCAPIClient, form_data):
     stock_id = form_data.pop("id")
     stock_obj = Stock.objects.get(id=stock_id)
@@ -661,8 +700,12 @@ def task_update_stock(one_c: OneCAPIClient, form_data):
             StockPhone.objects.bulk_create([StockPhone(stock=stock_obj, phone=data['phone']) for data in phones])
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке обновления инвентаря #%s", ["id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке обновления инвентаря #%s",
+    use_key_on_err=["id"]
+)
 def task_inventory_update(one_c: OneCAPIClient, form_data):
     inventory_id = form_data.pop("id")
     inventory_obj = Inventory.objects.get(id=inventory_id)
@@ -700,8 +743,12 @@ def task_inventory_update(one_c: OneCAPIClient, form_data):
     inventory_obj.save()
 
 
-@app.task()
-@one_c_task_wrapper("Ошибка при попытке обновления возрата #%s", ["id"])
+@app.task(
+    bind=True,
+    base=OneCSyncTask,
+    notify_title="Ошибка при попытке обновления возрата #%s",
+    use_key_on_err=["id"]
+)
 def task_update_return_order(one_c: OneCAPIClient, form_data):
     return_product_id = form_data.pop("id")
     return_product_obj = ReturnOrderProduct.objects.select_related("return_order", "product").get(id=return_product_id)
