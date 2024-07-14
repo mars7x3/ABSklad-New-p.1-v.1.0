@@ -101,7 +101,7 @@ class OneCTaskMixin:
         return {"key": cache_key}
 
     def _run_task(self, task, cache_key):
-        task = task.apply_async(kwargs=dict(key=self._get_task_kwargs(cache_key)))
+        task = task.apply_async(kwargs=self._get_task_kwargs(cache_key))
         set_launch_task(cache_key, task.task_id)
 
 
