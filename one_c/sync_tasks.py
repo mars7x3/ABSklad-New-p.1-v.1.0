@@ -65,7 +65,8 @@ class OneCSyncTask(Task):
             timeout=60
         )
 
-    def run(self, *args, key: str, **kwargs):
+    def run(self, *args, **kwargs):
+        key = kwargs.pop("key")
         form_data = get_from_cache(key=key)
 
         if not form_data:
@@ -79,7 +80,7 @@ class OneCSyncTask(Task):
         try:
             kwargs["one_c"] = self.one_c_client
             kwargs["form_data"] = form_data
-            return super().run(*args, **kwargs)
+            return super().run(**kwargs)
         except NotifyException as notify_exc:
             logger.error(notify_exc)
             send_web_notif(
