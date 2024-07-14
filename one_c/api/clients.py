@@ -17,7 +17,7 @@ class OneCAPIClient(APIClient):
             password: str,
             retries: int = 0,
             retries_delay: int = 0,
-            retries_force_statuses: Collection[int] = None,
+            retry_force_statuses: Collection[int] = None,
             timeout: int = None
     ):
         self._username = username
@@ -26,7 +26,7 @@ class OneCAPIClient(APIClient):
         self.timeout = timeout
         self.retries = retries
         self.retries_delay = retries_delay
-        self.retries_force_statuses = retries_force_statuses
+        self.retry_force_statuses = retry_force_statuses
 
         super().__init__()
         self.__setup_session()
@@ -47,7 +47,7 @@ class OneCAPIClient(APIClient):
                 max_retries=RetryWithDelay(
                     total=self.retries,
                     backoff_factor=1,
-                    status_forcelist=self.retries_force_statuses,
+                    status_forcelist=self.retry_force_statuses,
                     delay=self.retries_delay,
                 )
             )
