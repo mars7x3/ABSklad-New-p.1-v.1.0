@@ -40,7 +40,7 @@ class DealerKPISerializer(serializers.ModelSerializer):
             else:
                 product_price = ProductPrice.objects.filter(d_status=user.dealer_profile.dealer_status,
                                                             product_id=product['id'],
-                                                            city=user.dealer_profile.city).first()
+                                                            city=user.dealer_profile.price_city).first()
                 price = product_price.price
 
             kpi_products_to_create.append(
