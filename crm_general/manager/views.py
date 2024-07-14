@@ -196,8 +196,10 @@ class DealerCreateAPIView(BaseDealerViewMixin, task_views.OneCCreateTaskMixin, t
     create_task = sync_tasks.task_create_dealer
 
     @staticmethod
-    def _get_task_args(cache_key):
-        return cache_key, True
+    def _get_task_kwargs(cache_key):
+        kwargs = super()._get_task_kwargs(cache_key)
+        kwargs["from_profile"] = True
+        return kwargs
 
 
 class DealerUpdateAPIView(BaseDealerViewMixin, task_views.OneCUpdateTaskMixin, task_views.OneCTaskGenericAPIView):
@@ -207,8 +209,10 @@ class DealerUpdateAPIView(BaseDealerViewMixin, task_views.OneCUpdateTaskMixin, t
     update_task = sync_tasks.task_update_dealer
 
     @staticmethod
-    def _get_task_args(cache_key):
-        return cache_key, True
+    def _get_task_kwargs(cache_key):
+        kwargs = super()._get_task_kwargs(cache_key)
+        kwargs["from_profile"] = True
+        return kwargs
 
 
 class DealerChangeActivityView(BaseDealerViewMixin, generics.GenericAPIView):

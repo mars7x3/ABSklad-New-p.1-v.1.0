@@ -97,11 +97,11 @@ class OneCTaskMixin:
         )
 
     @staticmethod
-    def _get_task_args(cache_key):
-        return (cache_key,)
+    def _get_task_kwargs(cache_key) -> dict:
+        return {"key": cache_key}
 
     def _run_task(self, task, cache_key):
-        task = task.apply_async(args=self._get_task_args(cache_key))
+        task = task.apply_async(kwargs=dict(key=self._get_task_kwargs(cache_key)))
         set_launch_task(cache_key, task.task_id)
 
 
@@ -126,7 +126,6 @@ class OneCModelViewSet(
     OneCTaskGenericViewSet
 ):
     pass
-
 
 
 class OneCTaskGenericAPIView(OneCTaskMixin, GenericAPIView):
