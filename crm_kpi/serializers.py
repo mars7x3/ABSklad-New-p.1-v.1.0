@@ -48,7 +48,7 @@ class DealerKPISerializer(serializers.ModelSerializer):
                     kpi=instance,
                     product=product_instance,
                     count=product['count'],
-                    sum=product['count'] * price
+                    sum=product['count'] * int(price)
                 )
             )
 
