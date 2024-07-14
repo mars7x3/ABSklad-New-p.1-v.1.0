@@ -93,17 +93,18 @@ def build_file_url(file_path):
 def create_chats_for_dealers(user_ids: Iterable[int] = None) -> list[Chat] | None:
     user_model = get_user_model()
 
+    dealers = user_model.objects.filter(status="dealer").exclude(
+        id__in=Chat.objects.all().values_list("dealer_id", flat=True)
+    ).values_list("id", flat=True)
+
     if user_ids is None:
-        user_ids = user_model.objects.exclude(
-            id__in=Chat.objects.all().values_list("dealer_id", flat=True)
-        ).values_list("id", flat=True)
+        user_ids = dealers
     else:
         created_chat_user_ids = list(Chat.objects.all().values_list("dealer_id", flat=True))
-
         user_ids = [
             user_id
             for user_id in user_ids
-            if user_id not in created_chat_user_ids
+            if user_id in dealers and user_id not in created_chat_user_ids
         ]
 
     new_chats = [
