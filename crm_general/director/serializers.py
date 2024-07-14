@@ -231,10 +231,10 @@ class CollectionCategoryProductListSerializer(serializers.ModelSerializer):
         rep['sot_15'] = round(sum((instance.order_products.filter(order__created_at__gte=last_15_days,
                                                                   order__is_active=True,
                                                                   order__status__in=['sent', 'paid', 'success'])
-                                   .values_list('count', flat=True))), 2) / 15
-        avg_check = instance.order_products.filter(order__is_active=True,
-                                                   order__status__in=['sent', 'success', 'paid', 'wait']
-                                                   ).values_list('total_price', flat=True)
+                                   .values_list('count', flat=True))) / 15, 2)
+        avg_check = round(instance.order_products.filter(order__is_active=True,
+                                                         order__status__in=['sent', 'success', 'paid', 'wait']
+                                                         ).values_list('total_price', flat=True))
         if len(avg_check) == 0:
             rep['avg_check'] = 0
         else:

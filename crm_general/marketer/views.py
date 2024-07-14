@@ -90,7 +90,7 @@ class MarketerCategoryModelViewSet(ListModelMixin,
                                    CreateModelMixin,
                                    UpdateModelMixin,
                                    GenericViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsMarketer]
     serializer_class = MarketerCategorySerializer
 
@@ -101,7 +101,7 @@ class MarketerCategoryModelViewSet(ListModelMixin,
 
     def get_queryset(self):
         collection_slug = self.request.query_params.get('collection_slug')
-        queryset = Category.objects.all()
+        queryset = Category.objects.filter(is_active=True)
         if collection_slug:
             return queryset.filter(products__collection__slug=collection_slug).distinct()
         else:

@@ -7,6 +7,7 @@ from django.db import connection, transaction
 
 from absklad_commerce.celery import app
 from account.models import DealerStatus, MyUser, DealerProfile, Wallet, ManagerProfile, WarehouseProfile, RopProfile
+from chat.utils import create_chats_for_dealers
 from crm_general.models import Inventory, InventoryProduct
 from general_service.models import Stock, PriceType, City, CashBox, Village
 from one_c.models import MoneyDoc, MovementProduct1C, MovementProducts
@@ -527,9 +528,12 @@ def main_initial_sync():
     sync_prods_list()
     sync_dealer()
     dealer_mng_join()
+    create_chats_for_dealers(user_ids=MyUser.objects.all().values_list("id", flat=True))
     sync_order_histories_1c_to_crm()
     sync_pay_doc_histories()
     sync_movement_history()
+    # Добавить инвентаризацию
+
 
 
 
