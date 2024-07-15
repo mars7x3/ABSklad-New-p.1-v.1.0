@@ -1,14 +1,13 @@
 import datetime
 import re
-import pandas as pd
+import pandas
 
 import requests
 import json
 
-from django.utils import timezone
 from django.utils.crypto import get_random_string
 from decouple import config
-from account.models import MyUser, Notification, Wallet, BalancePlus
+from account.models import Notification, BalancePlus
 from crm_general.models import AutoNotification
 from one_c.models import MoneyDoc
 from order.models import MyOrder
@@ -140,7 +139,7 @@ def get_balance_history(user_id, start_date, end_date):
             }
         )
 
-    df = pd.DataFrame(data)
+    df = pandas.DataFrame(data)
     df = df.sort_values(by="date")
     df['before'] = 0
     df['after'] = 0
