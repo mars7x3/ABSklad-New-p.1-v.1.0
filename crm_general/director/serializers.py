@@ -158,7 +158,7 @@ class BalanceDealerSerializer(serializers.ModelSerializer):
         rep['city_title'] = instance.village.city.title if instance.village else '---'
         rep['name'] = instance.user.name
         rep['user_id'] = instance.user.id
-        last_transaction = instance.balance_histories.filter(is_active=True, amount__gte=0).last()
+        last_transaction = instance.user.money_docs.filter(is_active=True).last()
         rep['last_repl'] = last_transaction.created_at if last_transaction else '---'
 
         return rep

@@ -344,17 +344,6 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
         except ObjectDoesNotExist:
             return 0.0
 
-    #
-    # def get_incoming_funds(self, instance) -> Decimal:
-    #     return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
-    #         incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-    #     )["incoming_funds"]
-    #
-    # def get_shipment_amount(self, instance) -> Decimal:
-    #     return instance.balance_histories.only("amount").filter(status="order").aggregate(
-    #         shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-    #     )["shipment_amount"]
-    #
     # def get_last_order_date(self, instance) -> date | None:
     #     last_order = instance.orders.only("created_at").order_by("-created_at").first()
     #     if last_order:
@@ -655,7 +644,8 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.user.name
 
     def get_created_at(self, instance):
-        return instance.dealer.balance_histories.last().created_at
+        money_docs = instance.dealer.user.money_docs.filter(is_active=True)
+        return money_docs.last().created_at if money_docs else None
 
     def get_paid_amount(self, instance) -> float:
         return instance.dealer.orders.filter(is_active=True, paid_at__isnull=False).aggregate(
@@ -669,9 +659,8 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.dealer_status.title
 
     def get_last_replenishment_date(self, instance) -> datetime:
-        last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
-        if last_replenishment:
-            return last_replenishment.created_at
+        last_replenishment = instance.dealer.user.money_docs.filter(is_active=True).last()
+        return last_replenishment.created_at if last_replenishment else None
 
 
 class OrderStockInfoSerializer(serializers.ModelSerializer):
