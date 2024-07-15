@@ -10,15 +10,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from account.models import MyUser, Wallet, BalanceHistory, DealerStatus, DealerProfile, WarehouseProfile
+from account.models import MyUser, Wallet, DealerStatus, DealerProfile, WarehouseProfile
+from account.utils import get_balance_history
 from crm_general.director.one_c_serializers import ValidateProductSerializer
 from crm_general.director.permissions import IsDirector
-from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSerializer, BalanceHistoryListSerializer, \
+from crm_general.director.serializers import StaffCRUDSerializer, BalanceListSerializer, \
     DirectorProductListSerializer, DirectorCollectionListSerializer, CollectionCategoryListSerializer, \
     CollectionCategoryProductListSerializer, DirectorProductCRUDSerializer, DirectorDiscountSerializer, \
     DirectorDiscountDealerStatusSerializer, DirectorDiscountCitySerializer, DirectorDiscountProductSerializer, \
     DirectorDealerSerializer, DirectorDealerProfileSerializer, DirectorDealerCRUDSerializer, DirDealerOrderSerializer, \
-    DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, DirBalanceHistorySerializer, \
+    DirDealerCartProductSerializer, DirectorMotivationCRUDSerializer, \
     DirectorPriceListSerializer, DirectorMotivationDealerListSerializer, DirectorTaskCRUDSerializer, \
     DirectorTaskListSerializer, DirectorMotivationListSerializer, StockListSerializer, \
     DirectorDealerListSerializer, StockProductListSerializer, DirectorStockCRUDSerializer, DirectorKPICRUDSerializer, \
@@ -250,20 +251,15 @@ class BalanceHistoryListView(APIView):
 
     def post(self, request):
         user_id = request.data.get('user_id')
-        kwargs = {'is_active': True, 'dealer__user_id': user_id}
         start_date = request.data.get('start_date')
         end_date = request.data.get('end_date')
 
-        if start_date and end_date:
-            start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
-            end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
-            end_date = end_date + timezone.timedelta(days=1)
-            kwargs['created_at__gte'] = start_date
-            kwargs['created_at__lte'] = end_date
+        start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
+        end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+        end_date = end_date + timezone.timedelta(days=1)
 
-        queryset = BalanceHistory.objects.filter(**kwargs)
-        response_data = BalanceHistoryListSerializer(queryset, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        response = get_balance_history(user_id, start_date, end_date)
+        return Response({'data': response}, status=status.HTTP_200_OK)
 
 
 class TotalEcoBalanceView(APIView):
@@ -505,19 +501,15 @@ class DirectorBalanceHistoryListView(APIView):
     """
     permission_classes = [IsAuthenticated, IsDirector]
 
-    def post(self, request):
-        user_id = request.data.get('user_id')
-        start = request.data.get('start')
-        end = request.data.get('end')
+    def get(self, request):
+        user_id = request.query_params.get('user_id')
+        start = request.query_params.get('start')
+        end = request.query_params.get('end')
         start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
         end_date = end_date + timezone.timedelta(days=1)
-        user = MyUser.objects.filter(id=user_id).first()
-        balance_histories = user.dealer_profile.balance_histories.filter(created_at__gte=start_date,
-                                                                         created_at__lte=end_date)
-        response_data = DirBalanceHistorySerializer(balance_histories, many=True,
-                                                    context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        response = get_balance_history(user_id, start_date, end_date)
+        return Response({'data': response}, status=status.HTTP_200_OK)
 
 
 class DirectorDealerOrderListView(APIView):

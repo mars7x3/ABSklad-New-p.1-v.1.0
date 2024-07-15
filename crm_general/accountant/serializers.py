@@ -4,7 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from account.models import MyUser, DealerProfile, BalanceHistory, BalancePlus, BalancePlusFile
+from account.models import MyUser, DealerProfile, BalancePlus, BalancePlusFile
 from crm_general.accountant.utils import deduct_returned_product_from_order_and_stock
 from crm_general.models import Inventory, InventoryProduct
 from crm_general.serializers import CRMStockSerializer
@@ -141,22 +141,6 @@ class MyUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('name', 'phone', 'email')
-
-
-class DirBalanceHistorySerializer(serializers.ModelSerializer):
-    files = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = BalanceHistory
-        fields = '__all__'
-
-    def get_files(self, obj):
-        balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
-        files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
-        if files:
-            serializer = BalancePlusFileSerializer(files, many=True, context=self.context)
-            return serializer.data
-        return []
 
 
 class BalancePlusListSerializer(serializers.ModelSerializer):

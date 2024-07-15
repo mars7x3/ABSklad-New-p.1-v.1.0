@@ -6,7 +6,8 @@ from decouple import config
 from django.db import connection, transaction
 
 from absklad_commerce.celery import app
-from account.models import DealerStatus, MyUser, DealerProfile, Wallet, ManagerProfile, WarehouseProfile, RopProfile
+from account.models import DealerStatus, MyUser, DealerProfile, Wallet, ManagerProfile, WarehouseProfile, RopProfile, \
+    BalanceHistory
 from chat.utils import create_chats_for_dealers
 from crm_general.models import Inventory, InventoryProduct
 from general_service.models import Stock, PriceType, City, CashBox, Village
@@ -420,13 +421,20 @@ def dealer_statuses_create():
 
 def stocks_create():
     stocks = [
-        Stock(id=1, city_id=1, title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', address='ул.ГП'),
-        Stock(id=2, city_id=2, title='Шымкент', uid='ef4a379c-2e67-11ed-8a2f-2c59e53ae4c3', address='ул.Шымкент'),
-        Stock(id=3, city_id=3, title='Алматы', uid='c10ad4ab-35f9-11ed-8a2f-2c59e53ae4c3', address='ул.Алматы'),
-        Stock(id=4, city_id=4, title='Кызылорда', uid='9bf30a33-35fe-11ed-8a2f-2c59e53ae4c3', address='ул.Кызылорда'),
-        Stock(id=5, city_id=5, title='Астана', uid='822cb2e2-37fd-11ed-8a2f-2c59e53ae4c3', address='ул.Астана'),
-        Stock(id=6, city_id=6, title='Атырау', uid='ab39d4e4-c49e-11ee-8a3c-2c59e53ae4c1', address='ул.Атырау'),
-        Stock(id=7, city_id=7, title='Тараз', uid='5310feb3-64c7-11ee-8a3b-2c59e53ae4c3', address='ул.Тараз')
+        Stock(id=1, city_id=1, title='ГП', uid='234c9704-2446-11ed-8a2f-2c59e53ae4c3', address='ул.ГП',
+              shedule='Работаем 24/7'),
+        Stock(id=2, city_id=2, title='Шымкент', uid='ef4a379c-2e67-11ed-8a2f-2c59e53ae4c3', address='ул.Шымкент',
+              shedule='Работаем 24/7'),
+        Stock(id=3, city_id=3, title='Алматы', uid='c10ad4ab-35f9-11ed-8a2f-2c59e53ae4c3', address='ул.Алматы',
+              shedule='Работаем 24/7'),
+        Stock(id=4, city_id=4, title='Кызылорда', uid='9bf30a33-35fe-11ed-8a2f-2c59e53ae4c3', address='ул.Кызылорда',
+              shedule='Работаем 24/7'),
+        Stock(id=5, city_id=5, title='Астана', uid='822cb2e2-37fd-11ed-8a2f-2c59e53ae4c3', address='ул.Астана',
+              shedule='Работаем 24/7'),
+        Stock(id=6, city_id=6, title='Атырау', uid='ab39d4e4-c49e-11ee-8a3c-2c59e53ae4c1', address='ул.Атырау',
+              shedule='Работаем 24/7'),
+        Stock(id=7, city_id=7, title='Тараз', uid='5310feb3-64c7-11ee-8a3b-2c59e53ae4c3', address='ул.Тараз',
+              shedule='Работаем 24/7')
     ]
     Stock.objects.bulk_create(stocks)
 
@@ -535,23 +543,3 @@ def main_initial_sync():
     # Добавить инвентаризацию
 
 
-
-
-# from product.models import AsiaProduct, ProductPrice
-# from general_service.models import City
-# from account.models import DealerStatus
-#
-# city = City.objects.get(id=2)
-# dealer_status = DealerStatus.objects.first()
-# create_list = []
-# for p in AsiaProduct.objects.all():
-#     create_list.append(
-#         ProductPrice(
-#             product=p,
-#             d_status=dealer_status,
-#             city=city,
-#
-#         )
-#     )
-#
-# ProductPrice.objects.bulk_create(create_list)

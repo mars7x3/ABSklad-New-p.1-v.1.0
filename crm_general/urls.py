@@ -190,8 +190,7 @@ manager_urlpatterns = [
             name="crm_general-manager-dealers-update"),
     re_path("^manager/dealers/(?P<user_id>.+)/update-image/$", ManagerDealerImageUpdateAPIView.as_view(),
             name="crm_general-manager-dealers-update-image"),
-    re_path("^manager/dealers/(?P<user_id>.+)/balance-history/$", ManagerDealerBalanceHistoryListAPIView.as_view(),
-            name="crm_general-manager-dealers-balance-history-list"),
+
     re_path("^manager/dealers/(?P<user_id>.+)/basket-history/$", ManagerDealerBasketListAPIView.as_view(),
             name="crm_general-manager-dealers-basket-history-list"),
     re_path("^manager/dealers/(?P<user_id>.+)/change-activity/$", ManagerDealerChangeActivityView.as_view(),
@@ -220,6 +219,7 @@ manager_urlpatterns = [
     path("manager/product/list/for-order/", ProdListForOrderView.as_view()),
     path("manager/order/delete/", ManagerDeleteOrderView.as_view()),
     path("manager/notifications/", ManagerNotificationView.as_view()),
+    path("manager/dealers/balance-history/", ManagerDealerBalanceHistoryListAPIView.as_view()),
 
     path("manager/", include(manager_router.urls)),
 ]
@@ -257,8 +257,7 @@ rop_urlpatterns = [
 
     re_path("^rop/dealers/(?P<user_id>.+)/detail/$", RopDealerRetrieveAPIView.as_view(),
             name="crm_general-rop-dealers-detail"),
-    re_path("^rop/dealers/(?P<user_id>.+)/balance-history/$", RopDealerBalanceHistoryListAPIView.as_view(),
-            name="crm_general-rop-dealers-balance-history-list"),
+
     re_path("^rop/dealers/(?P<user_id>.+)/basket-history/$", RopDealerBasketListAPIView.as_view(),
             name="crm_general-rop-dealers-basket-history-list"),
 
@@ -273,7 +272,7 @@ rop_urlpatterns = [
     path("rop/categories/", RopCategoryListAPIView.as_view(), name="crm_general-rop-categories-list"),
     path("rop/products/", RopProductPriceListAPIView.as_view(), name="crm_general-rop-products-list"),
     path('rop/notifications/', RopNotificationView.as_view()),
-
+    path('rop/dealers/balance-history/', RopDealerBalanceHistoryListAPIView.as_view()),
     re_path("^rop/products/(?P<product_id>.+)/detail/$", RopProductRetrieveAPIView.as_view(),
             name="crm_general-rop-product-detail"),
 

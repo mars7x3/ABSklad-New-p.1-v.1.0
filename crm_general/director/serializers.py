@@ -6,7 +6,7 @@ from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import serializers
 
-from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, BalanceHistory, \
+from account.models import MyUser, WarehouseProfile, ManagerProfile, RopProfile, Wallet, DealerProfile, \
     DealerStatus, DealerStore
 from account.utils import username_is_valid, pwd_is_valid
 from crm_general.director.tasks import create_product_prices
@@ -144,17 +144,6 @@ class BalanceListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['dealer_info'] = BalanceDealerSerializer(instance.dealer, context=self.context).data
-        return rep
-
-
-class BalanceHistoryListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BalanceHistory
-        fields = ('amount', 'balance', 'status', 'action_id', 'created_at')
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep['dealer_name'] = instance.dealer.user.name
         return rep
 
 
@@ -562,12 +551,6 @@ class DirDealerMotivationPresentSerializer(serializers.ModelSerializer):
 class DirDealerOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyOrder
-        fields = '__all__'
-
-
-class DirBalanceHistorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BalanceHistory
         fields = '__all__'
 
 

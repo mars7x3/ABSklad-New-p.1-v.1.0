@@ -11,13 +11,13 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from account.models import DealerProfile, MyUser, Wallet, BalancePlus, Notification
-from account.utils import send_push_notification
+from account.utils import send_push_notification, get_balance_history
 from crm_general.accountant.one_c_serializers import BalancePlusModerationSerializer
 from crm_general.accountant.permissions import IsAccountant
 from crm_general.accountant.serializers import MainOrderListSerializer, MainOrderDetailSerializer, \
     AccountantProductSerializer, AccountantCollectionSerializer, AccountantCategorySerializer, \
     AccountantStockListSerializer, AccountantStockDetailSerializer, \
-    DealerProfileListSerializer, DirBalanceHistorySerializer, BalancePlusListSerializer, InventorySerializer, \
+    DealerProfileListSerializer, BalancePlusListSerializer, InventorySerializer, \
     AccountantStockShortSerializer, InventoryDetailSerializer, ReturnOrderDetailSerializer, ReturnOrderSerializer, \
     ReturnOrderProductSerializer
 from crm_general.models import Inventory, CRMTask
@@ -187,11 +187,8 @@ class AccountantBalanceHistoryListView(APIView):
         end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
         end_date = end_date + datetime.timedelta(days=1)
 
-        user = MyUser.objects.filter(id=user_id).first()
-        balance_histories = user.dealer_profile.balance_histories.filter(created_at__gte=start_date,
-                                                                         created_at__lte=end_date)
-        response_data = DirBalanceHistorySerializer(balance_histories, many=True, context=self.get_renderer_context()).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        response = get_balance_history(user_id, start_date, end_date)
+        return Response({'data': response}, status=status.HTTP_200_OK)
 
 
 class AccountantTotalEcoBalanceView(APIView):

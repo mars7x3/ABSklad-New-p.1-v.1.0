@@ -7,7 +7,7 @@ from django.db.models.functions import Round
 from django.utils import timezone
 from rest_framework import serializers
 
-from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory
+from account.models import ManagerProfile, DealerProfile, DealerStatus, Wallet, DealerStore
 
 from crm_general.serializers import BaseProfileSerializer
 from crm_general.utils import get_motivation_done
@@ -162,21 +162,6 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
             attrs["dealer_status"] = dealer_status
 
         return attrs
-
-
-class DealerBalanceHistorySerializer(serializers.ModelSerializer):
-    balance_crm = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = BalanceHistory
-        fields = ("id", "created_at", "status", "balance_crm", "amount")
-
-    def get_balance_crm(self, instance) -> Decimal:
-        match instance.status:
-            case "order":
-                return instance.balance + instance.amount
-            case "wallet":
-                return instance.balance - instance.amount
 
 
 class DealerBasketProductSerializer(serializers.ModelSerializer):
