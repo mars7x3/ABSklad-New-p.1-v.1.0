@@ -116,12 +116,6 @@ class BalancePlusFileSerializer(serializers.ModelSerializer):
         fields = ('file', )
 
 
-class BalanceHistorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BalanceHistory
-        exclude = ('is_active', 'dealer')
-
-
 class DealerProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser

@@ -8,7 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from account.models import (
-    MyUser, DealerProfile, DealerStatus, Wallet, DealerStore, BalanceHistory,
+    MyUser, DealerProfile, DealerStatus, Wallet, DealerStore,
     BalancePlus, BalancePlusFile
 )
 from account.serializers import BalancePlusFileSerializer
@@ -456,30 +456,6 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         if dealer_status:
             attrs["dealer_status_id"] = dealer_status.id
         return attrs
-
-
-class DealerBalanceHistorySerializer(serializers.ModelSerializer):
-    balance_crm = serializers.SerializerMethodField(read_only=True)
-    files = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = BalanceHistory
-        fields = ("id", "created_at", "status", "balance_crm", "amount", 'files')
-
-    def get_balance_crm(self, instance) -> Decimal:
-        match instance.status:
-            case "order":
-                return instance.balance + instance.amount
-            case "wallet":
-                return instance.balance - instance.amount
-
-    def get_files(self, obj):
-        balance_plus_instance = BalancePlus.objects.filter(id=obj.action_id).first()
-        files = BalancePlusFile.objects.filter(balance=balance_plus_instance)
-        if files:
-            serializer = BalancePlusFileSerializer(files, many=True, context=self.context)
-            return serializer.data
-        return []
 
 
 class DealerBasketProductSerializer(serializers.ModelSerializer):

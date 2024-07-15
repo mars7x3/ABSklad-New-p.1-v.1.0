@@ -201,23 +201,6 @@ class VerifyCode(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
-class BalanceHistory(models.Model):
-    STATUS = (
-        ('order', 'order'),
-        ('wallet', 'wallet')
-    )
-    dealer = models.ForeignKey(DealerProfile, on_delete=models.CASCADE, related_name='balance_histories')
-    amount = models.DecimalField(decimal_places=2, max_digits=100, default=0)
-    balance = models.DecimalField(decimal_places=2, max_digits=100, default=0)
-    status = models.CharField(max_length=10, choices=STATUS)
-    action_id = models.IntegerField()
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ('-id',)
-
-
 class CRMNotification(models.Model):
     STATUS = (
         ('order', 'Заказ'),

@@ -6,7 +6,6 @@ from .views import *
 router = DefaultRouter()
 router.register('dealer-store-crud', DealerStoreCRUDView, basename="dealer-store-crud")
 router.register('dealer/balance/plus/list', BalancePlusListView)  # balance list
-router.register('dealer/transaction/history/list', BalanceHistoryListView)
 router.register('dealer/profile/change', ChangeProfileView)  # change dealer profile
 
 urlpatterns = [
@@ -27,6 +26,8 @@ urlpatterns = [
     path('dealer/pwd/change/', ChangePwdView.as_view()),  # change pwd
 
     path('dealer/balance/plus/', BalancePlusView.as_view()),  # balance plus
+
+    path('dealer/transaction/history/list/', TransactionHistoryListView.as_view()),
 
     path('', include(router.urls)),
 ]

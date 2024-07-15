@@ -56,7 +56,7 @@ admin.site.register(Wallet)
 
 admin.site.register(BalancePlus)
 admin.site.register(BalancePlusFile)
-admin.site.register(BalanceHistory)
+
 admin.site.register(CRMNotification)
 admin.site.register(VerifyCode)
 

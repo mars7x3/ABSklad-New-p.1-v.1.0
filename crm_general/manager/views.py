@@ -1,10 +1,14 @@
+import datetime
+
 from django.db.models import Sum, Q, FloatField
+from django.utils import timezone
 from rest_framework import filters, generics, permissions, mixins, viewsets, decorators, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from account.models import DealerProfile, BalanceHistory, Wallet, MyUser
+from account.models import DealerProfile, Wallet, MyUser
+from account.utils import get_balance_history
 from crm_general.models import CRMTask
 from crm_general.filters import FilterByFields
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
@@ -19,7 +23,7 @@ from .permissions import IsManager, ManagerOrderPermission
 from .serializers import (
     MainShortOrderSerializer, MainOrderSerializer,
     DealerProfileListSerializer, DealerBirthdaySerializer, DealerProfileDetailSerializer,
-    DealerBalanceHistorySerializer, DealerBasketProductSerializer,
+    DealerBasketProductSerializer,
     CollectionSerializer, ShortCategorySerializer, ProductDetailSerializer,
     WalletListSerializer, BalancePlusSerializer, ProductListForOrderSerializer,
     ShortProductSerializer, MainOrderUpdateSerializer
@@ -239,23 +243,18 @@ class DealerImageUpdateAPIView(BaseManagerMixin, generics.UpdateAPIView):
         return super().get_queryset().filter(dealer_profile__managers=self.request.user.id)
 
 
-class DealerBalanceHistoryListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):
-    queryset = (
-        BalanceHistory.objects.only("id", "created_at", "status", "amount", "balance")
-        .all()
-    )
-    serializer_class = DealerBalanceHistorySerializer
-    filter_backends = (FilterByFields,)
-    filter_by_fields = {
-        "start_date": {"by": "created_at__date__gte", "type": "date", "pipline": string_date_to_date},
-        "end_date": {"by": "created_at__date__lte", "type": "date", "pipline": string_date_to_date}
-    }
-    lookup_field = "user_id"
-    lookup_url_kwarg = "user_id"
+class DealerBalanceHistoryListAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsManager]
 
-    def get_queryset(self):
-        dealer_profile = self.get_dealer_profile()
-        return super().get_queryset().filter(dealer=dealer_profile)
+    def get(self, request):
+        user_id = request.data.get('user_id')
+        start = request.query_params.get('start')
+        end = request.query_params.get('end')
+        start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
+        end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+        end_date = end_date + timezone.timedelta(days=1)
+        response = get_balance_history(user_id, start_date, end_date)
+        return Response({'data': response}, status=status.HTTP_200_OK)
 
 
 class DealerBasketListAPIView(BaseDealerRelationViewMixin, generics.ListAPIView):

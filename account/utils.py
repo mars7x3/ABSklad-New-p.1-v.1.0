@@ -1,12 +1,16 @@
+import datetime
 import re
-from pprint import pprint
+import pandas as pd
 
 import requests
 import json
+
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 from decouple import config
-from account.models import MyUser, BalanceHistory, Notification, Wallet, BalancePlus
+from account.models import MyUser, Notification, Wallet, BalancePlus
 from crm_general.models import AutoNotification
+from one_c.models import MoneyDoc
 from order.models import MyOrder
 
 
@@ -66,35 +70,6 @@ def send_push_notification(tokens: [], title: str, text: str, link_id: int, stat
         print(f"Failed to send push notification. Status code: {response.status_code}")
 
 
-def sync_balance_history(data, type_status):
-    if type_status == 'order':
-        balance = data.author.wallet.amount_crm
-        dealer = data.author
-        amount = data.price
-    else:
-        balance = data.user.dealer_profile.wallet.amount_crm
-        dealer = data.user.dealer_profile
-        amount = data.amount
-
-    validated_data = {
-        'dealer': dealer,
-        'amount': amount,
-        'status': type_status,
-        'action_id': data.id,
-        'is_active': data.is_active,
-        'created_at': data.created_at,
-        'balance': balance
-    }
-
-    history = BalanceHistory.objects.filter(status=type_status, action_id=data.id).first()
-    if history:
-        for key, value in validated_data.items():
-            setattr(history, key, value)
-        history.save()
-    else:
-        BalanceHistory.objects.create(**validated_data)
-
-
 def username_is_valid(username):
     if re.match("^[a-zA-Z0-9]+$", username) and len(username) > 5:
         return True
@@ -137,3 +112,64 @@ def create_notification_by_wallet(balance: BalancePlus):
             link_id=balance.id,
             is_pushed=True
         )
+
+
+def get_balance_history(user_id, start_date, end_date):
+    data = []
+    orders = MyOrder.objects.filter(
+        author__user_id=user_id, is_active=True, status__in=['success', 'sent', 'wait', 'paid']
+    ).values_list('id', 'price', 'created_at')
+    balances = MoneyDoc.objects.filter(user_id=user_id, is_active=True).values_list('id', 'amount', 'created_at')
+
+    for order in orders:
+        data.append(
+            {
+                "action_id": order[0],
+                "date": order[-1],
+                "amount": order[1],
+                "type": "order"
+            }
+        )
+    for balance in balances:
+        data.append(
+            {
+                "action_id": balance[0],
+                "date": balance[-1],
+                "amount": balance[1],
+                "type": "wallet"
+            }
+        )
+
+    df = pd.DataFrame(data)
+    df = df.sort_values(by="date")
+    df['before'] = 0
+    df['after'] = 0
+    df['date'] = df['date'].astype(str)
+    df['amount'] = df['amount'].astype(int)
+
+    balance = 0
+
+    result = []
+    for index, row in df.iterrows():
+        df.at[index, 'before'] = balance
+
+        if row['type'] == 'wallet':
+            balance += row['amount']
+        elif row['type'] == 'order':
+            balance -= row['amount']
+
+        df.at[index, 'after'] = balance
+        comparison_date_str = row['date']
+        history_date = datetime.datetime.fromisoformat(comparison_date_str)
+        if start_date <= history_date < end_date:
+            result.append(
+                {
+                    'action_id': row['action_id'],
+                    'created_at': row['date'],
+                    'amount': row['amount'],
+                    'status': row['type'],
+                    'before': row['before'],
+                    'after': row['after'],
+                }
+            )
+    return result
