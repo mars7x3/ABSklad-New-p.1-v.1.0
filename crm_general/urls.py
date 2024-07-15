@@ -118,6 +118,7 @@ director_router.register("director/stock/product/list", DStockProductListView)
 director_router.register("director/price-type/crud", PriceTypeCRUDView)
 director_router.register("director/dealer-status/crud", DealerStatusModelViewSet)
 director_router.register("director/category/crud", DirectorCategoryModelViewSet)
+director_router.register("director/order", DirectorOrderDetailView)
 
 
 director_urlpatterns = [
@@ -141,8 +142,6 @@ director_urlpatterns = [
     path('director/rop/deactivate/', ROPChangeView.as_view()),
     path('director/warehouse/deactivate/', WareHouseChangeView.as_view()),
     path('director/notifications/', DirectorNotificationView.as_view()),
-
-    path('max-test/', MaxatTestView.as_view()),
 
 
     path('', include(director_router.urls)),

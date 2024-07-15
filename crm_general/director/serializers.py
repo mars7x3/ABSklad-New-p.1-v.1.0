@@ -20,7 +20,7 @@ from promotion.utils import calculate_discount
 from crm_general.utils import change_dealer_profile_status_after_deactivating_dealer_status
 from general_service.models import Stock, City, StockPhone, PriceType
 from one_c.from_crm import sync_dealer_back_to_1C, sync_product_crm_to_1c, sync_stock_1c_2_crm, sync_category_crm_to_1c
-from order.models import MyOrder, Cart, CartProduct
+from order.models import MyOrder, Cart, CartProduct, OrderProduct
 from product.models import AsiaProduct, Collection, Category, ProductSize, ProductImage, ProductPrice, ProductCount, \
     ProductCostPrice
 
@@ -1287,3 +1287,54 @@ class DirectorCategorySerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         sync_category_crm_to_1c(instance)
         return instance
+
+
+class DirectorOrderDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyOrder
+        exclude = ('gmail', 'name', 'phone', 'address', 'comment', 'uid', 'main_order', 'is_active', 'updated_at',
+                   )
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['author_info'] = MyOrderDealerSerializer(instance.author, context=self.context).data
+        rep['products'] = MyOrderProductSerializer(instance.order_products, many=True, context=self.context).data
+        rep['stock'] = CRMStockSerializer(instance.stock, context=self.context).data
+        return rep
+
+
+class MyOrderDealerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealerProfile
+        fields = ('village', 'user')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['name'] = instance.user.name
+        rep['city_title'] = instance.village.city.title if instance.village else None
+        rep['phone'] = instance.user.phone
+        return rep
+
+
+class MyOrderProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderProduct
+        fields = ('count', 'price', 'total_price')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['prod_info'] = OrderAsiaProductSerializer(instance.ab_product, context=self.context).data
+        return rep
+
+
+class OrderAsiaProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsiaProduct
+        fields = ('id', 'title', 'category')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['category_title'] = instance.category.title if instance.category else None
+        return rep
+
+
