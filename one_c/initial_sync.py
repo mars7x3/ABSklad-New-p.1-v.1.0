@@ -6,8 +6,7 @@ from decouple import config
 from django.db import connection, transaction
 
 from absklad_commerce.celery import app
-from account.models import DealerStatus, MyUser, DealerProfile, Wallet, ManagerProfile, WarehouseProfile, RopProfile, \
-    BalanceHistory
+from account.models import DealerStatus, MyUser, DealerProfile, Wallet, ManagerProfile, WarehouseProfile, RopProfile
 from chat.utils import create_chats_for_dealers
 from crm_general.models import Inventory, InventoryProduct
 from general_service.models import Stock, PriceType, City, CashBox, Village

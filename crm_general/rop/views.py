@@ -103,13 +103,13 @@ class DealerListViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericVie
         queryset = self.filter_queryset(self.get_queryset())
         amounts = queryset.aggregate(
             incoming_funds=Sum(
-                "balance_histories__amount",
-                filter=Q(balance_histories__status="wallet"),
+                "user__money_docs__amount",
+                filter=Q(user__money_docs__is_active=True),
                 output_field=FloatField()
             ),
             shipment_amount=Sum(
-                "balance_histories__amount",
-                filter=Q(balance_histories__status="order"),
+                "orders__price",
+                filter=Q(orders__status__in=['sent', 'success']),
                 output_field=FloatField()
             ),
             balance=Sum("wallet__amount_crm", output_field=FloatField())

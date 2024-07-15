@@ -118,7 +118,7 @@ class OrderProductCountAPIView(BaseOrderMixin, APIView):
 class DealerListViewSet(BaseDealerViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
         DealerProfile.objects.select_related("user", "village__city", "dealer_status")
-        .prefetch_related("balance_histories", "orders")
+        .prefetch_related("orders")
         .only("user_id", "birthday", "village__city", "dealer_status")
         .all()
     )

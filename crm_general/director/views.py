@@ -249,15 +249,13 @@ class BalanceHistoryListView(APIView):
     """
     permission_classes = [IsAuthenticated, IsDirector]
 
-    def post(self, request):
+    def get(self, request):
         user_id = request.data.get('user_id')
-        start_date = request.data.get('start_date')
-        end_date = request.data.get('end_date')
-
-        start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
-        end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
+        start = request.query_params.get('start')
+        end = request.query_params.get('end')
+        start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
+        end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
         end_date = end_date + timezone.timedelta(days=1)
-
         response = get_balance_history(user_id, start_date, end_date)
         return Response({'data': response}, status=status.HTTP_200_OK)
 
@@ -447,7 +445,7 @@ class DirectorDealerListView(mixins.ListModelMixin, GenericViewSet):
     URL/search/?city_slug=taraz&name=nurbek&start_date=%d-%m-%Y&end_date=%d-%m-%Y
     """
     permission_classes = [IsAuthenticated, IsDirector]
-    queryset = DealerProfile.objects.all().select_related('user').prefetch_related('balance_histories')
+    queryset = DealerProfile.objects.all().select_related('user')
     serializer_class = DirectorDealerSerializer
     pagination_class = CRMPaginationClass
 
@@ -559,17 +557,23 @@ class DirectorTotalAmountView(APIView):
         if city_slug:
             kwargs['city__slug'] = city_slug
 
-        dealers = DealerProfile.objects.filter(**kwargs)
-        dealer_ids = dealers.values_list('id', flat=True)
+        dealer_ids = DealerProfile.objects.filter(**kwargs).values_list('user_id', flat=True)
         start_date = timezone.make_aware(datetime.datetime.strptime(start_date, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end_date, "%d-%m-%Y"))
-        balance_histories = BalanceHistory.objects.filter(is_active=True, created_at__gte=start_date,
-                                                          created_at__lte=end_date, dealer_id__in=dealer_ids)
         response_data = {}
-        response_data['pds_amount'] = sum(balance_histories.filter(status='wallet').values_list('amount', flat=True))
+        money_docs = MoneyDoc.objects.filter(
+            is_active=True, user_id__in=dealer_ids,
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        )
+        response_data['pds_amount'] = sum(money_docs.values_list('amount', flat=True))
         response_data['shipment_amount'] = sum(
-            balance_histories.filter(status='order').values_list('amount', flat=True))
-        response_data['balance'] = balance_histories.last().balance if balance_histories else 0
+            MyOrder.objects.filter(
+                is_active=True, status__in=['success', 'sent'], author__user_id__in=dealer_ids,
+                released_at__gte=start_date,
+                released_at__lte=end_date
+            ).values_list('price', flat=True))
+        response_data['balance'] = money_docs.last().amount if money_docs else 0
 
         return Response(response_data, status=status.HTTP_200_OK)
 

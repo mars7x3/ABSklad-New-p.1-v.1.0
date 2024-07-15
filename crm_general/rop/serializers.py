@@ -77,15 +77,9 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
             return 0.0
 
     def get_incoming_funds(self, instance) -> Decimal:
-        # return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
-        #     incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-        # )["incoming_funds"]
         return Decimal(sum(instance.user.money_docs.filter(is_active=True).values_list('amount', flat=True)))
 
     def get_shipment_amount(self, instance) -> Decimal:
-        # return instance.balance_histories.only("amount").filter(status="order").aggregate(
-        #     shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-        # )["shipment_amount"]
         return Decimal(sum(instance.orders.filter(
             is_active=True, status__in=['sent', 'success']
         ).values_list('price', flat=True)))
@@ -392,7 +386,7 @@ class WalletListSerializer(serializers.ModelSerializer):
         return instance.dealer.dealer_status.title
 
     def get_last_replenishment_date(self, instance) -> datetime:
-        last_replenishment = instance.dealer.balance_histories.filter(status="wallet").last()
+        last_replenishment = instance.dealer.user.money_docs.filter(is_active=True).last()
         if last_replenishment:
             return last_replenishment.created_at
 
