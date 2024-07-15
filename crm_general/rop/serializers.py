@@ -77,14 +77,18 @@ class DealerProfileListSerializer(serializers.ModelSerializer):
             return 0.0
 
     def get_incoming_funds(self, instance) -> Decimal:
-        return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
-            incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-        )["incoming_funds"]
+        # return instance.balance_histories.only("amount").filter(status="wallet").aggregate(
+        #     incoming_funds=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
+        # )["incoming_funds"]
+        return Decimal(sum(instance.user.money_docs.filter(is_active=True).values_list('amount', flat=True)))
 
     def get_shipment_amount(self, instance) -> Decimal:
-        return instance.balance_histories.only("amount").filter(status="order").aggregate(
-            shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
-        )["shipment_amount"]
+        # return instance.balance_histories.only("amount").filter(status="order").aggregate(
+        #     shipment_amount=Sum("amount", output_field=DecimalField(max_digits=100, decimal_places=2))
+        # )["shipment_amount"]
+        return Decimal(sum(instance.orders.filter(
+            is_active=True, status__in=['sent', 'success']
+        ).values_list('price', flat=True)))
 
     def get_last_order_date(self, instance) -> date | None:
         last_order = instance.orders.only("created_at").order_by("-created_at").first()
