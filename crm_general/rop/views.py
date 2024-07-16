@@ -302,9 +302,9 @@ class BalanceViewSet(BaseRopMixin, mixins.ListModelMixin, viewsets.GenericViewSe
     filter_backends = (filters.SearchFilter, FilterByFields, filters.OrderingFilter)
     search_fields = ("dealer__user__name",)
     filter_by_fields = {
-        "start_date": {"by": "dealer__balance_histories__created_at__date__gte", "type": "date",
+        "start_date": {"by": "dealer__orders__created_at__date__gte", "type": "date",
                        "pipline": string_date_to_date},
-        "end_date": {"by": "dealer__balance_histories__created_at__date__lte", "type": "date",
+        "end_date": {"by": "dealer__orders__created_at__date__lte", "type": "date",
                      "pipline": string_date_to_date},
         "status": {"by": "dealer__dealer_status_id", "type": "number"}
     }
