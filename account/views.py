@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from account.main_functions import notifications_info
-from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile, MyUser
+from account.models import Notification, VerifyCode, DealerStore, BalancePlus, BalancePlusFile, MyUser, FireBaseToken
 from account.permissions import IsAuthor, IsUserAuthor
 from account.serializers import DealerMeInfoSerializer, NotificationSerializer, AccountStockSerializer, \
     DealerStoreSerializer, BalancePlusSerializer, DealerProfileUpdateSerializer, \
@@ -108,6 +108,7 @@ class ForgotPwdView(APIView):
     """
     email
     """
+
     def post(self, request):
         if isinstance(request.user, AnonymousUser):
             email = request.data.get('email')
@@ -129,6 +130,7 @@ class VerifyCodeView(APIView):
     """
     email, code
     """
+
     def post(self, request):
         email = request.data.get('email')
         user = get_user_model().objects.filter(email=email, is_active=True, status='dealer').first()
@@ -145,6 +147,7 @@ class ChangePwdView(APIView):
     """
     email, code, pwd
     """
+
     def post(self, request):
         email = request.data.get('email')
         user = get_user_model().objects.filter(email=email, is_active=True, status='dealer').first()
@@ -242,11 +245,19 @@ class TransactionHistoryListView(APIView):
         return Response({'data': response}, status=status.HTTP_200_OK)
 
 
+class FireBaseTokenAddView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        FireBaseToken.objects.create(user=request.user, token=request.data['token'])
+        return Response({"status": "success",
+                         "message": "Успешно добавлено."}, status=status.HTTP_200_OK)
 
 
+class FireBaseTokenRemoveView(APIView):
+    permission_classes = [IsAuthenticated]
 
-
-
-
-
-
+    def post(self, request):
+        FireBaseToken.objects.filter(token=request.data['token']).delete()
+        return Response({"status": "success",
+                         "message": "Успешно удалено."}, status=status.HTTP_200_OK)
