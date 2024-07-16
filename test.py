@@ -137,29 +137,29 @@ def get_balance_history(user_id, start_date, end_date):
             author__user_id=user_id,
             is_active=True,
             status__in=['success', 'sent', 'wait', 'paid'],
-        ).annotate(
-            action_id=F("id"),
-            date=F("created_at"),
-            price_amount=Cast(F("price"), IntegerField(default=0)),
-            type=Value("order", CharField()),
+        ).values(
+            'created_at',
+            action_id=F('id'),
             after=Value(0, IntegerField()),
             before=Value(0, IntegerField()),
-        ).values('action_id', 'date', 'price_amount', 'type', 'after', 'before')
+            type=Value('order', CharField()),
+            price_amount=Cast(F('price'), IntegerField(default=0)),
+        )
     )
     balances = (
         MoneyDoc.objects.filter(user_id=user_id, is_active=True)
-        .annotate(
-            action_id=F("id"),
-            date=F("created_at"),
-            price_amount=Cast(F("amount"), IntegerField(default=0)),
-            type=Value("wallet", CharField()),
+        .values(
+            'created_at',
+            action_id=F('id'),
             after=Value(0, IntegerField()),
             before=Value(0, IntegerField()),
-        ).values('action_id', 'date', 'price_amount', 'type', 'after', 'before')
+            type=Value('wallet', CharField()),
+            price_amount=Cast(F('price'), IntegerField(default=0)),
+        )
     )
 
     data = list(orders) + list(balances)
-    df = pandas.DataFrame(data).sort_values(by="date")
+    df = pandas.DataFrame(data).sort_values(by='created_at')
     balance = 0
 
     for index, row in df.iterrows():
@@ -173,8 +173,9 @@ def get_balance_history(user_id, start_date, end_date):
 
         df.at[index, 'after'] = balance
 
-    start_date = pandas.to_datetime(start_date).tz_localize(df['date'].dt.tz)
-    end_date = pandas.to_datetime(end_date).tz_localize(df['date'].dt.tz)
-    df = df[(start_date <= df['date']) & (df['date'] < end_date)]
-    df.rename(columns={'date': 'created_at', 'type': 'status', 'price_amount': 'amount'}, inplace=True)
+    start_date = pandas.to_datetime(start_date).tz_localize(df['created_at'].dt.tz)
+    end_date = pandas.to_datetime(end_date).tz_localize(df['created_at'].dt.tz)
+
+    df = df[(start_date <= df['created_at']) & (df['created_at'] < end_date)]
+    df.rename(columns={'type': 'status', 'price_amount': 'amount'}, inplace=True)
     return df.to_dict('records')
