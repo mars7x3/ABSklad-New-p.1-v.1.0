@@ -119,7 +119,6 @@ def get_balance_history(user_id, start_date, end_date):
         author__user_id=user_id, is_active=True, status__in=['success', 'sent', 'wait', 'paid']
     ).values_list('id', 'price', 'created_at')
     balances = MoneyDoc.objects.filter(user_id=user_id, is_active=True).values_list('id', 'amount', 'created_at')
-
     for order in orders:
         data.append(
             {
@@ -138,37 +137,37 @@ def get_balance_history(user_id, start_date, end_date):
                 "type": "wallet"
             }
         )
-
-    df = pandas.DataFrame(data)
-    df = df.sort_values(by="date")
-    df['before'] = 0
-    df['after'] = 0
-    df['date'] = df['date'].astype(str)
-    df['amount'] = df['amount'].astype(int)
-
-    balance = 0
-
     result = []
-    for index, row in df.iterrows():
-        df.at[index, 'before'] = balance
+    if data:
+        df = pandas.DataFrame(data)
+        df = df.sort_values(by="date")
+        df['before'] = 0
+        df['after'] = 0
+        df['date'] = df['date'].astype(str)
+        df['amount'] = df['amount'].astype(int)
 
-        if row['type'] == 'wallet':
-            balance += row['amount']
-        elif row['type'] == 'order':
-            balance -= row['amount']
+        balance = 0
 
-        df.at[index, 'after'] = balance
-        comparison_date_str = row['date']
-        history_date = datetime.datetime.fromisoformat(comparison_date_str)
-        if start_date <= history_date < end_date:
-            result.append(
-                {
-                    'action_id': row['action_id'],
-                    'created_at': row['date'],
-                    'amount': row['amount'],
-                    'status': row['type'],
-                    'before': row['before'],
-                    'after': row['after'],
-                }
-            )
+        for index, row in df.iterrows():
+            df.at[index, 'before'] = balance
+
+            if row['type'] == 'wallet':
+                balance += row['amount']
+            elif row['type'] == 'order':
+                balance -= row['amount']
+
+            df.at[index, 'after'] = balance
+            comparison_date_str = row['date']
+            history_date = datetime.datetime.fromisoformat(comparison_date_str)
+            if start_date <= history_date < end_date:
+                result.append(
+                    {
+                        'action_id': row['action_id'],
+                        'created_at': row['date'],
+                        'amount': row['amount'],
+                        'status': row['type'],
+                        'before': row['before'],
+                        'after': row['after'],
+                    }
+                )
     return result
