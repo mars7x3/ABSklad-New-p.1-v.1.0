@@ -1,7 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
 
-from django.db import transaction
 from django.db.models import Sum, Count, FloatField
 from django.db.models.functions import Round
 from django.core.exceptions import ObjectDoesNotExist
@@ -11,18 +10,16 @@ from account.models import (
     MyUser, DealerProfile, DealerStatus, Wallet, DealerStore,
     BalancePlus, BalancePlusFile
 )
-from account.serializers import BalancePlusFileSerializer
 from crm_general.models import CRMTask
 from crm_general.serializers import CRMStockSerializer, BaseProfileSerializer, VillageSerializer
 from general_service.models import Stock, PriceType, City
 from general_service.serializers import CitySerializer
-from one_c.from_crm import sync_dealer_back_to_1C
 from order.models import MyOrder, OrderProduct, OrderReceipt, CartProduct, MainOrder, MainOrderProduct, MainOrderReceipt
 from order.tasks import create_order_notification
 from product.models import AsiaProduct, ProductPrice, Collection, Category, ProductSize, ProductImage, ProductCount
 
 from .utils import (
-    check_to_unavailable_products, order_total_price, calculate_order_cost_price, build_order_products_data,
+    check_to_unavailable_products, order_total_price, build_order_products_data,
     update_main_order_product_count
 )
 
