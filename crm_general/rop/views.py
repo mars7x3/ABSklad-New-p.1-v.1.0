@@ -147,7 +147,7 @@ class DealerBalanceHistoryListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user_id = request.data.get('user_id')
+        user_id = request.query_params.get('user_id')
         start = request.query_params.get('start')
         end = request.query_params.get('end')
         start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
