@@ -150,13 +150,14 @@ def get_balance_history(user_id, start_date, end_date):
 
         for index, row in df.iterrows():
             df.at[index, 'before'] = balance
-
+            before_balance = balance
             if row['type'] == 'wallet':
                 balance += row['amount']
             elif row['type'] == 'order':
                 balance -= row['amount']
 
             df.at[index, 'after'] = balance
+
             comparison_date_str = row['date']
             history_date = datetime.datetime.fromisoformat(comparison_date_str)
             if start_date <= history_date < end_date:
@@ -166,8 +167,8 @@ def get_balance_history(user_id, start_date, end_date):
                         'created_at': row['date'],
                         'amount': row['amount'],
                         'status': row['type'],
-                        'before': row['before'],
-                        'after': row['after'],
+                        'before': before_balance,
+                        'after': balance,
                     }
                 )
     return result
