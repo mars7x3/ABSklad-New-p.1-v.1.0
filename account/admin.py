@@ -27,7 +27,7 @@ class MyUserAdmin(UserAdmin):
     )
     fieldsets = (
         (_("Personal info"), {"fields": ("email", "username", "password", "pwd", "status", "uid",
-                                         "name", "phone", "image", 'firebase_token')}),
+                                         "name", "phone", "image")}),
         (
             _("Permissions"),
             {
