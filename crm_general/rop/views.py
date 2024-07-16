@@ -10,9 +10,10 @@ from rest_framework.views import APIView
 from account.models import ManagerProfile, DealerProfile, Wallet, DealerStatus, MyUser
 from account.utils import get_balance_history
 from crm_general.filters import FilterByFields
+from crm_general.models import CRMTask
 from crm_general.paginations import AppPaginationClass
 from crm_general.serializers import ActivitySerializer, UserImageSerializer
-from crm_general.utils import convert_bool_string_to_bool, string_date_to_date, today_on_true
+from crm_general.utils import convert_bool_string_to_bool, string_date_to_date
 from order.models import CartProduct, MyOrder
 from product.models import Collection, Category, ProductPrice, AsiaProduct
 
@@ -21,7 +22,6 @@ from .serializers import ManagerProfileSerializer, DealerProfileListSerializer, 
     ShortCategorySerializer, ProductPriceListSerializer, ProductDetailSerializer, WalletListSerializer, \
     DealerStatusSerializer, ManagerListSerializer
 from .mixins import BaseRopMixin, BaseDealerRelationViewMixin, BaseDealerMixin, BaseManagerMixin
-from ..models import CRMTask
 
 
 # -------------------------------------------- MANAGERS
