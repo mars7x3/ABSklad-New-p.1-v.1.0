@@ -1,6 +1,7 @@
 import datetime
 
-from django.db.models import Sum, F, Q
+from django.db.models import Sum, F, Q, Value, IntegerField
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
@@ -203,8 +204,10 @@ class AccountantTotalEcoBalanceView(APIView):
 
     def get(self, request):
         user_id = request.query_params.get('user_id')
-        kwargs = {'is_active': True, 'author__user_id': user_id, 'status__in': ['success', 'sent', 'paid',
-                                                                                'wait']}
+        kwargs = {'is_active': True,
+                  'author__user_id': user_id,
+                  'status__in': ['success', 'sent', 'paid', 'wait'],
+                  'order_products__discount__isnull': False}
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
 
@@ -215,7 +218,10 @@ class AccountantTotalEcoBalanceView(APIView):
             kwargs['created_at__gte'] = start_date
             kwargs['created_at__lte'] = end_date
 
-        amount_eco = sum(MyOrder.objects.filter(**kwargs).values_list('order_products__discount', flat=True))
+        amount_eco = MyOrder.objects.filter(**kwargs).annotate(
+            discount_with_default=Coalesce('order_products__discount', Value(0), output_field=IntegerField())
+        ).aggregate(total_discount=Sum('discount_with_default'))['total_discount']
+
         amount_crm = Wallet.objects.filter(dealer__user_id=user_id).first().amount_crm
 
         return Response({"amount_eco": amount_eco, "amount_crm": amount_crm}, status=status.HTTP_200_OK)
@@ -249,7 +255,7 @@ class BalancePlusListView(viewsets.ReadOnlyModelViewSet):
         page = paginator.paginate_queryset(queryset, request)
         serializer = self.get_serializer(page, many=True, context=self.get_renderer_context()).data
         return paginator.get_paginated_response(serializer)
-      
+
 
 class BalancePlusModerationView(APIView):
     """
@@ -374,7 +380,7 @@ class AccountantProductListView(ListModelMixin, GenericViewSet):
         serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(serializer, status=status.HTTP_200_OK)
 
-      
+
 class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Collection.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
@@ -395,8 +401,8 @@ class AccountantCollectionListView(ListModelMixin, RetrieveModelMixin, GenericVi
 
         serializer = self.get_serializer(queryset, many=True, context=self.get_renderer_context()).data
         return Response(serializer, status=status.HTTP_200_OK)
-      
-      
+
+
 class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
@@ -414,8 +420,8 @@ class AccountantCategoryView(ListModelMixin, RetrieveModelMixin, GenericViewSet)
             return instances.filter(products__collection__slug=collection_slug).distinct()
         else:
             return instances
-          
-          
+
+
 class AccountantStockViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     queryset = Stock.objects.all()
     permission_classes = [IsAuthenticated, IsAccountant]
@@ -447,7 +453,6 @@ class InventoryListUpdateView(ListModelMixin,
                               RetrieveModelMixin,
                               task_views.OneCUpdateTaskMixin,
                               task_views.OneCTaskGenericViewSet):
-
     queryset = Inventory.objects.filter(is_active=True)
     permission_classes = [IsAuthenticated, IsAccountant]
     serializer_class = InventorySerializer
