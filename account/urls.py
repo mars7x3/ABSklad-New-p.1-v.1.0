@@ -29,5 +29,9 @@ urlpatterns = [
 
     path('dealer/transaction/history/list/', TransactionHistoryListView.as_view()),
 
+    path('dealer/fb-token/add', FireBaseTokenAddView.as_view()),
+    path('dealer/fb-token/remove', FireBaseTokenRemoveView.as_view()),
+
+
     path('', include(router.urls)),
 ]

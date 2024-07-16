@@ -38,12 +38,11 @@ class UserLoginSerializer(TokenObtainPairSerializer):
 class DealerMeInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ['email', 'pwd', 'name', 'image', 'phone', 'updated_at', 'id', 'firebase_token']
+        fields = ['email', 'pwd', 'name', 'image', 'phone', 'updated_at', 'id']
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['profile'] = DealerProfileSerializer(instance.dealer_profile, context=self.context).data
-
         return representation
 
 
@@ -119,26 +118,17 @@ class BalancePlusFileSerializer(serializers.ModelSerializer):
 class DealerProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ['email', 'name', 'phone', 'image', 'id', 'firebase_token']
+        fields = ['email', 'name', 'phone', 'image', 'id']
 
-    # def update(self, instance, validated_data):
-    #     username = validated_data.get('username')
-    #     pwd = validated_data.get('pwd')
-    #     if username:
-    #         if not username_is_valid(username):
-    #             raise serializers.ValidationError({"username": "Некорректный username"})
-    #     if pwd:
-    #         if not pwd_is_valid(pwd):
-    #             raise serializers.ValidationError({"pwd": "Некорректный pwd"})
-    #
-    #     for key, value in validated_data.items():
-    #         setattr(instance, key, value)
-    #     pwd = validated_data.get('pwd')
-    #     if pwd:
-    #         instance.pwd = pwd
-    #         instance.set_password(validated_data.get('pwd'))
-    #     instance.save()
-    #     return instance
+    def update(self, instance, validated_data):
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        pwd = validated_data.get('pwd')
+        if pwd:
+            instance.pwd = pwd
+            instance.set_password(validated_data.get('pwd'))
+        instance.save()
+        return instance
 
 
 class UserNotificationSerializer(serializers.ModelSerializer):

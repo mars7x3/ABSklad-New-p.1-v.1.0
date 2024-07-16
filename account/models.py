@@ -225,3 +225,8 @@ class CRMNotification(models.Model):
     @classmethod
     def get_status_choices(cls):
         return cls.STATUS
+
+
+class FireBaseToken(models.Model):
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE, related_name='fb_tokens')
+    token = models.TextField()
