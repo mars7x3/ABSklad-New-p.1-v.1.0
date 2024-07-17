@@ -241,7 +241,10 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
                 received_products_qty=Sum('count', filter=Q(movement__warehouse_sender__uid=stock_uid))
             )
 
-            movement_delta = movement_products_qts["sent_products_qty"] - movement_products_qts["received_products_qty"]
+            sent_products_qty = movement_products_qts["sent_products_qty"] or 0
+            received_products_qty = movement_products_qts["received_products_qty"] or 0
+
+            movement_delta = sent_products_qty - received_products_qty
             if movement_delta < 0:
                 movement_delta = 0
 
