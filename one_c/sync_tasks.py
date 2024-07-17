@@ -6,7 +6,7 @@ from celery import Task
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from requests import RequestException, ConnectionError, ConnectTimeout
+from requests import RequestException, ConnectionError, ConnectTimeout, HTTPError
 
 from absklad_commerce.celery import app
 from account.models import DealerStatus, DealerProfile, MyUser, BalancePlus, Notification
@@ -93,7 +93,7 @@ class OneCSyncTask(Task):
         except ConnectionError as con_exc:
             logger.error(con_exc)
             self.send_failure_notify(NOTIFY_ERRORS["connection_err"])
-        except RequestException as http_exc:
+        except (RequestException, HTTPError) as http_exc:
             logger.error(http_exc)
 
             match http_exc.response.status_code:
