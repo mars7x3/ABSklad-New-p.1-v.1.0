@@ -74,19 +74,9 @@ class OneCSyncTask(Task):
         if not self.bind:
             kwargs["one_c"] = self.one_c_client
             kwargs["form_data"] = self.form_data
-        return super().__call__(*args, **kwargs)
 
-    def send_failure_notify(self, message) -> None:
-        send_web_notif(
-            form_data_key=self.key,
-            title=self.notify_title,
-            status="failure",
-            message=message
-        )
-
-    def run(self, *args, **kwargs):
         try:
-            return super().run(*args, **kwargs)
+            return super().__call__(*args, **kwargs)
         except ConnectTimeout as timeout_exc:
             logger.error(timeout_exc)
             self.send_failure_notify(NOTIFY_ERRORS["timeout"])
@@ -108,6 +98,14 @@ class OneCSyncTask(Task):
                     msg = NOTIFY_ERRORS["default"]
 
             self.send_failure_notify(msg)
+
+    def send_failure_notify(self, message) -> None:
+        send_web_notif(
+            form_data_key=self.key,
+            title=self.notify_title,
+            status="failure",
+            message=message
+        )
 
 
 def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:
