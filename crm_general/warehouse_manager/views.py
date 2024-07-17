@@ -229,20 +229,23 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
         for product in products:
             remains = ProductCount.objects.get(product=product, stock=self.warehouse_profile.stock).count_crm
 
-            try:
-                movement_product = MovementProducts.objects.get(product=product,
-                                                                movement__is_active=True,
-                                                                movement__created_at__gte=start_date,
-                                                                movement__created_at__lte=end_date)
+            movement_products = MovementProducts.objects.filter(
+                product=product,
+                movement__is_active=True,
+                movement__created_at__gte=start_date,
+                movement__created_at__lte=end_date
+            )
+
+            if not movement_products.exists():
+                movement_delta = 0
+            else:
                 sent_products = sum(
-                    movement_product.filter(movement__warehouse_recipient_uid=self.warehouse_profile.stock.uid)
+                    movement_products.filter(movement__warehouse_recipient_uid=self.warehouse_profile.stock.uid)
                     .values_list('count'))
                 received_products = sum(
-                    movement_product.filter(movement__warehouse_sender_uid=self.warehouse_profile.stock.uid)
+                    movement_products.filter(movement__warehouse_sender_uid=self.warehouse_profile.stock.uid)
                     .values_list('count'))
                 movement_delta = sent_products - received_products
-            except ObjectDoesNotExist:
-                movement_delta = 0
 
             sold = OrderProduct.objects.filter(ab_product=product,
                                                ab_product__is_active=True,
@@ -253,12 +256,12 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
 
             count_crm = ProductCount.objects.filter(product=product,
                                                     stock=self.warehouse_profile.stock).aggregate(
-                                                    count_crm=Sum('count_crm')
-                                                )
+                count_crm=Sum('count_crm')
+            )
             count_1c = ProductCount.objects.filter(product=product,
                                                    stock=self.warehouse_profile.stock).aggregate(
-                                                   count_1c=Sum('count_1c')
-                                                )
+                count_1c=Sum('count_1c')
+            )
 
             reserved = count_1c['count_1c'] - count_crm['count_crm']
             statistics_entry = {
@@ -401,7 +404,7 @@ class WareHouseNotificationView(APIView):
 
 class VerifyOrderAuthorView(APIView):
     permission_classes = [IsAuthenticated, IsWareHouseManager]
-    
+
     def post(self, request):
         code = request.data['code']
         order_id = request.data['order_id']
