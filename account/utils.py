@@ -171,4 +171,7 @@ def get_balance_history(user_id, start_date, end_date):
                         'after': balance,
                     }
                 )
+
+    if result:
+        result.reverse()
     return result
