@@ -96,8 +96,7 @@ class OneCTaskMixin:
             action=self._get_task_action(),
         )
 
-    @staticmethod
-    def _get_task_kwargs(cache_key) -> dict:
+    def _get_task_kwargs(self, cache_key) -> dict:
         return {"key": cache_key}
 
     def _run_task(self, task, cache_key):
