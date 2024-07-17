@@ -24,7 +24,7 @@ def create_product_prices(price_type_id):
 
 
 @app.task()
-def checking_tasks_statuses():
+def update_expired_crm_tasks():
     CRMTask.objects.filter(
         is_active=True,
         status__in=["created", "waiting", "repeat"],
