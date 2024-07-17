@@ -1,5 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, CreateModelMixin, \
@@ -226,33 +226,32 @@ class WareHouseSaleReportView(WareHouseManagerMixin, APIView):
 
         products = AsiaProduct.objects.filter(is_active=True, counts__stock=self.request.user.warehouse_profile.stock)
         stat = []
+        stock_uid = self.warehouse_profile.stock.uid
+
         for product in products:
             remains = ProductCount.objects.get(product=product, stock=self.warehouse_profile.stock).count_crm
 
-            movement_products = MovementProducts.objects.filter(
+            movement_products_qts = MovementProducts.objects.filter(
                 product=product,
                 movement__is_active=True,
                 movement__created_at__gte=start_date,
                 movement__created_at__lte=end_date
+            ).aggregate(
+                sent_products_qty=Sum('count', filter=Q(movement__warehouse_recipient__uid=stock_uid)),
+                received_products_qty=Sum('count', filter=Q(movement__warehouse_sender__uid=stock_uid))
             )
 
-            if not movement_products.exists():
+            movement_delta = movement_products_qts["sent_products_qty"] - movement_products_qts["received_products_qty"]
+            if movement_delta < 0:
                 movement_delta = 0
-            else:
-                sent_products = sum(
-                    movement_products.filter(movement__warehouse_recipient_uid=self.warehouse_profile.stock.uid)
-                    .values_list('count'))
-                received_products = sum(
-                    movement_products.filter(movement__warehouse_sender_uid=self.warehouse_profile.stock.uid)
-                    .values_list('count'))
-                movement_delta = sent_products - received_products
 
-            sold = OrderProduct.objects.filter(ab_product=product,
-                                               ab_product__is_active=True,
-                                               order__stock=self.warehouse_profile.stock,
-                                               order__status__in=order_positive_statuses,
-                                               order__created_at__range=(start_date, end_date)
-                                               ).aggregate(Sum('count'))['count__sum'] or 0
+            sold = OrderProduct.objects.filter(
+                ab_product=product,
+                ab_product__is_active=True,
+                order__stock=self.warehouse_profile.stock,
+                order__status__in=order_positive_statuses,
+                order__created_at__range=(start_date, end_date)
+            ).aggregate(Sum('count'))['count__sum'] or 0
 
             count_crm = ProductCount.objects.filter(product=product,
                                                     stock=self.warehouse_profile.stock).aggregate(
