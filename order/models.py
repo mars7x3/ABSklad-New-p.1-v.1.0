@@ -160,6 +160,6 @@ class MainOrderReceipt(models.Model):
 
 
 class MainOrderCode(models.Model):
-    user = models.ForeignKey(MainOrder, on_delete=models.CASCADE, related_name='codes')
+    main_order = models.ForeignKey(MainOrder, on_delete=models.CASCADE, related_name='codes')
     code = models.CharField(max_length=4)
     created_at = models.DateTimeField(auto_now_add=True)

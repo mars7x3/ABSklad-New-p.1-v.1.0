@@ -190,7 +190,6 @@ class BalancePlusView(APIView):
         files = request.FILES.getlist('files')
         dealer = request.user.dealer_profile
         if amount and files:
-            # TODO: добавить синхронизацию с 1С
             balance = BalancePlus.objects.create(dealer=dealer, amount=amount)
             BalancePlusFile.objects.bulk_create([BalancePlusFile(balance=balance, file=i) for i in files])
             return Response({'text': 'Завявка принята!'}, status=status.HTTP_200_OK)

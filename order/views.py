@@ -16,7 +16,7 @@ from rest_framework.viewsets import GenericViewSet
 from account.utils import random_code
 from order.permissions import IsAuthor
 from order.main_functions import purchase_analysis
-from order.models import MyOrder, Cart, CartProduct, OrderReceipt, MainOrder, MainOrderReceipt
+from order.models import MyOrder, Cart, CartProduct, OrderReceipt, MainOrder, MainOrderReceipt, MainOrderCode
 from order.serializers import MyOrderListSerializer, MyOrderDetailSerializer, MyOrderCreateSerializer, \
     CartListSerializer, CartCreateSerializer, MainOrderCreateSerializer, MainOrderDetailSerializer, \
     MainOrderListSerializer, MainOrderUpdateSerializer
@@ -223,10 +223,12 @@ class GenerateCodeView(APIView):
 
     def post(self, request):
         order_id = request.data.get('order_id')
-        order = MainOrder.objects.filter(id=order_id).first()
-        if order.author.user == request.user:
-            if order:
-                response_data = {"code": random_code()}
+        main_order = MainOrder.objects.filter(id=order_id).first()
+        if main_order.author.user == request.user:
+            if main_order:
+                order_code = random_code()
+                MainOrderCode.objects.create(code=order_code, main_order=main_order)
+                response_data = {"code": order_code}
                 return Response(response_data, status=status.HTTP_200_OK)
             return Response({'text': 'По такому id заказ осутсвует!'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'text': 'Доступ ограничен!'}, status=status.HTTP_400_BAD_REQUEST)
