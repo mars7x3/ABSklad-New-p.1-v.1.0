@@ -385,7 +385,7 @@ def kpi_akb_2lvl(date: datetime):
         managers_data.append({
             'name': manager.name,
             'id': manager.id,
-            'akb': plan.akb,
+            'akb': plan.akb if plan else 0,
             'fact_akb': users.count()
         })
     return managers_data
