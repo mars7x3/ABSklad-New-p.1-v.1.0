@@ -19,7 +19,7 @@ def purchase_analysis(request):
     start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
     end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
     end_date = end_date + datetime.timedelta(days=1)
-    o_status = order_statuses.get((request.data.get('status')))
+    o_status = order_statuses.get(request.data.get('status'))
     if o_status:
         kwargs['status__in'] = o_status
     kwargs['created_at__gte'] = start_date
@@ -28,7 +28,7 @@ def purchase_analysis(request):
     orders = request.user.dealer_profile.orders.filter(
         is_active=True, **kwargs
     ).annotate(
-        total_price=Sum('price', output_field=IntegerField()),
+        total_price=Sum('price', default=0, output_field=IntegerField()),
         true_price=Sum(
             Case(
                 When(order_products__discount=0, then=F("order_products__total_price")),
