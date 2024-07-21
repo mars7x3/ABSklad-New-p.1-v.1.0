@@ -577,11 +577,13 @@ def task_order_partial_sent(self):
             self.send_failure_notify(f"Не найдена цена для товара #{product_obj.id}")
             raise exc
 
+        sale_count = products_data[str(product_obj.id)]
         order_products_data.append(
             {
                 "ab_product": product_obj,
-                "count": products_data[str(product_obj.id)],
+                "count": sale_count,
                 "price": prod_price,
+                "total_price": sale_count * prod_price
             }
         )
 
