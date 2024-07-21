@@ -1,3 +1,4 @@
+import json
 import random
 
 import requests
@@ -90,36 +91,84 @@ from account.models import DealerStatus
 #                                                               'accountant', 'warehouse', 'director'])
 
 
-from promotion.models import Motivation, ConditionProduct
-from product.models import AsiaProduct
+# from promotion.models import Motivation, ConditionProduct
+# from product.models import AsiaProduct
+#
+# prods = AsiaProduct.objects.filter(id__in=[305, 308])
+# a = Motivation.objects.get(id=32)
+# for i in a.conditions.all():
+#     for b in i.condition_prods.all():
+#         print(b)
+#         # for p in prods:
+#         #     ConditionProduct.objects.create(condition=b, product=p, count=5)
+#
+#
+# def rounding(n, m):
+#     pass
+#
+#
+# from order.models import MainOrder, MyOrder
+#
+# o = MainOrder.objects.get(id=64)
+#
+# my_o = MyOrder.objects.create(main_order=o,
+#                               author=o.author,
+#                               stock=o.stock,
+#                               price=o.price,
+#                               status='sent',
+#                               type_status=o.type_status,
+#                               created_at=o.created_at,
+#                               paid_at=o.paid_at)
+#
+# from one_c.initial_sync import main_initial_sync
+# main_initial_sync()
+#
+# from account.models import MyUser, WarehouseProfile
+# WarehouseProfile.objects.all().count()
+#
+# MyUser.objects.filter(status='warehouse').delete()
+#
+# from one_c.models import MovementProduct1C
+# MovementProduct1C.objects.all().count()
 
-prods = AsiaProduct.objects.filter(id__in=[305, 308])
-a = Motivation.objects.get(id=32)
-for i in a.conditions.all():
-    for b in i.condition_prods.all():
-        print(b)
-        # for p in prods:
-        #     ConditionProduct.objects.create(condition=b, product=p, count=5)
 
-
-def rounding(n, m):
-    pass
-
-
-from order.models import MainOrder, MyOrder
-
-o = MainOrder.objects.get(id=64)
-
-my_o = MyOrder.objects.create(main_order=o,
-                              author=o.author,
-                              stock=o.stock,
-                              price=o.price,
-                              status='sent',
-                              type_status=o.type_status,
-                              created_at=o.created_at,
-                              paid_at=o.paid_at)
+('order', 'Заказ'),
+('news', 'Новости'),
+('action', 'Акция'),
+('notif', 'Оповещение'),
+('chat', 'Чат'),
+('balance', 'Пополнение баланса'),
+('motivation', 'Мотивация'),
 
 from account.models import MyUser
 
-a = MyUser.objects.filter(username='azat').first()
-a.pwd
+user = MyUser.objects.create(
+    email='accountant@gmail.com',
+    username='accountant',
+    status='accountant',
+    pwd='absklad123',
+    name='Accountant',
+    phone='+996554730944',
+)
+user.set_password('absklad123')
+user.save()
+
+from account.models import MyUser
+from order.models import MainOrderCode
+
+user = MyUser.objects.get(id=1504)
+orders = user.dealer_profile.main_orders.all().values_list('id', flat=True)
+create_list = []
+for o in orders:
+    create_list.append(
+        MainOrderCode(
+            user_id=o,
+            code='1234'
+        )
+    )
+MainOrderCode.objects.bulk_create(create_list)
+
+from account.models import DealerProfile
+d = DealerProfile.objects.filter(user__username='dinnur').first()
+d.main_orders.values_list('main_order_products__total_price', flat=True)
+
