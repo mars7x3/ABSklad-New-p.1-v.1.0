@@ -74,6 +74,11 @@ app.conf.beat_schedule = {
     'day_stat_task': {
         'task': "crm_stat.tasks.day_stat_task",
         'schedule': crontab(hour=0, minute=2)
+    },
+    #
+    'checking_update_crm_tasks': {
+        'task': "crm_general.director.tasks.update_expired_crm_tasks",
+        'schedule': 60.0
     }
 }
 

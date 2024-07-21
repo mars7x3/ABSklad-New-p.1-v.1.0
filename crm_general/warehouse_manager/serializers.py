@@ -125,6 +125,7 @@ class MainOrderDetailSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     type_status = VerboseChoiceField(choices=MainOrder.TYPE_STATUS)
     orders = OrderDetailSerializer(read_only=True, many=True)
+    creator_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MainOrder
@@ -136,6 +137,9 @@ class MainOrderDetailSerializer(serializers.ModelSerializer):
     def get_order(self, instance):
         return instance.orders.first().id
 
+    def get_creator_name(self, instance):
+        if instance.creator:
+            return instance.creator.name
 
 class WareHouseCollectionListSerializer(serializers.ModelSerializer):
     class Meta:

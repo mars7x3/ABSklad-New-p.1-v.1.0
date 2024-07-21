@@ -6,7 +6,7 @@ from celery import Task
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from requests import RequestException, ConnectionError, ConnectTimeout
+from requests import RequestException, ConnectionError, ConnectTimeout, HTTPError
 
 from absklad_commerce.celery import app
 from account.models import DealerStatus, DealerProfile, MyUser, BalancePlus, Notification
@@ -74,29 +74,20 @@ class OneCSyncTask(Task):
         if not self.bind:
             kwargs["one_c"] = self.one_c_client
             kwargs["form_data"] = self.form_data
-        return super().__call__(*args, **kwargs)
 
-    def send_failure_notify(self, message) -> None:
-        send_web_notif(
-            form_data_key=self.key,
-            title=self.notify_title,
-            status="failure",
-            message=message
-        )
-
-    def run(self, *args, **kwargs):
         try:
-            return super().run(*args, **kwargs)
+            return super().__call__(*args, **kwargs)
         except ConnectTimeout as timeout_exc:
             logger.error(timeout_exc)
             self.send_failure_notify(NOTIFY_ERRORS["timeout"])
         except ConnectionError as con_exc:
             logger.error(con_exc)
             self.send_failure_notify(NOTIFY_ERRORS["connection_err"])
-        except RequestException as http_exc:
+        except (RequestException, HTTPError) as http_exc:
             logger.error(http_exc)
 
-            match http_exc.response.status_code:
+            status_code = http_exc.response.status_code if http_exc.response else None
+            match status_code:
                 case 404:
                     msg = NOTIFY_ERRORS["not_found"]
                 case 400:
@@ -108,6 +99,14 @@ class OneCSyncTask(Task):
                     msg = NOTIFY_ERRORS["default"]
 
             self.send_failure_notify(msg)
+
+    def send_failure_notify(self, message) -> None:
+        send_web_notif(
+            form_data_key=self.key,
+            title=self.notify_title,
+            status="failure",
+            message=message
+        )
 
 
 def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:

@@ -949,7 +949,7 @@ class DirectorTaskTotalInfoView(APIView):
         tasks = CRMTask.objects.filter(is_active=True)
         total_count = tasks.count()
         done_count = tasks.filter(status='completed').count()
-        overdue_count = tasks.exclude(status='expired').count()
+        overdue_count = tasks.filter(status='expired').count()
         return Response({'total_count': total_count, 'done_count': done_count, 'overdue_count': overdue_count},
                         status=status.HTTP_200_OK)
 

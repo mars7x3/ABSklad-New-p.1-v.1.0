@@ -114,8 +114,9 @@ class ProductListSerializer(serializers.ModelSerializer):
             return rep
 
         else:
-            prices = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
-            if not prices:
+            if dealer.price_type:
+                prices = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+            else:
                 prices = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
 
             if prices:
