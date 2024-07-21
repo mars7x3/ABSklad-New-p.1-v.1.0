@@ -36,7 +36,7 @@ from product.models import AsiaProduct, Collection, Category
 
 
 class AccountantOrderListView(viewsets.ReadOnlyModelViewSet):
-    # permission_classes = [IsAuthenticated, IsAccountant]
+    permission_classes = [IsAuthenticated, IsAccountant]
     queryset = MainOrder.objects.filter(is_active=True)
     serializer_class = MainOrderListSerializer
     pagination_class = CRMPaginationClass
