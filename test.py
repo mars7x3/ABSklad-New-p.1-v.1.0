@@ -1,4 +1,29 @@
-# import random
+
+import json
+import random
+
+import requests
+
+# api_key = 'kz8117159b2a1da2d17a9b1dda664a5f4f54f6ada074b7c5dbdd19a85d0fcc5e0211b0'
+# api_url = 'http://api.mobizon.kz/service/message/'
+#
+#
+# def send_text():
+#     # Определите параметры сообщения
+#     params = {
+#         'recipient': '+996550211788',
+#         'text': 'Test sms message',
+#         'from': 'ABSKLAD',
+#         'apiKey': api_key
+#     }
+#
+#     # Отправка SMS
+#     response = requests.get(api_url + 'sendsmsmessage', params=params)
+#     print(response.json())
+
+
+# from account.models import MyUser, Notification
+
 #
 # import requests
 #
@@ -120,62 +145,90 @@
 #                               paid_at=o.paid_at)
 #
 # from account.models import MyUser
+
+# u = MyUser.objects.filter(name__icontains='Асан', status__in=['rop', 'manager', 'marketer',
+#                                                               'accountant', 'warehouse', 'director'])
+
+
+# from promotion.models import Motivation, ConditionProduct
+# from product.models import AsiaProduct
 #
-# a = MyUser.objects.filter(username='azat').first()
-# a.pwd
-import pandas
-from django.db.models import F, IntegerField, CharField, Value
-from django.db.models.functions import Cast
+# prods = AsiaProduct.objects.filter(id__in=[305, 308])
+# a = Motivation.objects.get(id=32)
+# for i in a.conditions.all():
+#     for b in i.condition_prods.all():
+#         print(b)
+#         # for p in prods:
+#         #     ConditionProduct.objects.create(condition=b, product=p, count=5)
+#
+#
+# def rounding(n, m):
+#     pass
+#
+#
+# from order.models import MainOrder, MyOrder
+#
+# o = MainOrder.objects.get(id=64)
+#
+# my_o = MyOrder.objects.create(main_order=o,
+#                               author=o.author,
+#                               stock=o.stock,
+#                               price=o.price,
+#                               status='sent',
+#                               type_status=o.type_status,
+#                               created_at=o.created_at,
+#                               paid_at=o.paid_at)
+#
+# from one_c.initial_sync import main_initial_sync
+# main_initial_sync()
+#
+# from account.models import MyUser, WarehouseProfile
+# WarehouseProfile.objects.all().count()
+#
+# MyUser.objects.filter(status='warehouse').delete()
+#
+# from one_c.models import MovementProduct1C
+# MovementProduct1C.objects.all().count()
 
-from one_c.models import MoneyDoc
-from order.models import MyOrder
 
+('order', 'Заказ'),
+('news', 'Новости'),
+('action', 'Акция'),
+('notif', 'Оповещение'),
+('chat', 'Чат'),
+('balance', 'Пополнение баланса'),
+('motivation', 'Мотивация'),
 
-def get_balance_history(user_id, start_date, end_date):
-    orders = (
-        MyOrder.objects.filter(
-            author__user_id=user_id,
-            is_active=True,
-            status__in=['success', 'sent', 'wait', 'paid'],
-        ).values(
-            'created_at',
-            action_id=F('id'),
-            after=Value(0, IntegerField()),
-            before=Value(0, IntegerField()),
-            type=Value('order', CharField()),
-            price_amount=Cast(F('price'), IntegerField(default=0)),
+from account.models import MyUser
+
+user = MyUser.objects.create(
+    email='accountant@gmail.com',
+    username='accountant',
+    status='accountant',
+    pwd='absklad123',
+    name='Accountant',
+    phone='+996554730944',
+)
+user.set_password('absklad123')
+user.save()
+
+from account.models import MyUser
+from order.models import MainOrderCode
+
+user = MyUser.objects.get(id=1504)
+orders = user.dealer_profile.main_orders.all().values_list('id', flat=True)
+create_list = []
+for o in orders:
+    create_list.append(
+        MainOrderCode(
+            user_id=o,
+            code='1234'
         )
     )
-    balances = (
-        MoneyDoc.objects.filter(user_id=user_id, is_active=True)
-        .values(
-            'created_at',
-            action_id=F('id'),
-            after=Value(0, IntegerField()),
-            before=Value(0, IntegerField()),
-            type=Value('wallet', CharField()),
-            price_amount=Cast(F('price'), IntegerField(default=0)),
-        )
-    )
+MainOrderCode.objects.bulk_create(create_list)
 
-    data = list(orders) + list(balances)
-    df = pandas.DataFrame(data).sort_values(by='created_at')
-    balance = 0
+from account.models import DealerProfile
+d = DealerProfile.objects.filter(user__username='dinnur').first()
+d.main_orders.values_list('main_order_products__total_price', flat=True)
 
-    for index, row in df.iterrows():
-        df.at[index, 'before'] = balance
 
-        match row['type']:
-            case 'wallet':
-                balance += row['price_amount']
-            case 'order':
-                balance -= row['price_amount']
-
-        df.at[index, 'after'] = balance
-
-    start_date = pandas.to_datetime(start_date).tz_localize(df['created_at'].dt.tz)
-    end_date = pandas.to_datetime(end_date).tz_localize(df['created_at'].dt.tz)
-
-    df = df[(start_date <= df['created_at']) & (df['created_at'] < end_date)]
-    df.rename(columns={'type': 'status', 'price_amount': 'amount'}, inplace=True)
-    return df.to_dict('records')
