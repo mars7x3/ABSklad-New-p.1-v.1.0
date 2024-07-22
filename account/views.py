@@ -248,7 +248,9 @@ class FireBaseTokenAddView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        FireBaseToken.objects.create(user=request.user, token=request.data['token'])
+        token = request.user.fb_tokens.filter(token=request.data['token'])
+        if not token:
+            FireBaseToken.objects.create(user=request.user, token=request.data['token'])
         return Response({"status": "success",
                          "message": "Успешно добавлено."}, status=status.HTTP_200_OK)
 
