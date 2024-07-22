@@ -20,7 +20,7 @@ from product.models import AsiaProduct, ProductPrice, Collection, Category, Prod
 
 from .utils import (
     check_to_unavailable_products, order_total_price, build_order_products_data,
-    update_main_order_product_count
+    update_main_order_product_count, mngr_get_product_price
 )
 
 
@@ -738,13 +738,9 @@ class ProductListForOrderSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         user_id = self.context.get('request').query_params.get('user_id')
-        dealer = MyUser.objects.get(id=user_id).dealer_profile
-        if dealer.price_type:
-            price = instance.prices.only('price').filter(price_type=dealer.price_type,
-                                                         d_status=dealer.dealer_status).first()
-        else:
-            price = instance.prices.only('price').filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
-        rep['price'] = price.price
+        user = MyUser.objects.get(id=user_id)
+
+        rep['price'] = mngr_get_product_price(user, instance)
         rep['count'] = ProductCountForOrderSerializer(instance.counts, many=True, context=self.context).data
 
         return rep

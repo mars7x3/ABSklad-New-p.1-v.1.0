@@ -1,6 +1,6 @@
 import datetime
 
-from django.db.models import Sum, Case, F, When, Value, DecimalField, IntegerField
+from django.db.models import Sum, Case, F, When, Value, DecimalField, IntegerField, ExpressionWrapper, FloatField
 from django.utils import timezone
 
 from order.models import OrderProduct, MyOrder
@@ -45,7 +45,7 @@ def purchase_analysis(request):
         ),
         eco_price=Sum(
             Case(
-                When(order_products__discount=0, then=F("order_products__discount")),
+                When(order_products__discount__gte=0, then=F("order_products__discount")),
                 default=0,
                 output_field=IntegerField()
             )
@@ -61,14 +61,17 @@ def purchase_analysis(request):
         if stock:
             stock_info[stock] = sum(orders2.filter(stock__title=stock).values_list('price', flat=True))
 
-    categories_list = orders2.values_list('order_products__category__title', flat=True).distinct()
+    categories_list = orders2.values_list('order_products__ab_product__category__title', flat=True).distinct()
     cat_info = {}
     for cat in categories_list:
         if cat:
             cat_info[cat] = sum(orders2.filter(
-                order_products__category__title=cat
-                ).annotate(
-                total_price=Sum(F('order_products__total_price'), default=0),
+                order_products__ab_product__category__title=cat
+            ).annotate(
+                total_price=Sum(ExpressionWrapper(
+                    F('order_products__price') * F('order_products__count'),
+                    output_field=FloatField()
+                ), default=0)
             ).values_list('total_price', flat=True))
 
     result_data = {

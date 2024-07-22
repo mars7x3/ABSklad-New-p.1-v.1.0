@@ -106,3 +106,27 @@ def update_main_order_product_count(main_order: MainOrder, product_counts: dict[
     return main_order
 
 
+def mngr_get_product_price(user, product):
+    dealer = user.dealer_profile
+    if product.is_discount:
+        discount_price_type = user.discount_prices.select_related('discount').filter(
+            is_active=True,
+            product=product,
+            price_type=dealer.price_type).first()
+        if discount_price_type:
+            return discount_price_type.price
+
+        discount_price_city = user.discount_prices.select_related('discount').filter(
+            is_active=True,
+            product=product,
+            city=dealer.price_city).first()
+        if discount_price_city:
+            return discount_price_city.price
+
+    if dealer.price_type:
+        return product.prices.only('price').filter(price_type=dealer.price_type,
+                                                   d_status=dealer.dealer_status).first().price
+    else:
+        return product.prices.only('price').filter(city=dealer.price_city,
+                                                   d_status=dealer.dealer_status).first().price
+

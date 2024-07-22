@@ -4,6 +4,7 @@ from rest_framework import serializers
 from crm_general.utils import create_product_recommendation
 from .models import *
 from .tasks import create_avg_rating
+from .utils import get_product_price
 
 
 class ReviewImageSerializer(serializers.ModelSerializer):
@@ -76,65 +77,8 @@ class ProductListSerializer(serializers.ModelSerializer):
 
         request = self.context['request']
         user = request.user
-        dealer = user.dealer_profile
-
-        if request.query_params.get('discount'):
-            discount_price = user.discount_prices.select_related('discount').filter(
-                is_active=True,
-                product=instance,
-                price_type=dealer.price_type).first()
-            if discount_price:
-                rep['price_info'] = {
-                    'price': discount_price.price,
-                    'old_price': discount_price.old_price,
-                    'discount': discount_price.discount.amount,
-                    'discount_status': discount_price.discount.status
-                }
-                return rep
-
-            discount_price = user.discount_prices.select_related('discount').filter(
-                is_active=True,
-                product=instance,
-                city=dealer.price_city).first()
-            if discount_price:
-                rep['price_info'] = {
-                    'price': discount_price.price,
-                    'old_price': discount_price.old_price,
-                    'discount': discount_price.discount.amount,
-                    'discount_status': discount_price.discount.status
-                }
-                return rep
-
-            rep['price_info'] = {
-                'price': 0.0,
-                'old_price': 0.0,
-                'discount': 0.0,
-                'discount_status': "Per"
-            }
-            return rep
-
-        else:
-            if dealer.price_type:
-                prices = instance.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
-            else:
-                prices = instance.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
-
-            if prices:
-                rep['price_info'] = ProductPriceListSerializer(
-                    instance=prices,
-                    many=False,
-                    context=self.context
-                ).data
-
-            else:
-                rep['price_info'] = {
-                    'price': 0.0,
-                    'old_price': 0.0,
-                    'discount': 0.0,
-                    'discount_status': "Per"
-                }
-
-            return rep
+        rep['price_info'] = get_product_price(user, instance)
+        return rep
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):

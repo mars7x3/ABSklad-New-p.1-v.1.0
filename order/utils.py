@@ -39,8 +39,8 @@ def order_total_price(product_list, products, dealer):
 def order_cost_price(product_list, products):
     amount = 0
     for p in product_list:
-        cost_price = p.cost_prices.filter(is_active=True).first()
-        amount += cost_price.price * products[str(p.id)]
+        cost_price = p.cost_prices.filter(is_active=True).values('price').first()
+        amount += cost_price['price'] * products[str(p.id)]
 
     return amount
 
