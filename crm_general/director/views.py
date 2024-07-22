@@ -524,6 +524,7 @@ class DirectorDealerOrderListView(APIView):
         end = request.data.get('end')
         start_date = timezone.make_aware(datetime.datetime.strptime(start, "%d-%m-%Y"))
         end_date = timezone.make_aware(datetime.datetime.strptime(end, "%d-%m-%Y"))
+        end_date = timezone.timedelta(days=1) + end_date
         user = MyUser.objects.filter(id=user_id).first()
         orders = user.dealer_profile.orders.filter(created_at__gte=start_date, created_at__lte=end_date, is_active=True,
                                                    status__in=['paid', 'sent', 'wait', 'success'])
