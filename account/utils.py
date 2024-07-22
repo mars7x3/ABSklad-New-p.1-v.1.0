@@ -57,7 +57,7 @@ def send_push_notification(tokens: [], title: str, text: str, link_id: int, stat
         }
     })
     headers = {
-        'Authorization': f'key={config("SECRET_KEY")}',
+        'Authorization': f'key={config("FB_SECRET_KEY")}',
         'Content-Type': 'application/json'
     }
 
