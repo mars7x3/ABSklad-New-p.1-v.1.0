@@ -275,7 +275,7 @@ class BalancePlusModerationView(APIView):
             balance.is_moderation = True
             balance.save()
             kwargs = {
-                "tokens": [balance.dealer.user.fb_tokens.all().values_list('token', flat=True)],
+                "tokens": balance.dealer.user.fb_tokens.all().values_list('token', flat=True),
                 "title": f"Заявка на пополнение #{balance_id}",
                 'link_id': balance_id,
                 "status": "balance"
@@ -324,7 +324,7 @@ class AccountantOrderModerationView(APIView):
                 order.status = order_status
                 order.save()
                 kwargs = {
-                    "tokens": [order.author.user.fb_tokens.all().values_list('token', flat=True)],
+                    "tokens": order.author.user.fb_tokens.all().values_list('token', flat=True),
                     "title": f"Заказ #{order_id}",
                     'link_id': order_id,
                     "status": "order"
