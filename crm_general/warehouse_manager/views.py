@@ -449,7 +449,7 @@ class OrderPartialSentView(APIView):
             minus_quantity_order(order.id, self.request.user.warehouse_profile.stock.id)
 
             kwargs = {
-                "tokens": order.author.user.fb_tokens.all().values_list('token', flat=True),
+                "tokens": list(order.author.user.fb_tokens.all().values_list('token', flat=True)),
                 "title": f"Заказ #{order_id}",
                 'text': "Ваш заказ отгружен!",
                 'link_id': order_id,

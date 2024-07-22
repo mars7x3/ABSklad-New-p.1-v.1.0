@@ -91,7 +91,7 @@ def activate_discount():
 
         notifications.append(
             {
-                "tokens": discount.dealer_profiles.all().values_list('user__fb_tokens__token', flat=True),
+                "tokens": list(discount.dealer_profiles.all().values_list('user__fb_tokens__token', flat=True)),
                 "title": f"Акция",
                 'text': str(discount.title),
                 'link_id': discount.id,
