@@ -582,7 +582,7 @@ def task_order_partial_sent(self):
                 product_obj.discount_prices.filter(
                     is_active=True,
                     product=product_obj,
-                    city=main_order.auhtor.price_city
+                    city=main_order.author.price_city
                 ).first()
                 or
                 product_obj.prices.filter(
