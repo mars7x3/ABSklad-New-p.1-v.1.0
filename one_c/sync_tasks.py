@@ -26,9 +26,7 @@ from order.utils import order_total_price, order_cost_price, update_main_order_s
 from product.models import Category, AsiaProduct, ProductCount, ProductPrice, ProductCostPrice
 from promotion.utils import calculate_discount
 
-
 logger = getLogger("sync_tasks")
-
 
 NOTIFY_ERRORS = {
     "default": "Не отвечает 1C-сервер",
@@ -86,6 +84,9 @@ class OneCSyncTask(Task):
         except (RequestException, HTTPError) as http_exc:
             logger.error(http_exc)
 
+            if http_exc.response:
+                logger.error(http_exc.response.body)
+
             status_code = http_exc.response.status_code if http_exc.response else None
             match status_code:
                 case 404:
@@ -112,7 +113,7 @@ class OneCSyncTask(Task):
 def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:
     for field, value in data.items():
         setattr(obj, field, value)
-        
+
 
 @app.task(
     bind=True,
@@ -302,7 +303,7 @@ def task_create_dealer(self, from_profile: bool = False):
         ),
     )
     response_data = self.one_c_client.action_dealers(dealers)
-    
+
     if "client" not in response_data:
         self.send_failure_notify(NOTIFY_ERRORS["key_err"])
         return
@@ -369,7 +370,7 @@ def task_update_dealer(self, from_profile: bool = False):
     with transaction.atomic():
         _set_attrs_from_dict(profile, profile_data)
         profile.save()
-        
+
         _set_attrs_from_dict(user, user_data)
         user.save()
 
@@ -561,18 +562,38 @@ def task_order_partial_sent(self):
 
     order_products_data = []
     for product_obj in product_objs:
-        try:
-            prod_price = (
+        price_type = main_order.author.price_type
+
+        if price_type:
+            prod_price_obj = (
+                product_obj.discount_prices.filter(
+                    is_active=True,
+                    product=product_obj,
+                    price_type=price_type
+                ).first()
+                or
                 product_obj.prices.filter(
-                    price_type=main_order.author.price_type,
+                    price_type=price_type,
                     d_status=main_order.author.dealer_status
+                ).first()
+            )
+        else:
+            prod_price_obj = (
+                product_obj.discount_prices.filter(
+                    is_active=True,
+                    product=product_obj,
+                    city=main_order.auhtor.price_city
                 ).first()
                 or
                 product_obj.prices.filter(
                     city=main_order.author.price_city,
                     d_status=main_order.author.dealer_status
                 ).first()
-            ).price
+            )
+
+        try:
+            prod_price = prod_price_obj.price
+            discount_amount = prod_price_obj.old_price - prod_price
         except AttributeError as exc:
             self.send_failure_notify(f"Не найдена цена для товара #{product_obj.id}")
             raise exc
@@ -583,7 +604,8 @@ def task_order_partial_sent(self):
                 "ab_product": product_obj,
                 "count": sale_count,
                 "price": prod_price,
-                "total_price": sale_count * prod_price
+                "total_price": sale_count * prod_price,
+                "discount": discount_amount
             }
         )
 
@@ -603,7 +625,7 @@ def task_order_partial_sent(self):
             ) for p_data in order_products_data
         )
     )
-    
+
     if 'result_uid' not in response_data:
         self.send_failure_notify(NOTIFY_ERRORS["key_err"])
         return
@@ -652,7 +674,7 @@ def task_create_stock(self):
         title=self.form_data.get("title", ""),
         to_delete=False
     )
-    
+
     if 'result_uid' not in response_data:
         self.send_failure_notify(NOTIFY_ERRORS["key_err"])
         return
@@ -686,7 +708,7 @@ def task_update_stock(self):
     logger.debug(response_data)
 
     phones = self.form_data.pop("phones", None)
-    
+
     with transaction.atomic():
         _set_attrs_from_dict(stock_obj, self.form_data)
         stock_obj.save()
@@ -705,7 +727,7 @@ def task_update_stock(self):
 def task_inventory_update(self):
     inventory_id = self.form_data.pop("id")
     inventory_obj = Inventory.objects.get(id=inventory_id)
-    
+
     _set_attrs_from_dict(inventory_obj, self.form_data)
 
     if self.form_data.get("status", "") != "moderated" or inventory_obj.status != "moderated":
