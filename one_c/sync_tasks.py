@@ -563,10 +563,11 @@ def task_order_partial_sent(self):
     order_products_data = []
     for product_obj in product_objs:
         price_type = main_order.author.price_type
+        dealer = main_order.author
 
         if price_type:
             prod_price_obj = (
-                product_obj.discount_prices.filter(
+                dealer.user.discount_prices.filter(
                     is_active=True,
                     product=product_obj,
                     price_type=price_type
@@ -579,7 +580,7 @@ def task_order_partial_sent(self):
             )
         else:
             prod_price_obj = (
-                product_obj.discount_prices.filter(
+                dealer.user.discount_prices.filter(
                     is_active=True,
                     product=product_obj,
                     city=main_order.author.price_city
