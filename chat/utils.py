@@ -30,7 +30,7 @@ def get_limit_and_offset(req_data: dict[str, Any], max_page_size: int, default_p
     return limit, offset + 1 if offset > 1 else 0
 
 
-def get_chat_receivers(chat):
+def collect_chat_receivers(chat):
     dealer = chat.dealer
     receivers = [slugify(dealer.username)]
 
@@ -56,15 +56,14 @@ def get_manager_profile(user) -> DealerProfile | None:
 
 
 def get_dealer_name(chat):
-    dealer = chat.dealer
-    return dealer.name or dealer.email
+    return chat.dealer.name or chat.dealer.email
 
 
 def ws_send_message(chat, message_data):
     channel_layer = get_channel_layer()
     event = {'type': 'send_message', 'data': {"message_type": "new_message", "results": message_data}}
 
-    for receiver in set(get_chat_receivers(chat)):
+    for receiver in set(collect_chat_receivers(chat)):
         async_to_sync(channel_layer.group_send)(receiver, event)
 
 

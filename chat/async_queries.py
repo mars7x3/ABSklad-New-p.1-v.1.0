@@ -1,15 +1,18 @@
 from urllib.parse import urljoin
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.db import connection
 from channels.db import database_sync_to_async
 
+from account.models import MyUser
 from general_service.utils import dictfetchall
 from .constants import CITY_CHATS_SQL, CITY_SEARCH_CHATS_SQL, DEALER_CHAT_SQL, MANAGER_CHATS_SQL, \
     MANAGER_CHATS_SEARCH_SQL
 from .models import Message, Chat
 from .serializers import MessageSerializer
-from .utils import get_manager_profile, get_chat_receivers, build_chats_data
+from .utils import get_manager_profile, collect_chat_receivers, build_chats_data
 
 
 FILES_BASE_URL = urljoin(settings.SERVER_URL, settings.MEDIA_ROOT)
@@ -71,10 +74,20 @@ def is_dealer_message(msg_id):
 
 
 @database_sync_to_async
-def get_chat_receivers_by_chat(chat_id):
-    chat = Chat.objects.filter(id=chat_id).first()
-    if chat:
-        return get_chat_receivers(chat)
+def get_chat_by_id(chat_id):
+    return Chat.objects.filter(id=chat_id).first()
+
+
+@database_sync_to_async
+def get_chat_receivers(chat: Chat):
+    return collect_chat_receivers(chat)
+
+
+@database_sync_to_async
+def get_user_firebase_tokens(username) -> list[str] | None:
+    user = MyUser.objects.filter(username=username).first()
+    if user:
+        return list(user.fb_tokens.all().values_list('token', flat=True))
 
 
 @database_sync_to_async
@@ -91,6 +104,16 @@ def create_db_message(user_id: int, chat_id: str, text: str) -> dict:
         instance=Message.objects.create(sender_id=user_id, chat_id=chat_id, text=text),
         many=False
     ).data
+
+
+@async_to_sync
+async def is_room_active(room_name) -> bool:
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return False
+
+    channels = await channel_layer.group_channels(room_name)
+    return len(channels) > 0
 
 
 @database_sync_to_async
