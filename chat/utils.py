@@ -8,7 +8,8 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
-from account.models import DealerProfile
+from account.models import DealerProfile, MyUser
+from account.utils import send_push_notification as mobile_notification
 from chat.constants import CHATS_IGNORE_COLS, CHAT_FIELDS_SUBSTITUTES
 from chat.models import Chat
 
@@ -59,14 +60,6 @@ def get_dealer_name(chat):
     return chat.dealer.name or chat.dealer.email
 
 
-def ws_send_message(chat, message_data):
-    channel_layer = get_channel_layer()
-    event = {'type': 'send_message', 'data': {"message_type": "new_message", "results": message_data}}
-
-    for receiver in set(collect_chat_receivers(chat)):
-        async_to_sync(channel_layer.group_send)(receiver, event)
-
-
 def build_chats_data(chats_data) -> list[dict[str, Any]]:
     collected_data = []
     for chat_data in chats_data:
@@ -114,10 +107,40 @@ def create_chats_for_dealers(user_ids: Iterable[int] = None) -> list[Chat] | Non
         return Chat.objects.bulk_create(new_chats)
 
 
-async def is_room_active(room_name) -> bool:
-    channel_layer = get_channel_layer()
-    if channel_layer is None:
-        return False
-
+async def is_room_active(channel_layer, room_name) -> bool:
     channels = await channel_layer.group_channels(room_name)
     return len(channels) > 0
+
+
+def ws_send_message(chat, message_data):
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+
+    event = {'type': 'send_message', 'data': {"message_type": "new_message", "results": message_data}}
+
+    for receiver in set(collect_chat_receivers(chat)):
+        if not async_to_sync(is_room_active)(channel_layer, receiver):
+            user = MyUser.objects.filter(username=receiver).first()
+            if not user:
+                async_to_sync(channel_layer.group_send)(receiver, event)
+                continue
+
+            fb_tokens = list(user.fb_tokens.all().values_list('token', flat=True))
+            if fb_tokens:
+                text = message_data["text"]
+                files = message_data["files"]
+
+                if files:
+                    files_count = len(files)
+                    text = f"{files_count} files" if files_count > 1 else "1 file"
+
+                mobile_notification(
+                    text=text,
+                    title=message_data["sender"]["name"],
+                    tokens=fb_tokens,
+                    link_id=message_data["chat_id"],
+                    status="chat",
+                )
+                continue
+        async_to_sync(channel_layer.group_send)(receiver, event)

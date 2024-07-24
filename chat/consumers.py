@@ -6,11 +6,11 @@ from django.utils.functional import cached_property
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from account.models import MyUser
 from account.utils import send_push_notification as mobile_notification
 from chat.async_queries import (
     get_chat_messages, create_db_message, set_read_message,
-    get_chats_for_dealer, is_dealer_message, get_chat_receivers, get_chats_for_manager, get_chat_by_id,
-    get_user_firebase_tokens
+    get_chats_for_dealer, is_dealer_message, get_chat_receivers, get_chats_for_manager, get_chat_by_id
 )
 from chat.models import Chat
 from chat.validators import validate_user_active, validate_is_manager, validate_is_dealer
@@ -45,6 +45,9 @@ class AsyncBaseChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, code):
         if self.room:
             await self.channel_layer.group_discard(self.room, self.channel_name)
+
+    async def is_room_active(self, room: str) -> bool:
+        return await is_room_active(self.channel_layer, room)
 
 
 class AsyncCommandConsumer(AsyncBaseChatConsumer):
@@ -208,15 +211,20 @@ class ManagerConsumer(AsyncCommandConsumer):
             await super().send_success_message(message_type, data, receiver=receiver)
             return
 
-        if receiver and not await is_room_active(receiver):
-            fb_tokens = await get_user_firebase_tokens(receiver)
+        if receiver and not await self.is_room_active(receiver):
+            user = MyUser.objects.filter(username=receiver).first()
+            if not user:
+                await super().send_success_message(message_type, data, receiver=receiver)
+                return
+
+            fb_tokens = list(user.fb_tokens.all().values_list('token', flat=True))
 
             if fb_tokens:
                 mobile_notification(
                     text=data["text"],
                     title=data["sender"]["name"],
                     tokens=fb_tokens,
-                    link_id=self.room,
+                    link_id=data["chat_id"],
                     status="chat",
                 )
             return
