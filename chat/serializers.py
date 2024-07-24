@@ -13,7 +13,8 @@ class MessageAttachmentSerializer(serializers.ModelSerializer):
         fields = ("id", "file")
         read_only_fields = ("id",)
 
-    def get_file(self, instance):
+    @staticmethod
+    def get_file(instance):
         return build_file_url(instance.file.url)
 
 
