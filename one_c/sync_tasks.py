@@ -404,7 +404,7 @@ def task_balance_plus_moderation(self):
         mobile_notification(
             text="Заявка на пополнение отклонена.",
             title=f"Заявка на пополнение #{balance_id}",
-            tokens=[balance.dealer.user.firebase_token],
+            tokens=list(balance.dealer.user.fb_tokens.all().values_list('token', flat=True)),
             link_id=balance_id,
             status="balance",
         )
@@ -452,7 +452,7 @@ def task_balance_plus_moderation(self):
     mobile_notification(
         text="Заявка на пополнение одобрена!",
         title=f"Заявка на пополнение #{balance_id}",
-        tokens=[balance.dealer.user.firebase_token],
+        tokens=list(balance.dealer.user.fb_tokens.all().values_list('token', flat=True)),
         link_id=balance_id,
         status="balance",
     )
@@ -476,7 +476,7 @@ def task_order_paid_moderation(self):
     if order.status != "paid":
         order.save()
         mobile_notification(
-            tokens=[order.author.user.firebase_token],
+            tokens=list(order.author.user.fb_tokens.all().values_list('token', flat=True)),
             title=f"Заказ #{order_id}",
             text="Ваша оплата заказа не успешна.",
             link_id=order_id,
@@ -526,7 +526,7 @@ def task_order_paid_moderation(self):
         )
 
     mobile_notification(
-        tokens=[order.author.user.firebase_token],
+        tokens=list(order.author.user.fb_tokens.all().values_list('token', flat=True)),
         title=f"Заказ #{order_id}",
         text="Ваша оплата заказа не успешна.",
         link_id=order_id,
@@ -595,6 +595,7 @@ def task_order_partial_sent(self):
         try:
             prod_price = prod_price_obj.price
             discount_amount = prod_price_obj.old_price - prod_price
+            cost_price = prod_price_obj.cost_prices.filter(is_active=True).first().price
         except AttributeError as exc:
             self.send_failure_notify(f"Не найдена цена для товара #{product_obj.id}")
             raise exc
@@ -606,7 +607,8 @@ def task_order_partial_sent(self):
                 "count": sale_count,
                 "price": prod_price,
                 "total_price": sale_count * prod_price,
-                "discount": discount_amount
+                "discount": discount_amount,
+                "cost_price": cost_price
             }
         )
 
@@ -651,7 +653,7 @@ def task_order_partial_sent(self):
         update_main_order_status(main_order)
 
     mobile_notification(
-        tokens=[main_order.author.user.firebase_token],
+        tokens=list(main_order.author.user.fb_tokens.all().values_list('token', flat=True)),
         title=f"Заказ #{order_id}",
         text="Ваш заказ отгружен!",
         link_id=order_id,
