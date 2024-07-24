@@ -1,4 +1,3 @@
-from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from account.models import MyUser
@@ -114,7 +113,8 @@ class ChatSerializer(serializers.ModelSerializer):
         if instance.dealer.image:
             return instance.dealer.image.url
 
-    def get_last_message(self, instance):
+    @staticmethod
+    def get_last_message(instance):
         last_message = instance.messages.order_by("-created_at").first()
         if last_message:
             return MessageSerializer(instance=last_message, many=False).data
