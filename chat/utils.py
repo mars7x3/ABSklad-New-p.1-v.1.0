@@ -112,3 +112,12 @@ def create_chats_for_dealers(user_ids: Iterable[int] = None) -> list[Chat] | Non
     ]
     if new_chats:
         return Chat.objects.bulk_create(new_chats)
+
+
+async def is_room_active(room_name) -> bool:
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return False
+
+    channels = await channel_layer.group_channels(room_name)
+    return len(channels) > 0

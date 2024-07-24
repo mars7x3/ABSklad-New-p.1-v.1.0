@@ -1,7 +1,5 @@
 from urllib.parse import urljoin
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.conf import settings
 from django.db import connection
 from channels.db import database_sync_to_async
@@ -104,16 +102,6 @@ def create_db_message(user_id: int, chat_id: str, text: str) -> dict:
         instance=Message.objects.create(sender_id=user_id, chat_id=chat_id, text=text),
         many=False
     ).data
-
-
-@async_to_sync
-async def is_room_active(room_name) -> bool:
-    channel_layer = get_channel_layer()
-    if channel_layer is None:
-        return False
-
-    channels = await channel_layer.group_channels(room_name)
-    return len(channels) > 0
 
 
 @database_sync_to_async

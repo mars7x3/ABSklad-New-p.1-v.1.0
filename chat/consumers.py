@@ -10,11 +10,11 @@ from account.utils import send_push_notification as mobile_notification
 from chat.async_queries import (
     get_chat_messages, create_db_message, set_read_message,
     get_chats_for_dealer, is_dealer_message, get_chat_receivers, get_chats_for_manager, get_chat_by_id,
-    get_user_firebase_tokens, is_room_active
+    get_user_firebase_tokens
 )
 from chat.models import Chat
 from chat.validators import validate_user_active, validate_is_manager, validate_is_dealer
-from chat.utils import get_limit_and_offset
+from chat.utils import get_limit_and_offset, is_room_active
 
 
 class AsyncBaseChatConsumer(AsyncWebsocketConsumer):
