@@ -45,20 +45,71 @@ def order_cost_price(product_list, products):
     return amount
 
 
-def generate_order_products(product_list, products, dealer):
+# def generate_order_products(product_list, products, dealer):
+#     result_data = []
+#     for p in product_list:
+#         prod_price = p.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+#
+#         if not prod_price:
+#             prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+#
+#         result_data.append({
+#             "ab_product": p,
+#             "count": products[str(p.id)],
+#             "price": prod_price.price,
+#         })
+#
+#     return result_data
+
+
+def generate_order_products(product_list, product_counts, dealer):
     result_data = []
-    for p in product_list:
-        prod_price = p.prices.filter(price_type=dealer.price_type, d_status=dealer.dealer_status).first()
+    price_type = dealer.price_type
+    dealer_status = dealer.dealer_status
+    price_city = dealer.price_city
 
-        if not prod_price:
-            prod_price = p.prices.filter(city=dealer.price_city, d_status=dealer.dealer_status).first()
+    for product_obj in product_list:
+        if price_type:
+            prod_price_obj = (
+                dealer.user.discount_prices.filter(
+                    is_active=True,
+                    product=product_obj,
+                    price_type=price_type
+                ).first()
+                or
+                product_obj.prices.filter(
+                    price_type=price_type,
+                    d_status=dealer_status
+                ).first()
+            )
+        else:
+            prod_price_obj = (
+                dealer.user.discount_prices.filter(
+                    is_active=True,
+                    product=product_obj,
+                    city=price_city
+                ).first()
+                or
+                product_obj.prices.filter(
+                    city=price_city,
+                    d_status=dealer_status
+                ).first()
+            )
 
-        result_data.append({
-            "ab_product": p,
-            "count": products[str(p.id)],
-            "price": prod_price.price,
-        })
-
+        prod_price = prod_price_obj.price
+        discount_amount = prod_price_obj.old_price - prod_price
+        cost_price = prod_price_obj.cost_prices.filter(is_active=True).first().price
+        sale_count = product_counts[str(product_obj.id)]
+        result_data.append(
+            {
+                "ab_product": product_obj,
+                "count": sale_count,
+                "price": prod_price,
+                "discount": discount_amount * sale_count,
+                "unit_discount": discount_amount,
+                "cost_price": cost_price
+            }
+        )
     return result_data
 
 
