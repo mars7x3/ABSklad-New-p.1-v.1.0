@@ -120,27 +120,27 @@ def ws_send_message(chat, message_data):
     event = {'type': 'send_message', 'data': {"message_type": "new_message", "results": message_data}}
 
     for receiver in set(collect_chat_receivers(chat)):
-        if not async_to_sync(is_room_active)(channel_layer, receiver):
-            user = MyUser.objects.filter(username=receiver).first()
-            if not user:
-                async_to_sync(channel_layer.group_send)(receiver, event)
-                continue
-
-            fb_tokens = list(user.fb_tokens.all().values_list('token', flat=True))
-            if fb_tokens:
-                text = message_data["text"]
-                files = message_data["files"]
-
-                if files:
-                    files_count = len(files)
-                    text = f"{files_count} files" if files_count > 1 else "1 file"
-
-                mobile_notification(
-                    text=text,
-                    title=message_data["sender"]["name"],
-                    tokens=fb_tokens,
-                    link_id=message_data["chat_id"],
-                    status="chat",
-                )
-                continue
+        # if not async_to_sync(is_room_active)(channel_layer, receiver):
+        #     user = MyUser.objects.filter(username=receiver).first()
+        #     if not user:
+        #         async_to_sync(channel_layer.group_send)(receiver, event)
+        #         continue
+        #
+        #     fb_tokens = list(user.fb_tokens.all().values_list('token', flat=True))
+        #     if fb_tokens:
+        #         text = message_data["text"]
+        #         files = message_data["files"]
+        #
+        #         if files:
+        #             files_count = len(files)
+        #             text = f"{files_count} files" if files_count > 1 else "1 file"
+        #
+        #         mobile_notification(
+        #             text=text,
+        #             title=message_data["sender"]["name"],
+        #             tokens=fb_tokens,
+        #             link_id=message_data["chat_id"],
+        #             status="chat",
+        #         )
+        #         continue
         async_to_sync(channel_layer.group_send)(receiver, event)

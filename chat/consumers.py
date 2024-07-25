@@ -206,30 +206,31 @@ class AsyncCommandConsumer(AsyncBaseChatConsumer):
 class ManagerConsumer(AsyncCommandConsumer):
     user_validators = (validate_user_active, validate_is_manager)
 
-    async def send_success_message(self, message_type: str, data, receiver: str = None):
-        if message_type != "new_message":
-            await super().send_success_message(message_type, data, receiver=receiver)
-            return
-
-        if receiver and not await self.is_room_active(receiver):
-            user = MyUser.objects.filter(username=receiver).first()
-            if not user:
-                await super().send_success_message(message_type, data, receiver=receiver)
-                return
-
-            fb_tokens = list(user.fb_tokens.all().values_list('token', flat=True))
-
-            if fb_tokens:
-                mobile_notification(
-                    text=data["text"],
-                    title=data["sender"]["name"],
-                    tokens=fb_tokens,
-                    link_id=data["chat_id"],
-                    status="chat",
-                )
-            return
-
-        await super().send_success_message(message_type, data, receiver=receiver)
+    # async def send_success_message(self, message_type: str, data, receiver: str = None):
+    #     if message_type != "new_message":
+    #         await super().send_success_message(message_type, data, receiver=receiver)
+    #         return
+    #
+    #     if receiver and not await self.is_room_active(receiver):
+    #
+    #         user = MyUser.objects.filter(username=receiver).first()
+    #         if not user:
+    #             await super().send_success_message(message_type, data, receiver=receiver)
+    #             return
+    #
+    #         fb_tokens = list(user.fb_tokens.all().values_list('token', flat=True))
+    #
+    #         if fb_tokens:
+    #             mobile_notification(
+    #                 text=data["text"],
+    #                 title=data["sender"]["name"],
+    #                 tokens=fb_tokens,
+    #                 link_id=data["chat_id"],
+    #                 status="chat",
+    #             )
+    #         return
+    #
+    #     await super().send_success_message(message_type, data, receiver=receiver)
 
     async def get_chats_command(self, message_type, req_data):
         limit, offset = get_limit_and_offset(req_data, max_page_size=20)
