@@ -470,39 +470,39 @@ def task_balance_plus_moderation(self):
 )
 def task_order_paid_moderation(self):
     order_id = self.form_data["order_id"]
-    order = MainOrder.objects.get(id=order_id)
-    order.status = self.form_data["status"]
+    main_order = MainOrder.objects.get(id=order_id)
+    main_order.status = self.form_data["status"]
 
-    if order.status != "paid":
-        order.save()
+    if main_order.status != "paid":
+        main_order.save()
         mobile_notification(
-            tokens=list(order.author.user.fb_tokens.all().values_list('token', flat=True)),
+            tokens=list(main_order.author.user.fb_tokens.all().values_list('token', flat=True)),
             title=f"Заказ #{order_id}",
             text="Ваша оплата заказа не успешна.",
             link_id=order_id,
             status="order"
         )
         Notification.objects.create(
-            user=order.author.user,
-            title=f'Заказ #{order.id}',
+            user=main_order.author.user,
+            title=f'Заказ #{main_order.id}',
             link_id=order_id,
             status='order'
         )
         return
 
-    if order.type_status in ("cash", "kaspi"):
+    if main_order.type_status in ("cash", "kaspi"):
         type_status = 'Наличка'
         create_type_status = 'Нал'
-        cash_box_uid = order.stock.cash_box.uid
+        cash_box_uid = main_order.stock.cash_box.uid
     else:
         type_status = 'Без нал'
         cash_box_uid = ''
         create_type_status = 'Без нал'
 
     response_data = self.one_c_client.action_money_doc(
-        user_uid=order.author.user.uid,
-        amount=int(order.price),
-        created_at=f"{timezone.localtime(order.created_at)}",
+        user_uid=main_order.author.user.uid,
+        amount=int(main_order.price),
+        created_at=f"{timezone.localtime(main_order.created_at)}",
         order_type=type_status,
         cashbox_uid=cash_box_uid,
         to_delete=False,
@@ -512,29 +512,29 @@ def task_order_paid_moderation(self):
         self.send_failure_notify(NOTIFY_ERRORS["key_err"])
         return
 
-    order.payment_doc_uid = response_data['result_uid']
+    main_order.payment_doc_uid = response_data['result_uid']
     with transaction.atomic():
-        order.paid_at = timezone.make_aware(timezone.localtime().now())
-        order.save()
-        minus_quantity(order.id, order.stock.id)
+        main_order.paid_at = timezone.make_aware(timezone.localtime().now())
+        main_order.save()
+        minus_quantity(main_order.id, main_order.stock.id)
         money_doc = MoneyDoc.objects.create(
-            user=order.author.user,
-            amount=order.price,
-            uid=order.payment_doc_uid,
-            cash_box=order.stock.cash_box,
+            user=main_order.author.user,
+            amount=main_order.price,
+            uid=main_order.payment_doc_uid,
+            cash_box=main_order.stock.cash_box,
             status=create_type_status
         )
 
     mobile_notification(
-        tokens=list(order.author.user.fb_tokens.all().values_list('token', flat=True)),
+        tokens=list(main_order.author.user.fb_tokens.all().values_list('token', flat=True)),
         title=f"Заказ #{order_id}",
-        text="Ваша оплата заказа не успешна.",
+        text="Ваша оплата заказа успешна.",
         link_id=order_id,
         status="order"
     )
     Notification.objects.create(
-        user=order.author.user,
-        title=f'Заказ #{order.id}',
+        user=main_order.author.user,
+        title=f'Заказ #{main_order.id}',
         link_id=order_id,
         status='order'
     )
@@ -557,61 +557,26 @@ def task_order_partial_sent(self):
     wh_stock_id = self.form_data.pop("wh_stock_id")
 
     main_order = MainOrder.objects.select_related("author", "stock").get(id=order_id)
-    product_objs = AsiaProduct.objects.filter(id__in=[key for key in products_data])
-    released_at = timezone.localtime().now()
+    order_products = (
+        main_order.products.select_related("ab_product").only("ab_product")
+        .filter(ab_product_id__in=[key for key in products_data])
+    )
 
     order_products_data = []
-    for product_obj in product_objs:
-        price_type = main_order.author.price_type
-        dealer = main_order.author
-
-        if price_type:
-            prod_price_obj = (
-                dealer.user.discount_prices.filter(
-                    is_active=True,
-                    product=product_obj,
-                    price_type=price_type
-                ).first()
-                or
-                product_obj.prices.filter(
-                    price_type=price_type,
-                    d_status=main_order.author.dealer_status
-                ).first()
-            )
-        else:
-            prod_price_obj = (
-                dealer.user.discount_prices.filter(
-                    is_active=True,
-                    product=product_obj,
-                    city=main_order.author.price_city
-                ).first()
-                or
-                product_obj.prices.filter(
-                    city=main_order.author.price_city,
-                    d_status=main_order.author.dealer_status
-                ).first()
-            )
-
-        try:
-            prod_price = prod_price_obj.price
-            discount_amount = prod_price_obj.old_price - prod_price
-            cost_price = prod_price_obj.cost_prices.filter(is_active=True).first().price
-        except AttributeError as exc:
-            self.send_failure_notify(f"Не найдена цена для товара #{product_obj.id}")
-            raise exc
-
-        sale_count = products_data[str(product_obj.id)]
+    for order_product in order_products:
+        sale_count = products_data[str(order_product.ab_product.id)]
         order_products_data.append(
             {
-                "ab_product": product_obj,
+                "ab_product": order_product.ab_product,
                 "count": sale_count,
-                "price": prod_price,
-                "total_price": sale_count * prod_price,
-                "discount": discount_amount,
-                "cost_price": cost_price
+                "price": order_product.price,
+                "total_price": sale_count * order_product.price,
+                "discount": order_product.unit_discount * sale_count,
+                "cost_price": order_product.cost_price
             }
         )
 
+    released_at = timezone.localtime().now()
     response_data = self.one_c_client.action_sale(
         user_uid=main_order.author.user.uid,
         created_at=f'{released_at}',
@@ -633,6 +598,7 @@ def task_order_partial_sent(self):
         self.send_failure_notify(NOTIFY_ERRORS["key_err"])
         return
 
+    product_objs = [i.ab_product for i in order_products]
     with transaction.atomic():
         order = MyOrder.objects.create(
             uid=response_data['result_uid'],
