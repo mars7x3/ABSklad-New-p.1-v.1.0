@@ -87,15 +87,15 @@ class OneCSyncTask(Task):
             status_code = None
 
             if http_exc.response:
-                logger.error(http_exc.response.content)
+                logger.error(f"Response Content: {http_exc.response.content}")
                 status_code = http_exc.response.status_code
 
             if http_exc.request:
                 request = http_exc.request
                 if request.data:
-                    logger.error(http_exc.request.data)
+                    logger.error(f"Request data: {http_exc.request.data}")
                 elif request.json:
-                    logger.error(http_exc.request.json)
+                    logger.error(f"Request json: {http_exc.request.json}")
 
             match status_code:
                 case 404:
