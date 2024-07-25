@@ -409,7 +409,7 @@ class DealerProfileDetailSerializer(BaseProfileSerializer):
         queryset=PriceType.objects.all(),
         required=False
     )
-    price_city = CitySerializer(many=False, read_only=True)
+    price_city = CitySerializer(many=False, read_only=True, source="price_city")
     price_city_id = serializers.PrimaryKeyRelatedField(
         queryset=City.objects.all(),
         required=False
