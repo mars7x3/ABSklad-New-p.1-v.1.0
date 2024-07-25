@@ -44,7 +44,7 @@ def send_web_push_notification(user_id: int, title: str, msg: str = None, data=N
                 to_delete.append(subscriber_id)
 
     if to_delete:
-        Subscription.objects.fitler(id__in=to_delete).delete()
+        Subscription.objects.filter(id__in=to_delete).delete()
 
 
 def generate_vapid_keys():
