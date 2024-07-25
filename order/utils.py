@@ -19,19 +19,59 @@ def get_product_list(products):
     return product_list
 
 
-def order_total_price(product_list, products, dealer):
+# def order_total_price(product_list, products, dealer):
+#     price_type = dealer.price_type
+#     if price_type:
+#         prices = ProductPrice.objects.filter(product_id__in=product_list, price_type=price_type,
+#                                              d_status=dealer.dealer_status).only("product_id", "price")
+#     else:
+#         prices = ProductPrice.objects.filter(product_id__in=product_list, city=dealer.price_city,
+#                                              d_status=dealer.dealer_status).only("product_id", "price")
+#     amount = 0
+#     for price_data in prices:
+#         product_id = price_data.product_id
+#         price = price_data.price
+#         amount += price * products[str(product_id)]
+#
+#     return amount
+
+
+def order_total_price(product_list, product_counts, dealer):
     price_type = dealer.price_type
-    if price_type:
-        prices = ProductPrice.objects.filter(product_id__in=product_list, price_type=price_type,
-                                             d_status=dealer.dealer_status).only("product_id", "price")
-    else:
-        prices = ProductPrice.objects.filter(product_id__in=product_list, city=dealer.price_city,
-                                             d_status=dealer.dealer_status).only("product_id", "price")
+    dealer_status = dealer.dealer_status
+    price_city = dealer.price_city
     amount = 0
-    for price_data in prices:
-        product_id = price_data.product_id
-        price = price_data.price
-        amount += price * products[str(product_id)]
+    for product_obj in product_list:
+        if price_type:
+            prod_price_obj = (
+                dealer.user.discount_prices.filter(
+                    is_active=True,
+                    product=product_obj,
+                    price_type=price_type
+                ).first()
+                or
+                product_obj.prices.filter(
+                    price_type=price_type,
+                    d_status=dealer_status
+                ).first()
+            )
+        else:
+            prod_price_obj = (
+                dealer.user.discount_prices.filter(
+                    is_active=True,
+                    product=product_obj,
+                    city=price_city
+                ).first()
+                or
+                product_obj.prices.filter(
+                    city=price_city,
+                    d_status=dealer_status
+                ).first()
+            )
+
+        prod_price = prod_price_obj.price
+        sale_count = product_counts[str(product_obj.id)]
+        amount += prod_price * sale_count
 
     return amount
 
