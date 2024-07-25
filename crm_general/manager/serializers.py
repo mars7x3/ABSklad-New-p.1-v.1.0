@@ -20,7 +20,7 @@ from product.models import AsiaProduct, ProductPrice, Collection, Category, Prod
 
 from .utils import (
     check_to_unavailable_products, order_total_price, build_order_products_data,
-    update_main_order_product_count, mngr_get_product_price
+    update_main_order_product_count, mngr_get_product_price, calculate_order_cost_price
 )
 
 
@@ -215,11 +215,8 @@ class MainOrderSerializer(serializers.ModelSerializer):
             price_type = dealer.price_type or None
             attrs["price"] = order_total_price(
                 product_counts=product_counts,
-                dealer_status=dealer.dealer_status,
-                city=dealer.village.city,
-                price_type=price_type,
+                dealer=dealer,
             )
-            # attrs["cost_price"] = calculate_order_cost_price(product_counts)
             try:
                 attrs["products"] = build_order_products_data(
                     product_counts=product_counts,
