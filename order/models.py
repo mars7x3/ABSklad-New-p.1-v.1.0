@@ -1,7 +1,7 @@
 from django.db import models
 
 from account.models import DealerProfile, MyUser
-from general_service.models import City, Stock, CashBox
+from general_service.models import Stock
 from product.models import AsiaProduct, Category
 
 
@@ -151,6 +151,9 @@ class MainOrderProduct(models.Model):
                                    blank=True, null=True)
     count = models.DecimalField(max_digits=100, decimal_places=2, default=0)
     price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)  # сумма скидки
+    unit_discount = models.DecimalField(max_digits=100, decimal_places=2, default=0)
+    cost_price = models.DecimalField(max_digits=100, decimal_places=2, default=0)
 
 
 class MainOrderReceipt(models.Model):
