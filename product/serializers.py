@@ -82,9 +82,14 @@ class ProductListSerializer(serializers.ModelSerializer):
 
 
 class ProductPriceListSerializer(serializers.ModelSerializer):
+    discount = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductPrice
         fields = ('price', 'old_price', 'discount', 'discount_status')
+
+    def get_discount(self, obj):
+        return int(obj.discount)
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -136,7 +141,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                 rep['price_info'] = {
                     'price': discount_price.price,
                     'old_price': discount_price.old_price,
-                    'discount': discount_price.discount.amount,
+                    'discount': int(discount_price.discount.amount),
                     'discount_status': discount_price.discount.status
                 }
                 return rep
@@ -149,7 +154,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                 rep['price_info'] = {
                     'price': discount_price.price,
                     'old_price': discount_price.old_price,
-                    'discount': discount_price.discount.amount,
+                    'discount': int(discount_price.discount.amount),
                     'discount_status': discount_price.discount.status
                 }
                 return rep
@@ -157,7 +162,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             rep['price_info'] = {
                 'price': 0.0,
                 'old_price': 0.0,
-                'discount': 0.0,
+                'discount': 0,
                 'discount_status': "Per"
             }
             return rep
@@ -178,7 +183,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                 rep['price_info'] = {
                     'price': 0.0,
                     'old_price': 0.0,
-                    'discount': 0.0,
+                    'discount': 0,
                     'discount_status': "Per"
                 }
 

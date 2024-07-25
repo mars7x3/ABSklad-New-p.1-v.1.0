@@ -10,7 +10,7 @@ def get_product_price(user, product):
             return {
                 'price': discount_price_type.price,
                 'old_price': discount_price_type.old_price,
-                'discount': discount_price_type.discount.amount,
+                'discount': int(discount_price_type.discount.amount),
                 'discount_status': discount_price_type.discount.status
             }
 
@@ -22,7 +22,7 @@ def get_product_price(user, product):
             return {
                 'price': discount_price_city.price,
                 'old_price': discount_price_city.old_price,
-                'discount': discount_price_city.discount.amount,
+                'discount': int(discount_price_city.discount.amount),
                 'discount_status': discount_price_city.discount.status
             }
 
@@ -36,13 +36,13 @@ def get_product_price(user, product):
         return {
             'price': product_price.price,
             'old_price': product_price.old_price,
-            'discount': dealer.dealer_status.discount,
+            'discount': int(dealer.dealer_status.discount),
             'discount_status': "Per"
         }
     else:
         return {
             'price': 0.0,
             'old_price': 0.0,
-            'discount': 0.0,
+            'discount': 0,
             'discount_status': "Per"
         }
