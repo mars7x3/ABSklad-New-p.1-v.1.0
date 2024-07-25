@@ -84,10 +84,12 @@ class OneCSyncTask(Task):
         except (RequestException, HTTPError) as http_exc:
             logger.error(http_exc)
 
-            if http_exc.response:
-                logger.error(http_exc.response.body)
+            status_code = None
 
-            status_code = http_exc.response.status_code if http_exc.response else None
+            if http_exc.response:
+                logger.error(http_exc.response.content)
+                status_code = http_exc.response.status_code
+
             match status_code:
                 case 404:
                     msg = NOTIFY_ERRORS["not_found"]
