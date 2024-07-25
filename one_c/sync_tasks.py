@@ -90,6 +90,13 @@ class OneCSyncTask(Task):
                 logger.error(http_exc.response.content)
                 status_code = http_exc.response.status_code
 
+            if http_exc.request:
+                request = http_exc.request
+                if request.data:
+                    logger.error(http_exc.request.data)
+                elif request.json:
+                    logger.error(http_exc.request.json)
+
             match status_code:
                 case 404:
                     msg = NOTIFY_ERRORS["not_found"]
