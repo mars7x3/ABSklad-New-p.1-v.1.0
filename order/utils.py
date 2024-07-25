@@ -98,7 +98,7 @@ def generate_order_products(product_list, product_counts, dealer):
 
         prod_price = prod_price_obj.price
         discount_amount = prod_price_obj.old_price - prod_price
-        cost_price = prod_price_obj.cost_prices.filter(is_active=True).first().price
+        cost_price = product_obj.cost_prices.filter(is_active=True).first().price
         sale_count = product_counts[str(product_obj.id)]
         result_data.append(
             {
