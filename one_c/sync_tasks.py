@@ -86,7 +86,7 @@ class OneCSyncTask(Task):
 
             status_code = None
 
-            if http_exc.response:
+            if http_exc.response is not None:
                 logger.error(f"Response Content: {http_exc.response.content}")
                 status_code = http_exc.response.status_code
 
@@ -114,6 +114,25 @@ class OneCSyncTask(Task):
             message=message
         )
 
+
+"""
+b'{
+    "user_uid": "ee2be091-443c-11ef-8a40-2c59e53ae4c1", 
+    "created_at": "2024-07-25 17:10:09.259790", 
+    "payment_doc_uid": "\\u041d\\u0435 \\u043d\\u0430\\u0439\\u0434\\u0435\\u043d \\u041a\\u043b\\u0438\\u0435\\u043d\\u0442", 
+    "cityUID": "c10ad4ab-35f9-11ed-8a2f-2c59e53ae4c3", 
+    "delete": 0, 
+    "uid": "00000000-0000-0000-0000-000000000000", 
+    "products": 
+        [
+            {
+                "title": "\\u0428\\u043a\\u0430\\u0444 \\u041a\\u043b\\u0430\\u0441\\u0441\\u0438\\u043a 6D", 
+                "uid": "96d7befb-60fa-11ed-8a30-2c59e53ae4c2", 
+                "count": 1, "price": 108000
+            }
+        ]
+    }'
+"""
 
 def _set_attrs_from_dict(obj, data: dict[str, Any]) -> None:
     for field, value in data.items():
