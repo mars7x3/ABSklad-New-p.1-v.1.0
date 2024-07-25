@@ -377,11 +377,9 @@ class ShortWalletSerializer(serializers.ModelSerializer):
 
 
 class DealerStoreSerializer(serializers.ModelSerializer):
-    city = CitySerializer(many=False, read_only=True)
-
     class Meta:
         model = DealerStore
-        fields = ("id", "city", "title", "address")
+        fields = ("id", "title", "city", "address")
         extra_kwargs = {
             "title": {"read_only": True},
             "address": {"read_only": True}
