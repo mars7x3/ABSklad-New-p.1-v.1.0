@@ -5,18 +5,45 @@ from order.models import MainOrder, MainOrderProduct
 from product.models import AsiaProduct, ProductPrice, ProductImage, ProductCostPrice
 
 
-def order_total_price(product_counts, dealer_status, city=None, price_type=None):
-    assert city or price_type
-    filters = dict(product_id__in=list(product_counts), d_status=dealer_status)
-    if price_type:
-        filters['price_type'] = price_type
-    else:
-        filters['city'] = city
-    prices = (
-        ProductPrice.objects.only("product_id", "price")
-        .filter(**filters)
-    )
-    return sum([price_obj.price * product_counts[str(price_obj.product_id)] for price_obj in prices])
+def order_total_price(product_counts, dealer):
+    product_list = AsiaProduct.objects.filter(id__in=list(product_counts.keys()))
+    price_type = dealer.price_type
+    dealer_status = dealer.dealer_status
+    price_city = dealer.price_city
+    amount = 0
+    for product_obj in product_list:
+        if price_type:
+            prod_price_obj = (
+                    dealer.user.discount_prices.filter(
+                        is_active=True,
+                        product=product_obj,
+                        price_type=price_type
+                    ).first()
+                    or
+                    product_obj.prices.filter(
+                        price_type=price_type,
+                        d_status=dealer_status
+                    ).first()
+            )
+        else:
+            prod_price_obj = (
+                    dealer.user.discount_prices.filter(
+                        is_active=True,
+                        product=product_obj,
+                        city=price_city
+                    ).first()
+                    or
+                    product_obj.prices.filter(
+                        city=price_city,
+                        d_status=dealer_status
+                    ).first()
+            )
+
+        prod_price = prod_price_obj.price
+        sale_count = product_counts[str(product_obj.id)]
+        amount += prod_price * sale_count
+
+    return amount
 
 
 def check_to_unavailable_products(product_counts: dict[str: int], stock) -> list[dict[str, int]]:
