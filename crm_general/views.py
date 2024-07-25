@@ -176,6 +176,7 @@ class DealersFilterAPIView(APIView):
     def post(self, request):
         cities = self.request.data.get('cities', [])
         categories = self.request.data.get('categories', [])
+        name = self.request.data.get('name')
         if not cities and not categories:
             return Response({'detail': 'filter by cities or categories needed'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -186,6 +187,9 @@ class DealersFilterAPIView(APIView):
 
         if categories:
             base_query &= Q(dealer_status__in=categories)
+
+        if name:
+            base_query &= Q(user__name__icontains=name)
 
         dealers = DealerProfile.objects.filter(base_query)
 
